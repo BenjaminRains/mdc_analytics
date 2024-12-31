@@ -1,8 +1,8 @@
 # mdc_analytics 
 
-# SmartTreatment model
+## SmartTreatment model
 
-# Predicting and Tracking Treatment Plan Acceptance (Including Partial Acceptance)
+### Predicting and Tracking Treatment Plan Acceptance (Including Partial Acceptance)
 
 ## Overview
 This project proposes a systematic approach to predict whether a patient will fully accept, partially accept, or completely decline a recommended treatment plan at a dental clinic. Unlike simpler models focused on full acceptance or rejection, this proposal addresses the realistic scenario where patients often accept some procedures while declining others. By leveraging data from **OpenDental (MariaDB)** and **Practice by Numbers** KPI dashboards, the project aims to produce actionable insights that can help improve treatment acceptance rates—especially among new patients, where the need is most critical.
