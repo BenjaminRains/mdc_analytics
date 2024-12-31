@@ -1,0 +1,39 @@
+# Ignore exported CSV files
+*.csv
+
+# Ignore all files in the raw_data directory
+/raw_data/
+
+# Ignore temporary files
+*.tmp
+*.log
+
+# Ignore database configuration files
+*.db
+*.sql
+
+# Ignore all files in a specific directory
+/temp/
+
+# Ignore OS-generated files
+.DS_Store
+Thumbs.db
+
+# Ignore Python virtual environments
+venv/
+.env
+
+# Ignore IDE or editor settings
+.vscode/
+.idea/
+
+# Ignore compiled code
+*.class
+*.pyc
+*.o
+*.out
+
+# Ignore sensitive credential files (if any)
+config.yaml
+config.json
+credentials.txt
