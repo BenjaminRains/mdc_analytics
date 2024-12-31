@@ -1,6 +1,6 @@
 
 SELECT * 
-INTO OUTFILE "C:\Users\rains\mdc_analytics\raw_data/temp_patients.csv"
+INTO OUTFILE "/path/to/export/mdc_analytics/raw_data/temp_patients.csv"
 FIELDS TERMINATED BY ',' 
 ENCLOSED BY '"' 
 LINES TERMINATED BY '\n'

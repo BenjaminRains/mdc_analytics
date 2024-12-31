@@ -1,8 +1,8 @@
 CREATE TEMPORARY TABLE temp_patients AS
 SELECT 
     p.PatNum,
-    p.LName,
-    p.FName,
+    p.LName, -- psyudonyminize
+    p.FName, -- psyudonyminize
     p.Birthdate,
     p.Gender,
     p.Zip,
