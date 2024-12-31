@@ -21,4 +21,11 @@ WHERE p.PatStatus IN (0, 2);
 -- All active and inactive patients
 
 
+SELECT * 
+INTO OUTFILE 'mdc_analytics/raw_data/temp_patients.csv'
+FIELDS TERMINATED BY ',' 
+ENCLOSED BY '"' 
+LINES TERMINATED BY '\n'
+FROM temp_patients;
 
+-- export data for use in modeling workflow
