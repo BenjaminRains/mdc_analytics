@@ -20,25 +20,32 @@ This project proposes a systematic approach to predict whether a patient will fu
 
 ## Project Structure
 
-```plaintext
-.
-├── data/
-│   ├── raw/                # Extracted tables from OpenDental & KPI data
-│   ├── processed/          # Cleaned and merged datasets
-│   └── README.md           # Notes on data ingestion
-├── notebooks/
-│   ├── EDA.ipynb           # Exploratory Data Analysis
-│   ├── feature_engineering.ipynb
-│   ├── modeling.ipynb      # Model training & validation
-│   └── README.md
+project/
+├── raw_data/                # Store raw data files here.
+│   ├── patients.csv
+│   ├── appointments.csv
+│   ├── procedures.csv
+├── scripts/                 # Store all SQL scripts here.
+│   ├── create_temp_tables/  # Subfolder for temp table scripts.
+│   │   ├── temp_patients.sql
+│   │   ├── temp_appointments.sql
+│   │   ├── temp_procedures.sql
+│   ├── analysis_queries.sql # Scripts for analysis-specific queries.
+├── processed_data/          # Exported processed data for analysis.
+│   ├── temp_patients.csv
+│   ├── temp_appointments.csv
+├── notebooks/               # Jupyter notebooks for analysis.
+│   ├── exploratory_analysis.ipynb
+│   ├── modeling.ipynb
+│   └── utils.py            # Shared helper functions
+├── reports/
+│   ├── figures/            # Visualizations, plots
+│   └── model_results.md    # Performance metrics & error analysis
+├── docs/                    # Documentation about the project.
+│   ├── README.md
+│   ├── data_dictionary.md
 ├── src/
 │   ├── data_ingestion.py   # Scripts for extracting & merging data
 │   ├── preprocessing.py    # Data cleaning & feature creation
 │   ├── modeling.py         # Multi-class classifier implementation
 │   └── utils.py            # Shared helper functions
-├── reports/
-│   ├── figures/            # Visualizations, plots
-│   └── model_results.md    # Performance metrics & error analysis
-├── README.md               # High-level project description
-└── requirements.txt        # Dependencies (pandas, scikit-learn, etc.)
-
