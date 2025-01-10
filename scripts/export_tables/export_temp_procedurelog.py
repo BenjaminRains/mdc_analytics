@@ -2,8 +2,8 @@ import mysql.connector
 import csv
 
 # Import database connection function and file paths
-from db_config import connect_to_mysql
-from file_paths import get_file_path
+from src.db_config import connect_to_mysql
+from src.file_paths import get_file_path
 
 try:
     # Retrieve file path for procedurelog export using the helper function
