@@ -1,0 +1,5 @@
+Table,Non_unique,Key_name,Seq_in_index,Column_name,Collation,Cardinality,Sub_part,Packed,Null,Index_type,Comment,Index_comment,Visible,Expression
+periomeasure,0,PRIMARY,1,PerioMeasureNum,A,498305,NULL,NULL,,BTREE,,,YES,NULL
+periomeasure,1,PerioExamNum,1,PerioExamNum,A,11325,NULL,NULL,,BTREE,,,YES,NULL
+periomeasure,1,SecDateTEntry,1,SecDateTEntry,A,5794,NULL,NULL,,BTREE,,,YES,NULL
+periomeasure,1,SecDateTEdit,1,SecDateTEdit,A,5932,NULL,NULL,,BTREE,,,YES,NULL

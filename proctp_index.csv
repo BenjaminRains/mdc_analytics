@@ -1,0 +1,8 @@
+Table,Non_unique,Key_name,Seq_in_index,Column_name,Collation,Cardinality,Sub_part,Packed,Null,Index_type,Comment,Index_comment,Visible,Expression
+proctp,0,PRIMARY,1,ProcTPNum,A,504,NULL,NULL,,BTREE,,,YES,NULL
+proctp,1,indexPatNum,1,PatNum,A,126,NULL,NULL,,BTREE,,,YES,NULL
+proctp,1,indexTreatPlanNum,1,TreatPlanNum,A,126,NULL,NULL,,BTREE,,,YES,NULL
+proctp,1,SecUserNumEntry,1,SecUserNumEntry,A,8,NULL,NULL,,BTREE,,,YES,NULL
+proctp,1,ProvNum,1,ProvNum,A,10,NULL,NULL,,BTREE,,,YES,NULL
+proctp,1,ClinicNum,1,ClinicNum,A,1,NULL,NULL,,BTREE,,,YES,NULL
+proctp,1,ProcNumOrig,1,ProcNumOrig,A,504,NULL,NULL,,BTREE,,,YES,NULL

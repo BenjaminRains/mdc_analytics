@@ -1,8 +1,9 @@
+-- drop table if needed
+drop temporary table temp_patients;
+
 CREATE TEMPORARY TABLE temp_patients AS
 SELECT 
     p.PatNum,
-    p.LName, -- psyudonyminize
-    p.FName, -- psyudonyminize
     p.Birthdate,
     p.Gender,
     p.Zip,

@@ -1,0 +1,4 @@
+Table,Non_unique,Key_name,Seq_in_index,Column_name,Collation,Cardinality,Sub_part,Packed,Null,Index_type,Comment,Index_comment,Visible,Expression
+procedurecode,0,PRIMARY,1,CodeNum,A,1705,NULL,NULL,,BTREE,,,YES,NULL
+procedurecode,1,ProcCode,1,ProcCode,A,1705,NULL,NULL,,BTREE,,,YES,NULL
+procedurecode,1,ProvNumDefault,1,ProvNumDefault,A,3,NULL,NULL,,BTREE,,,YES,NULL

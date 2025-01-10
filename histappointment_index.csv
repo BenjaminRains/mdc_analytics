@@ -1,0 +1,17 @@
+Table,Non_unique,Key_name,Seq_in_index,Column_name,Collation,Cardinality,Sub_part,Packed,Null,Index_type,Comment,Index_comment,Visible,Expression
+histappointment,0,PRIMARY,1,HistApptNum,A,421125,NULL,NULL,,BTREE,,,YES,NULL
+histappointment,1,HistUserNum,1,HistUserNum,A,34,NULL,NULL,,BTREE,,,YES,NULL
+histappointment,1,AptNum,1,AptNum,A,38284,NULL,NULL,,BTREE,,,YES,NULL
+histappointment,1,PatNum,1,PatNum,A,5848,NULL,NULL,,BTREE,,,YES,NULL
+histappointment,1,Confirmed,1,Confirmed,A,20,NULL,NULL,,BTREE,,,YES,NULL
+histappointment,1,Op,1,Op,A,16,NULL,NULL,,BTREE,,,YES,NULL
+histappointment,1,ProvNum,1,ProvNum,A,17,NULL,NULL,,BTREE,,,YES,NULL
+histappointment,1,ProvHyg,1,ProvHyg,A,16,NULL,NULL,,BTREE,,,YES,NULL
+histappointment,1,NextAptNum,1,NextAptNum,A,2193,NULL,NULL,,BTREE,,,YES,NULL
+histappointment,1,UnschedStatus,1,UnschedStatus,A,6,NULL,NULL,,BTREE,,,YES,NULL
+histappointment,1,Assistant,1,Assistant,A,8,NULL,NULL,,BTREE,,,YES,NULL
+histappointment,1,ClinicNum,1,ClinicNum,A,1,NULL,NULL,,BTREE,,,YES,NULL
+histappointment,1,InsPlan1,1,InsPlan1,A,2392,NULL,NULL,,BTREE,,,YES,NULL
+histappointment,1,InsPlan2,1,InsPlan2,A,318,NULL,NULL,,BTREE,,,YES,NULL
+histappointment,1,AppointmentTypeNum,1,AppointmentTypeNum,A,13,NULL,NULL,,BTREE,,,YES,NULL
+histappointment,1,SecUserNumEntry,1,SecUserNumEntry,A,33,NULL,NULL,,BTREE,,,YES,NULL

@@ -1,0 +1,7 @@
+Table,Non_unique,Key_name,Seq_in_index,Column_name,Collation,Cardinality,Sub_part,Packed,Null,Index_type,Comment,Index_comment,Visible,Expression
+insbluebook,0,PRIMARY,1,InsBlueBookNum,A,36086,NULL,NULL,,BTREE,,,YES,NULL
+insbluebook,1,ProcCodeNum,1,ProcCodeNum,A,196,NULL,NULL,,BTREE,,,YES,NULL
+insbluebook,1,CarrierNum,1,CarrierNum,A,343,NULL,NULL,,BTREE,,,YES,NULL
+insbluebook,1,PlanNum,1,PlanNum,A,1503,NULL,NULL,,BTREE,,,YES,NULL
+insbluebook,1,ProcNum,1,ProcNum,A,36086,NULL,NULL,,BTREE,,,YES,NULL
+insbluebook,1,ClaimNum,1,ClaimNum,A,12028,NULL,NULL,,BTREE,,,YES,NULL

@@ -1,0 +1,17 @@
+Table,Non_unique,Key_name,Seq_in_index,Column_name,Collation,Cardinality,Sub_part,Packed,Null,Index_type,Comment,Index_comment,Visible,Expression
+adjustment,0,PRIMARY,1,AdjNum,A,254623,NULL,NULL,,BTREE,,,YES,NULL
+adjustment,1,indexPatNum,1,PatNum,A,28291,NULL,NULL,,BTREE,,,YES,NULL
+adjustment,1,ClinicNum,1,ClinicNum,A,1,NULL,NULL,,BTREE,,,YES,NULL
+adjustment,1,StatementNum,1,StatementNum,A,1,NULL,NULL,,BTREE,,,YES,NULL
+adjustment,1,ProcNum,1,ProcNum,A,3857,NULL,NULL,,BTREE,,,YES,NULL
+adjustment,1,indexProvNum,1,ProvNum,A,32,NULL,NULL,,BTREE,,,YES,NULL
+adjustment,1,SecUserNumEntry,1,SecUserNumEntry,A,20,NULL,NULL,,BTREE,,,YES,NULL
+adjustment,1,indexPNAmt,1,ProcNum,A,3857,NULL,NULL,,BTREE,,,YES,NULL
+adjustment,1,indexPNAmt,2,AdjAmt,A,18187,NULL,NULL,,BTREE,,,YES,NULL
+adjustment,1,AdjDatePN,1,AdjDate,A,8780,NULL,NULL,,BTREE,,,YES,NULL
+adjustment,1,AdjDatePN,2,PatNum,A,254623,NULL,NULL,,BTREE,,,YES,NULL
+adjustment,1,TaxTransID,1,TaxTransID,A,1,NULL,NULL,,BTREE,,,YES,NULL
+adjustment,1,SecDateTEditPN,1,SecDateTEdit,A,5658,NULL,NULL,,BTREE,,,YES,NULL
+adjustment,1,SecDateTEditPN,2,PatNum,A,63655,NULL,NULL,,BTREE,,,YES,NULL
+adjustment,1,idx_adjustment_patnum_adjdate,1,PatNum,A,28291,NULL,NULL,,BTREE,,,YES,NULL
+adjustment,1,idx_adjustment_patnum_adjdate,2,AdjDate,A,254623,NULL,NULL,,BTREE,,,YES,NULL

@@ -1,0 +1,9 @@
+Table,Non_unique,Key_name,Seq_in_index,Column_name,Collation,Cardinality,Sub_part,Packed,Null,Index_type,Comment,Index_comment,Visible,Expression
+payment,0,PRIMARY,1,PayNum,A,291759,NULL,NULL,,BTREE,,,YES,NULL
+payment,1,indexPatNum,1,PatNum,A,22443,NULL,NULL,,BTREE,,,YES,NULL
+payment,1,DepositNum,1,DepositNum,A,6,NULL,NULL,,BTREE,,,YES,NULL
+payment,1,SecUserNumEntry,1,SecUserNumEntry,A,19,NULL,NULL,,BTREE,,,YES,NULL
+payment,1,ClinicNum,1,ClinicNum,A,1,NULL,NULL,,BTREE,,,YES,NULL
+payment,1,PayType,1,PayType,A,39,NULL,NULL,,BTREE,,,YES,NULL
+payment,1,idx_payment_patnum_paydate,1,PatNum,A,22443,NULL,NULL,,BTREE,,,YES,NULL
+payment,1,idx_payment_patnum_paydate,2,PayDate,A,291759,NULL,NULL,,BTREE,,,YES,NULL
