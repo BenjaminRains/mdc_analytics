@@ -1,9 +1,6 @@
 # Ignore exported CSV files
 *.csv
 
-# Ignore all files in the raw_data directory
-/raw_data/
-
 # Ignore temporary files
 *.tmp
 *.log
@@ -13,6 +10,10 @@
 *.sql
 
 # Ignore all files in a specific directory
+/src/
+/raw_data/
+/mdc_analytics_env/
+/processed_data/
 /temp/
 
 # Ignore OS-generated files
