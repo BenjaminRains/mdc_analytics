@@ -22,6 +22,7 @@ Thumbs.db
 # Ignore Python virtual environments
 venv/
 .env
+mdc_analytics_env/
 
 # Ignore IDE or editor settings
 .vscode/
