@@ -1,0 +1,220 @@
+# database: opendental analytics
+# tables: patient, payment, prodcedurelog
+
+patient.PatNum, PatStatus, Gender, Position, Birthdate, Zip, Guarantor, EstBalance, MedicaidID, Bal_0_30, Bal_31_60, Bal_61_90, BalOver90, InsEst, BalTotal
+
+payment.PayNum, PayType, PayDate, PayAmt, CheckNum, BankBranch, PayNote, IsSplit, PatNum
+
+prodcedurelog.ProcNum, PatNum, AptNum, OldCode, ProcDate, ProcFee, Surf, ToothNum, ToothRange, ProvNum 
+
+
+SELECT 
+    PatNum, 
+    PatStatus, 
+    Gender, 
+    Position, 
+    Birthdate, 
+    Zip, 
+    Guarantor, 
+    EstBalance, 
+    MedicaidID, 
+    Bal_0_30, 
+    Bal_31_60, 
+    Bal_61_90, 
+    BalOver90, 
+    InsEst, 
+    BalTotal
+FROM 
+    patient;
+
+SELECT
+    HistApptNum, 
+    HistDateTStamp, 
+    HistApptAction, 
+    AptNum, 
+    PatNum, 
+    AptStatus, 
+    Pattern, 
+    Confirmed, 
+    Op, 
+    Note, 
+    ProvNum, 
+    ProvHyg, 
+    AptDateTime,
+    IsNewPatient,
+    ProcDescript, 
+    IsHygiene, 
+    DateTStamp, 
+    DateTimeArrived, 
+    DateTimeSeated, 
+    DateTimeDismissed, 
+    InsPlan1, 
+    InsPlan2, 
+    AppointmentTypeNum 
+FROM
+    histapppointment;
+
+SELECT
+    AptNum,
+    PatNum,
+    AptStatus,
+    Pattern,
+    Confirmed,  
+    Op,
+    Note, 
+    ProvNum, 
+    ProvHyg,
+    AptDateTime,
+    IsNewPatient,
+    ProcDescript
+FROM
+    appointment;
+
+
+SELECT 
+    PayNum, 
+    PayType, 
+    PayDate, 
+    PayAmt, 
+    IsSplit, 
+    PatNum
+FROM 
+    payment;
+
+
+SELECT
+    CodeNum, 
+    ProcCode, 
+    Descript,
+    AbbrDesc,
+    ProcTime,
+    ProcCat,
+    TreatArea, 
+    NoBillIns,
+    DefaultNote, 
+    IsHygiene, 
+    GTypeNum
+FROM 
+    procedurecode;
+
+
+SELECT 
+    ProcNum, 
+    PatNum, 
+    AptNum,
+    OldCode, 
+    ProcDate, 
+    ProcFee, 
+    Surf, 
+    ToothNum, 
+    ToothRange, 
+    ProvNum,
+    DateTStamp
+FROM 
+    procedurelog;
+
+
+SELECT 
+    PerioMeasureNum, 
+    PerioExamNum, 
+    SequenceType, 
+    IntTooth, 
+    ToothValue, 
+    MBvalue, 
+    Bvalue, 
+    DBvalue, 
+    MLvalue, 
+    Lvalue, 
+    DLvalue, 
+    SecDateTEntry, 
+    SecDateTEdit
+FROM
+    periomeasure;
+
+
+SELECT
+    PerioExamNum,
+    PatNum, 
+    ExamDate, 
+    ProvNum, 
+    DateTMeasureEdit,
+    Note 
+FROM
+    perioexam;
+ 
+
+SELECT
+    ProcTPNum,
+    TreatPlanNum, 
+    PatNum, 
+    ProcNumOrig, 
+    ItemOrder, 
+    Priority, 
+    ToothNumTP, 
+    Surf, 
+    ProcCode, 
+    Descript, 
+    FeeAmt, 
+    PriInsAmt, 
+    SecInsAmt, 
+    PatAmt, 
+    Discount, 
+    Prognosis, 
+    Dx, 
+    ProcAbbr, 
+    SecUserNumEntry, 
+    FeeAllowed, 
+    TaxAmt, 
+    ProvNum, 
+    DateTP, 
+    CatPercUCR 
+FROM
+    proctp;
+
+
+SELECT
+    RecallNum, 
+    PatNum,
+    DateDueCalc, 
+    DateDue, 
+    DatePrevious, 
+    RecallInterval, 
+    RecallStatus, 
+    Note,
+    IsDisabled, 
+    DateTStamp,
+    RecallTypeNum, 
+    DisableUntilBalance, 
+    DisableUntilDate, 
+    DateScheduled, 
+    Priority, 
+    TimePatternOverride 
+FROM
+    recall;
+
+
+SELECT
+    FeeNum,
+    Amount,
+    OldCode, 
+    CodeNum,
+    ProvNum,
+FROM
+    fee;
+
+SELECT
+    TreatPlanNum, 
+    PatNum, 
+    DateTP, 
+    Heading, 
+    Note, 
+    Signature, 
+    SigIsTopaz, 
+    ResponsParty, 
+    DocNum, 
+    TPStatus 
+FROM
+    treatplan;
+
+
+
