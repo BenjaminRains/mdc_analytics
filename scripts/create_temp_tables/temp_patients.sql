@@ -1,5 +1,5 @@
 -- drop table if needed
-drop temporary table temp_patients;
+DROP TEMPORARY TABLE IF EXISTS temp_patients;
 
 CREATE TEMPORARY TABLE temp_patients AS
 SELECT 
