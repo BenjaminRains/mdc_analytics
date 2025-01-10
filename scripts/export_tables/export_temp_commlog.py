@@ -3,11 +3,8 @@ import os
 import mysql.connector
 import csv
 
-from db_config import connect_to_mysql
-from file_paths import get_file_path
-
-# Add the 'src' directory to Python's module search path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'src')))
+from src.db_config import connect_to_mysql
+from src.file_paths import get_file_path
 
 try:
     # Retrieve file path for commlog export using the helper function
