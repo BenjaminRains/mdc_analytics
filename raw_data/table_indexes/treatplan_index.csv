@@ -1,7 +1,0 @@
-Table,Non_unique,Key_name,Seq_in_index,Column_name,Collation,Cardinality,Sub_part,Packed,Null,Index_type,Comment,Index_comment,Visible,Expression
-treatplan,0,PRIMARY,1,TreatPlanNum,A,9772,NULL,NULL,,BTREE,,,YES,NULL
-treatplan,1,indexPatNum,1,PatNum,A,4886,NULL,NULL,,BTREE,,,YES,NULL
-treatplan,1,DocNum,1,DocNum,A,1,NULL,NULL,,BTREE,,,YES,NULL
-treatplan,1,SecUserNumEntry,1,SecUserNumEntry,A,28,NULL,NULL,,BTREE,,,YES,NULL
-treatplan,1,UserNumPresenter,1,UserNumPresenter,A,8,NULL,NULL,,BTREE,,,YES,NULL
-treatplan,1,MobileAppDeviceNum,1,MobileAppDeviceNum,A,1,NULL,NULL,,BTREE,,,YES,NULL

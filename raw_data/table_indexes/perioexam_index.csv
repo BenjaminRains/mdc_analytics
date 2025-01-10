@@ -1,3 +1,0 @@
-Table,Non_unique,Key_name,Seq_in_index,Column_name,Collation,Cardinality,Sub_part,Packed,Null,Index_type,Comment,Index_comment,Visible,Expression
-perioexam,0,PRIMARY,1,PerioExamNum,A,11312,NULL,NULL,,BTREE,,,YES,NULL
-perioexam,1,PatNum,1,PatNum,A,3770,NULL,NULL,,BTREE,,,YES,NULL
