@@ -1,3 +1,6 @@
+-- Drop the existing temporary table if it exists
+DROP TEMPORARY TABLE IF EXISTS temp_adjustment;
+
 -- Create a temporary table with 2 years of data from the adjustment table
 CREATE TEMPORARY TABLE temp_adjustment AS
 SELECT 
