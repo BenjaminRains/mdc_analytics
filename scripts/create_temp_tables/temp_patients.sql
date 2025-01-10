@@ -10,7 +10,7 @@ SELECT
     p.Gender,
     p.Zip,
     p.DateFirstVisit,
-    p.PatStatus,
+    p.PatStatus, -- (FIXME 0 = active?, 2 = inactive?)
     p.EstBalance,
     p.Bal_0_30,
     p.Bal_31_60,
