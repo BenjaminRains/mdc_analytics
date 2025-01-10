@@ -22,6 +22,4 @@ WHERE
 -- Verify the contents of the temporary table
 SELECT * FROM temp_adjustment;
 
--- Drop the existing temporary table if it exists
--- DROP TEMPORARY TABLE IF EXISTS temp_adjustment;
 
