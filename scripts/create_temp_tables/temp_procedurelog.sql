@@ -1,3 +1,7 @@
+-- create a temp table of procedurelog from past 4 years
+
+DROP TEMPORARY TABLE IF EXISTS temp_procedurelog;
+
 CREATE temporary table temp_procedurelog AS
 SELECT
 	pl.ProcNum,
@@ -14,7 +18,4 @@ SELECT
     pl.ProvNum,
     pl.CodeNum
 FROM procedurelog pl
-WHERE pl.ProcDate >= '2021-01-01';
-
--- create temp procedurelog table
-
+WHERE pl.ProcDate >= DATE_SUB(CURDATE(), INTERVAL 4 YEAR);

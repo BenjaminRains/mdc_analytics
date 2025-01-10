@@ -1,3 +1,5 @@
+-- create a temp table of all active and inactive patients
+
 -- drop table if needed
 DROP TEMPORARY TABLE IF EXISTS temp_patients;
 
@@ -19,4 +21,3 @@ SELECT
 FROM patient p
 WHERE p.PatStatus IN (0, 2);
 
--- All active and inactive patients

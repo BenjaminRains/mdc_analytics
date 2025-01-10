@@ -1,3 +1,8 @@
+-- create a temp table with all appointments in the past 4 years.
+
+-- Drop the existing temporary table if it exists
+DROP TEMPORARY TABLE IF EXISTS temp_appointment;
+
 CREATE temporary table temp_appointment AS
 SELECT
 	a.AptNum,
@@ -12,7 +17,4 @@ SELECT
     a.InsPlan1,
     a.InsPlan2
 FROM appointment a
-WHERE a.AptDateTime > '2021-01-01 00:00:00';
-
--- select all appointments within the past 4 years
-
+WHERE a.AptDateTime >= DATE_SUB(CURDATE(), INTERVAL 4 YEAR);
