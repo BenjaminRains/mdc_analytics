@@ -1,3 +1,11 @@
+import sys
+import os
+print("Current working directory:", os.getcwd())
+print("sys.path:", sys.path)
+
+# Add the project root to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+
 import mysql.connector
 import csv
 
