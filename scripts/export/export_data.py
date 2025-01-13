@@ -5,22 +5,23 @@ from mysql.connector import connect
 from src.db_config import connect_to_mysql
 from src.file_paths import get_file_path
 
-# Logging configuration
+# Ensure the logs directory exists
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))  # Navigate to /mdc_analytics/
 logs_dir = os.path.join(root_dir, "logs")  # Define the /logs/ directory
-os.makedirs(logs_dir, exist_ok=True)  # Ensure the /logs/ directory exists
+os.makedirs(logs_dir, exist_ok=True)  # Create the logs directory if it doesn't exist
 
-log_file_path = os.path.join(logs_dir, "data_export.log")  # Log file in /logs/
+# Define log file path
+log_file_path = os.path.join(logs_dir, "data_export.log")
 
+# Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.INFO,  # Set the global logging level
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(log_file_path, mode="w")
+        logging.StreamHandler(),  # Log to console
+        logging.FileHandler(log_file_path, mode="w")  # Log to the data_export.log file
     ]
 )
-
 
 def get_sql_query(file_name):
     """
@@ -36,7 +37,6 @@ def get_sql_query(file_name):
     
     with open(sql_file_path, "r", encoding="utf-8") as file:
         return file.read()
-
 
 def execute_query(query, chunk_size=10000):
     """
@@ -58,7 +58,6 @@ def execute_query(query, chunk_size=10000):
                     break
                 yield rows
 
-
 def write_csv(output_path, column_names, data):
     """
     Writes data to a CSV file.
@@ -71,7 +70,6 @@ def write_csv(output_path, column_names, data):
         writer.writerow(column_names)  # Write headers
         writer.writerows(data)
     logging.info(f"Data written to file: {output_path}")
-
 
 def export_data(table_name):
     """
@@ -109,7 +107,6 @@ def export_data(table_name):
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
 
-
 if __name__ == "__main__":
     # Automatically generate the list of tables from file_paths
     from src.file_paths import file_paths  # Import the file_paths dictionary
@@ -120,4 +117,7 @@ if __name__ == "__main__":
 
     for table in tables:
         export_data(table)
+
+    # Log summary at the end of the script
+    logging.info(f"Export process completed. Total tables exported: {len(tables)}.")
 
