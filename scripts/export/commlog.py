@@ -3,8 +3,24 @@ import os
 import mysql.connector
 import csv
 
+# Import database connection function and file paths
 from src.db_config import connect_to_mysql
 from src.file_paths import get_file_path
+
+def get_sql_query(file_name):
+    """
+    Reads and returns the SQL query from a file.
+    :param file_name: Name of the SQL file (without extension).
+    :return: The SQL query as a string.
+    """
+    sql_directory = os.path.join(os.path.dirname(__file__), "sql")
+    sql_file_path = os.path.join(sql_directory, f"{file_name}.sql")
+    
+    if not os.path.exists(sql_file_path):
+        raise FileNotFoundError(f"SQL file '{file_name}.sql' not found in the 'sql' directory.")
+    
+    with open(sql_file_path, "r", encoding="utf-8") as file:
+        return file.read()
 
 try:
     # Retrieve file path for commlog export using the helper function
@@ -20,20 +36,8 @@ try:
     cursor.execute("SELECT DATABASE();")
     print(f"Connected to database: {cursor.fetchone()[0]}")
 
-    # Query to fetch commlog data
-    query = """
-    SELECT 
-        PatNum,
-        CommlogNum,
-        CommDateTime,
-        CommType,
-        Note
-    FROM 
-        commlog
-    WHERE 
-        CommDateTime >= DATE_SUB(CURDATE(), INTERVAL 4 YEAR);
-
-    """
+    # Retrieve SQL query from file
+    query = get_sql_query("commlog_query")
 
     chunk_size = 10000  # Fetch 10,000 rows at a time
     total_rows = 0  # Keep track of total rows processed
@@ -61,6 +65,8 @@ try:
 
 except KeyError as ke:
     print(f"Configuration error: {ke}")
+except FileNotFoundError as fe:
+    print(f"SQL file error: {fe}")
 except Exception as e:
     print(f"An unexpected error occurred: {e}")
 

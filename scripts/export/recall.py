@@ -1,11 +1,5 @@
 import sys
 import os
-print("Current working directory:", os.getcwd())
-print("sys.path:", sys.path)
-
-# Add the project root to sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-
 import mysql.connector
 import csv
 
@@ -13,11 +7,26 @@ import csv
 from src.db_config import connect_to_mysql
 from src.file_paths import get_file_path
 
+def get_sql_query(file_name):
+    """
+    Reads and returns the SQL query from a file.
+    :param file_name: Name of the SQL file (without extension).
+    :return: The SQL query as a string.
+    """
+    sql_directory = os.path.join(os.path.dirname(__file__), "sql")
+    sql_file_path = os.path.join(sql_directory, f"{file_name}.sql")
+    
+    if not os.path.exists(sql_file_path):
+        raise FileNotFoundError(f"SQL file '{file_name}.sql' not found in the 'sql' directory.")
+    
+    with open(sql_file_path, "r", encoding="utf-8") as file:
+        return file.read()
+
 try:
-    # Retrieve file path for procedurelog export using the helper function
-    output_path = get_file_path("procedurelog")
+    # Retrieve file path for recall export using the helper function
+    output_path = get_file_path("recall")
     if not output_path:
-        raise KeyError("File path for 'procedurelog' is missing in file_paths.py")
+        raise KeyError("File path for 'recall' is missing in file_paths.py")
 
     # Establish the database connection
     conn = connect_to_mysql()
@@ -25,27 +34,10 @@ try:
     # Verify connection
     cursor = conn.cursor()
     cursor.execute("SELECT DATABASE();")
-    print(f"Connected to database: {cursor.fetchone()[0]}")   
+    print(f"Connected to database: {cursor.fetchone()[0]}")
 
-    # Query to fetch procedurelog data
-    query = """
-    SELECT
-        ProcNum,
-        PatNum,
-        AptNum,
-        OldCode,
-        ProcDate,
-        ProcFee,
-        Surf,
-        ToothNum,
-        ToothRange,
-        Priority,
-        ProcStatus,
-        ProvNum,
-        CodeNum
-    FROM procedurelog
-    WHERE ProcDate >= DATE_SUB(CURDATE(), INTERVAL 4 YEAR);
-    """
+    # Retrieve SQL query from file
+    query = get_sql_query("recall_query")
 
     chunk_size = 10000  # Fetch 10,000 rows at a time
     total_rows = 0  # Keep track of total rows processed
@@ -73,6 +65,8 @@ try:
 
 except KeyError as ke:
     print(f"Configuration error: {ke}")
+except FileNotFoundError as fe:
+    print(f"SQL file error: {fe}")
 except Exception as e:
     print(f"An unexpected error occurred: {e}")
 
