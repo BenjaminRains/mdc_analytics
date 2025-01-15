@@ -3,7 +3,7 @@ import os
 
 # Define file paths for raw data
 raw_data_dir = "raw_data"
-output_file = "processed_data/smart_treatment_dataset.csv"
+output_file = "processed_data/smart_treatment_dataset_development.csv"
 
 # Load raw data
 treatment_plan_data = pd.read_csv(os.path.join(raw_data_dir, "treatplan_data.csv"))
@@ -18,17 +18,18 @@ communication_data = pd.read_csv(os.path.join(raw_data_dir, "commlog_data.csv"))
 proctp_data = pd.read_csv(os.path.join(raw_data_dir, "proctp_data.csv"))
 
 # --- STEP 1: Aggregate proctp Data ---
-# Group proctp data by TreatPlanNum and calculate PlanAmt and AcceptedAmt
+# Group proctp data by TreatPlanNum and calculate PlanAmt and AcceptedAmt. Logic must be distinct for presented amount and
+# accepted amount. 
 plan_amt_aggregated = proctp_data.groupby("TreatPlanNum", as_index=False).agg({"FeeAmt": "sum"})
 plan_amt_aggregated.rename(columns={"FeeAmt": "PlanAmt"}, inplace=True)
-
-accepted_amt_aggregated = proctp_data.groupby("TreatPlanNum", as_index=False).agg({"FeeAmt": "sum"})
-accepted_amt_aggregated.rename(columns={"FeeAmt": "AcceptedAmt"}, inplace=True)
 
 # Merge PlanAmt and AcceptedAmt into treatment plan data
 treatment_plan_data = treatment_plan_data.merge(plan_amt_aggregated, on="TreatPlanNum", how="left")
 treatment_plan_data = treatment_plan_data.merge(accepted_amt_aggregated, on="TreatPlanNum", how="left")
 
+# display the df after the merge to inspect. 
+
+# check and display missing row count. 
 # Fill missing PlanAmt and AcceptedAmt with 0
 treatment_plan_data["PlanAmt"].fillna(0, inplace=True)
 treatment_plan_data["AcceptedAmt"].fillna(0, inplace=True)
@@ -42,11 +43,14 @@ treatment_plan_data = treatment_plan_data[
 
 # --- STEP 3: Merge Tables ---
 # Merge treatment plan data with other data sources
+# Verify and inspect df after each merge
 dataset = treatment_plan_data.merge(patient_data, on="PatNum", how="left")
 dataset = dataset.merge(procedure_data, on="PatNum", how="left")
 dataset = dataset.merge(appointment_data, on="PatNum", how="left")
 dataset = dataset.merge(payment_data, on="PatNum", how="left")
 dataset = dataset.merge(communication_data, on="PatNum", how="left")
+
+
 
 # --- STEP 4: Feature Engineering ---
 # 1. Treatment Plan Acceptance Rate
@@ -86,6 +90,7 @@ else:
 dataset["accepted"] = (dataset["AcceptedAmt"] > 0).astype(int)
 
 # --- STEP 6: Save Final Dataset ---
+# comment definition of each field or identify source data (ie. PatNum comes from patients.PatNum)
 final_dataset = dataset[
     [
         "PatNum",

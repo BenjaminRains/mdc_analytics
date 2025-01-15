@@ -2,7 +2,7 @@ import os
 import csv
 import logging
 from mysql.connector import connect
-from src.db_config import connect_to_mysql
+from src.db_config import connect_to_mysql_localhost
 from src.file_paths import get_file_path
 
 # Ensure the logs directory exists
@@ -45,7 +45,7 @@ def execute_query(query, chunk_size=10000):
     :param chunk_size: Number of rows to fetch per chunk.
     :return: Generator yielding rows.
     """
-    with connect_to_mysql() as conn:
+    with connect_to_mysql_localhost() as conn:
         with conn.cursor() as cursor:
             cursor.execute(query)
             logging.info("Query executed successfully.")
