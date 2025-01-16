@@ -7,10 +7,16 @@ from src.db_config import connect_to_mysql_mdcserver, get_available_backups, val
 from src.file_paths import file_paths
 
 # Configure logging
+log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
+os.makedirs(log_dir, exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()]
+    handlers=[
+        logging.FileHandler(os.path.join(log_dir, "backup_export.log")),
+        logging.StreamHandler()
+    ]
 )
 
 def list_available_backups():
