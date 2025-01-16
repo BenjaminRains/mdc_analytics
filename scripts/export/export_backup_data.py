@@ -82,11 +82,15 @@ def export_backup_tables(backup_database: str, chunk_size: int = 10000):
             
     conn.close()
     
-    # Log summary of exports
-    logging.info("\n=== Export Summary ===")
-    logging.info(f"Successfully exported {len(successful_exports)} tables: {', '.join(successful_exports)}")
+    # Log summary of exports with clear separation
+    logging.info("\n" + "="*50)
+    logging.info("EXPORT SUMMARY")
+    logging.info("="*50)
+    logging.info(f"Total tables processed: {len(tables_to_export)}")
+    logging.info(f"Successfully exported ({len(successful_exports)}): {', '.join(successful_exports)}")
     if failed_exports:
-        logging.warning(f"Failed to export {len(failed_exports)} tables: {', '.join(failed_exports)}")
+        logging.warning(f"Failed exports ({len(failed_exports)}): {', '.join(failed_exports)}")
+    logging.info("="*50 + "\n")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -120,4 +124,4 @@ if __name__ == "__main__":
 
     logging.info(f"Starting export of specified tables from {args.backup}...")
     export_backup_tables(args.backup, args.chunk_size)
-    logging.info("Export completed") 
+    logging.info("Export process completed") 
