@@ -35,6 +35,8 @@ def export_local_tables(chunk_size=10000):
     """
     conn = connect_to_mysql_localhost()
     tables_to_export = [key.replace("_query", "") for key in file_paths if key.endswith("_query")]
+    successful_exports = []
+    failed_exports = []
     
     logging.info(f"Preparing to export {len(tables_to_export)} tables: {', '.join(tables_to_export)}")
     
@@ -60,11 +62,19 @@ def export_local_tables(chunk_size=10000):
                         logging.info(f"Exported {len(rows)} rows for {table_name}")
                     
                 logging.info(f"Completed export of {table_name} to {output_path}")
+                successful_exports.append(table_name)
                 
         except Exception as e:
             logging.error(f"Failed to export {table_name}: {e}")
+            failed_exports.append(table_name)
             
     conn.close()
+    
+    # Log summary of exports
+    logging.info("\n=== Export Summary ===")
+    logging.info(f"Successfully exported {len(successful_exports)} tables: {', '.join(successful_exports)}")
+    if failed_exports:
+        logging.warning(f"Failed to export {len(failed_exports)} tables: {', '.join(failed_exports)}")
 
 if __name__ == "__main__":
     logging.info("Starting export of specified tables from local database...")
