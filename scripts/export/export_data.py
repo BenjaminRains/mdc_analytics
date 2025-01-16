@@ -86,6 +86,8 @@ def write_csv(output_path, column_names, data):
         writer.writerows(data)
     logging.info(f"Data written to file: {output_path}")
 
+
+# Example Usage if you want to export a single table
 def export_data(table_name, connection_type="local", database_name=None):
     """
     Exports data by executing a query and saving the result to a CSV file.
@@ -125,6 +127,35 @@ def export_data(table_name, connection_type="local", database_name=None):
         logging.error(f"SQL file error: {fe}")
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
+
+# Export multiple tables with error handling
+def batch_export(tables, connection_type="local", database_name=None):
+    successful_exports = []
+    failed_exports = []
+    
+    for table in tables:
+        try:
+            export_data(table, connection_type, database_name)
+            successful_exports.append(table)
+            logging.info(f"Successfully exported {table}")
+        except Exception as e:
+            failed_exports.append((table, str(e)))
+            logging.error(f"Failed to export {table}: {e}")
+    
+    return successful_exports, failed_exports
+
+# Example  Usage if you want to export a subset of tables. 
+"""
+tables_to_export = ["patient", "appointment", "procedurelog"]
+successful, failed = batch_export(
+    tables_to_export, 
+    connection_type="mdc",
+    database_name="opendental_backup_01_23_2024"
+)
+
+print(f"Successfully exported: {successful}")
+print(f"Failed exports: {failed}")
+"""
 
 if __name__ == "__main__":
     # Automatically generate the list of tables from file_paths
