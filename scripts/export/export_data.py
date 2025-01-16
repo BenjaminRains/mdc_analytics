@@ -2,7 +2,7 @@ import os
 import csv
 import logging
 from mysql.connector import connect
-from src.db_config import connect_to_mysql_localhost
+from src.db_config import connect_to_mysql_localhost, connect_to_mysql_mdcserver
 from src.file_paths import get_file_path
 
 # Ensure the logs directory exists
@@ -38,25 +38,40 @@ def get_sql_query(file_name):
     with open(sql_file_path, "r", encoding="utf-8") as file:
         return file.read()
 
-def execute_query(query, chunk_size=10000):
+def execute_query(query, connection_type="local", database_name=None, chunk_size=10000):
     """
     Executes a SQL query and yields results in chunks.
-    :param query: SQL query to execute.
-    :param chunk_size: Number of rows to fetch per chunk.
-    :return: Generator yielding rows.
+    
+    Args:
+        query: SQL query to execute
+        connection_type: Either "local" or "mdc" to specify connection type
+        database_name: Required for MDC server connection
+        chunk_size: Number of rows to fetch per chunk
     """
-    with connect_to_mysql_localhost() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(query)
-            logging.info("Query executed successfully.")
-            column_names = [desc[0] for desc in cursor.description]  # Get column headers
-            yield column_names  # Yield headers first
-            
-            while True:
-                rows = cursor.fetchmany(chunk_size)
-                if not rows:
-                    break
-                yield rows
+    try:
+        if connection_type == "local":
+            conn = connect_to_mysql_localhost()
+        elif connection_type == "mdc":
+            conn = connect_to_mysql_mdcserver(database_name)
+        else:
+            raise ValueError("Invalid connection_type. Use 'local' or 'mdc'")
+
+        with conn:
+            with conn.cursor() as cursor:
+                cursor.execute(query)
+                logging.info(f"Query executed successfully on {connection_type} database.")
+                column_names = [desc[0] for desc in cursor.description]
+                yield column_names
+                
+                while True:
+                    rows = cursor.fetchmany(chunk_size)
+                    if not rows:
+                        break
+                    yield rows
+                    
+    except Exception as e:
+        logging.error(f"Database connection error: {e}")
+        raise
 
 def write_csv(output_path, column_names, data):
     """
@@ -71,10 +86,14 @@ def write_csv(output_path, column_names, data):
         writer.writerows(data)
     logging.info(f"Data written to file: {output_path}")
 
-def export_data(table_name):
+def export_data(table_name, connection_type="local", database_name=None):
     """
     Exports data by executing a query and saving the result to a CSV file.
-    :param table_name: Name of the table (used for both the SQL file and output file key).
+    
+    Args:
+        table_name: Name of the table
+        connection_type: Either "local" or "mdc"
+        database_name: Required for MDC server connection
     """
     try:
         output_path = get_file_path(f"{table_name}_query")
@@ -88,7 +107,7 @@ def export_data(table_name):
 
         with open(output_path, mode="w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
-            rows_iter = execute_query(query)
+            rows_iter = execute_query(query, connection_type, database_name)
             
             # Write column headers
             column_names = next(rows_iter)
