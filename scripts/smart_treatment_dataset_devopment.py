@@ -16,6 +16,8 @@ appointment_data = pd.read_csv(os.path.join(raw_data_dir, "appointment_data.csv"
 payment_data = pd.read_csv(os.path.join(raw_data_dir, "payment_data.csv"))
 communication_data = pd.read_csv(os.path.join(raw_data_dir, "commlog_data.csv"))
 proctp_data = pd.read_csv(os.path.join(raw_data_dir, "proctp_data.csv"))
+procedurelog_data = pd.read_csv(os.path.join(raw_data_dir, "procedurelog_data.csv"))
+
 
 # --- STEP 1: Aggregate proctp Data ---
 # Group proctp data by TreatPlanNum and calculate PlanAmt and AcceptedAmt. Logic must be distinct for presented amount and
@@ -28,6 +30,8 @@ treatment_plan_data = treatment_plan_data.merge(plan_amt_aggregated, on="TreatPl
 treatment_plan_data = treatment_plan_data.merge(accepted_amt_aggregated, on="TreatPlanNum", how="left")
 
 # display the df after the merge to inspect. 
+
+""" DEVELOPMENT NOTES
 
 # check and display missing row count. 
 # Fill missing PlanAmt and AcceptedAmt with 0
@@ -111,3 +115,4 @@ final_dataset = dataset[
 os.makedirs("processed_data", exist_ok=True)
 final_dataset.to_csv(output_file, index=False)
 print(f"Dataset saved to {output_file}")
+"""
