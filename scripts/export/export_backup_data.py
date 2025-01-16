@@ -1,7 +1,9 @@
+import argparse
 import os
 import csv
 import logging
-from src.db_config import connect_to_mysql_mdcserver
+from datetime import datetime
+from src.db_config import connect_to_mysql_mdcserver, get_available_backups, validate_backup_schema
 from src.file_paths import file_paths
 
 # Configure logging
@@ -11,6 +13,16 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()]
 )
 
+def list_available_backups():
+    """Prints available backup databases and their dates."""
+    backups = get_available_backups()
+    print("\nAvailable backup databases:")
+    print("Schema Name".ljust(40) + "Backup Date")
+    print("-" * 60)
+    for schema, date in backups.items():
+        date_str = date.strftime("%B %d, %Y") if date else "N/A"
+        print(f"{schema.ljust(40)}{date_str}")
+
 def get_sql_query(table_name):
     """Reads SQL query from the sql directory"""
     sql_directory = os.path.join(os.path.dirname(__file__), "sql")
@@ -19,15 +31,14 @@ def get_sql_query(table_name):
     with open(sql_file_path, "r", encoding="utf-8") as file:
         return file.read()
 
-def export_backup_tables(backup_database, chunk_size=10000):
-    """
-    Export specified tables from backup database using chunked processing.
-    Only exports tables that have corresponding SQL queries defined in file_paths.py.
-    
-    Args:
-        backup_database: Name of the backup database to connect to
-        chunk_size: Number of records to process at once (default: 10000)
-    """
+def export_backup_tables(backup_database: str, chunk_size: int = 10000):
+    """Export specified tables from backup database using chunked processing."""
+    if not validate_backup_schema(backup_database):
+        raise ValueError(
+            f"Invalid backup database: {backup_database}\n"
+            "Use --list to see available backup databases."
+        )
+
     conn = connect_to_mysql_mdcserver(backup_database)
     tables_to_export = [key.replace("_query", "") for key in file_paths if key.endswith("_query")]
     
@@ -62,7 +73,35 @@ def export_backup_tables(backup_database, chunk_size=10000):
     conn.close()
 
 if __name__ == "__main__":
-    backup_db = "opendental_backup_01_23_2024"  # Update this as needed
-    logging.info(f"Starting export of specified tables from {backup_db}...")
-    export_backup_tables(backup_db)
+    parser = argparse.ArgumentParser(
+        description="Export data from OpenDental backup database"
+    )
+    parser.add_argument(
+        "--backup", 
+        type=str,
+        help="Name of the backup database to export from"
+    )
+    parser.add_argument(
+        "--list", 
+        action="store_true",
+        help="List available backup databases"
+    )
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=10000,
+        help="Number of records to process at once (default: 10000)"
+    )
+
+    args = parser.parse_args()
+
+    if args.list:
+        list_available_backups()
+        exit(0)
+
+    if not args.backup:
+        parser.error("Please specify a backup database with --backup or use --list to see available options")
+
+    logging.info(f"Starting export of specified tables from {args.backup}...")
+    export_backup_tables(args.backup, args.chunk_size)
     logging.info("Export completed") 
