@@ -92,28 +92,33 @@ def get_table_count(connection) -> int:
     cursor.close()
     return len(tables)
 
-def export_backup_to_local():
+def export_backup_to_local(backup_db_name=None):
     """
-    Exports the latest backup from MDC server to local MySQL database.
-    Returns the name of the created database.
+    Export a specific backup from MDC server to local MySQL
+    Args:
+        backup_db_name (str, optional): Name of the backup database to export. 
+                                      If None, uses latest backup.
+    Returns:
+        str: Name of the local database created
     """
     try:
-        # Get latest backup name
-        backups = get_available_backups()  # Now gets dynamic list of backups, excluding live DB
-        if not backups:
-            raise ValueError("No backup databases found on MDC server")
+        # Get latest backup name if none provided
+        if not backup_db_name:
+            backups = get_available_backups()  # Gets dynamic list of backups
+            if not backups:
+                raise ValueError("No backup databases found on MDC server")
+            backup_db_name = max(backups.items(), key=lambda x: x[1])[0]
             
-        latest_backup = max(backups.items(), key=lambda x: x[1])[0]
-        logging.info(f"Latest backup found: {latest_backup}")
+        logging.info(f"Using backup database: {backup_db_name}")
         
         # Get source table count
-        mdc_conn = connect_to_mysql_mdcserver(latest_backup)
+        mdc_conn = connect_to_mysql_mdcserver(backup_db_name)
         source_table_count = get_table_count(mdc_conn)
         logging.info(f"Source database has {source_table_count} tables")
         mdc_conn.close()
         
         # Create local database name
-        local_db_name = f"opendental_analytics_{latest_backup}"
+        local_db_name = f"opendental_analytics_{backup_db_name}"
         
         # Create temp directory for backup file
         temp_dir = Path("temp")
@@ -122,7 +127,7 @@ def export_backup_to_local():
         
         try:
             # Step 1: Export from MDC server
-            logging.info(f"Exporting {latest_backup} from MDC server...")
+            logging.info(f"Exporting {backup_db_name} from MDC server...")
             dump_cmd = [
                 "mysqldump",
                 "-h", "192.168.2.10",
@@ -132,7 +137,7 @@ def export_backup_to_local():
                 "--skip-lock-tables",
                 "--set-gtid-purged=OFF",
                 "--result-file", str(backup_file),
-                latest_backup
+                backup_db_name
             ]
             
             subprocess.run(dump_cmd, capture_output=True, text=True, check=True)
