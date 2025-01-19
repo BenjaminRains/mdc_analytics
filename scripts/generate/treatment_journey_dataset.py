@@ -26,7 +26,8 @@ def generate_treatment_journey_dataset(local_db_name: str):
     logging.info("SQL query prepared with correct database name")
     
     try:
-        conn = connect_to_mysql_localhost(database=local_db_name)
+        # Connect to the local database
+        conn = connect_to_mysql_localhost(local_db_name)
         
         # Execute query with progress updates
         chunks = []
@@ -71,8 +72,6 @@ def generate_treatment_journey_dataset(local_db_name: str):
             conn.close()
 
 if __name__ == "__main__":
-    import sys
-    
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -82,12 +81,10 @@ if __name__ == "__main__":
         ]
     )
     
-    if len(sys.argv) != 2:
-        print("Usage: python treatment_journey_dataset.py <database_name>")
-        sys.exit(1)
-    
-    database_name = sys.argv[1]
     try:
+        # Manually input the database name
+        database_name = input("Enter the database name: ")
+        
         output_path = generate_treatment_journey_dataset(database_name)
         print(f"Dataset generated successfully at: {output_path}")
     except Exception as e:
