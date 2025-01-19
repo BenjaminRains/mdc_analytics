@@ -1,14 +1,13 @@
 import logging
 import pandas as pd
-import pyarrow as pa
-import pyarrow.parquet as pq
 from pathlib import Path
 from src.db_config import connect_to_mysql_localhost
 import mysql.connector
 
 def generate_treatment_journey_dataset(local_db_name: str):
     """
-    Generates treatment journey dataset from local database and saves to parquet
+    Generates treatment journey dataset from local database and saves to parquet.
+    Requires indexes to be set up first for optimal performance.
     """
     logging.info(f"Starting dataset generation from {local_db_name}...")
     
@@ -21,15 +20,13 @@ def generate_treatment_journey_dataset(local_db_name: str):
     
     with open(query_path, 'r') as file:
         query = file.read()
-        
-    # Replace any hardcoded database names with the correct one
-    query = query.replace('opendentalbackup_01_03_2025', local_db_name)
+    
+    # Replace database name in query if needed
     query = query.replace('USE opendentalbackup_01_03_2025', f'USE {local_db_name}')
     logging.info("SQL query prepared with correct database name")
     
-    logging.info("Executing query...")
     try:
-        conn = connect_to_mysql_localhost(database_name=local_db_name)
+        conn = connect_to_mysql_localhost(database=local_db_name)
         
         # Execute query with progress updates
         chunks = []
@@ -47,18 +44,17 @@ def generate_treatment_journey_dataset(local_db_name: str):
         logging.info("Query complete, combining chunks...")
         df = pd.concat(chunks, ignore_index=True)
         
-        # Save to parquet with optimized settings
+        # Save to parquet
         output_dir = Path("data/processed")
         output_dir.mkdir(parents=True, exist_ok=True)
         
         output_path = output_dir / f"treatment_journey_{local_db_name}.parquet"
         logging.info(f"Saving dataset to {output_path}")
         
-        # Use pyarrow for better performance
         df.to_parquet(
             output_path,
             engine='pyarrow',
-            compression='snappy',  # Good balance of speed and size
+            compression='snappy',
             index=False
         )
         
@@ -68,7 +64,7 @@ def generate_treatment_journey_dataset(local_db_name: str):
     except mysql.connector.Error as e:
         logging.error(f"Database error: {str(e)}")
         if e.errno == 1049:  # Unknown database
-            logging.error(f"Database '{local_db_name}' does not exist. Did you run the export_backup_to_local.py first?")
+            logging.error(f"Database '{local_db_name}' does not exist")
         raise
     finally:
         if 'conn' in locals() and conn.is_connected():
@@ -77,7 +73,6 @@ def generate_treatment_journey_dataset(local_db_name: str):
 if __name__ == "__main__":
     import sys
     
-    # Setup logging
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -89,7 +84,6 @@ if __name__ == "__main__":
     
     if len(sys.argv) != 2:
         print("Usage: python treatment_journey_dataset.py <database_name>")
-        print("Example: python treatment_journey_dataset.py opendental_analytics_opendentalbackup_01_03_2025")
         sys.exit(1)
     
     database_name = sys.argv[1]

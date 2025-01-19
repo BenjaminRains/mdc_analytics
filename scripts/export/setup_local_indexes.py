@@ -4,16 +4,17 @@ import mysql.connector
 
 def setup_indexes(database_name: str):
     """
-    Sets up indexes on the local database for better query performance
+    Sets up indexes on the local database for better query performance.
+    These indexes are specifically optimized for treatment journey queries.
     """
-    logging.info("Setting up indexes for local database...")
+    logging.info(f"Setting up indexes for {database_name}...")
     
     # Connect to database
     conn = connect_to_mysql_localhost(database=database_name)
     cursor = conn.cursor()
     
     try:
-        # Define indexes - removed IF NOT EXISTS as it's not supported in older MySQL
+        # Define indexes for treatment journey analysis
         indexes = [
             "CREATE INDEX idx_proc_date ON procedurelog (ProcDate, ProcStatus)",
             "CREATE INDEX idx_proc_patient ON procedurelog (PatNum, ProcDate)",
@@ -30,6 +31,7 @@ def setup_indexes(database_name: str):
             try:
                 cursor.execute(index)
                 conn.commit()
+                logging.info(f"Created index: {index}")
             except mysql.connector.Error as err:
                 # Ignore if index already exists
                 if err.errno == 1061:  # Error code for duplicate key name
@@ -37,12 +39,11 @@ def setup_indexes(database_name: str):
                 else:
                     logging.warning(f"Error creating index: {err}")
         
-        # Analyze tables
+        # Analyze tables for query optimization
         tables = ["procedurelog", "patient", "paysplit", "claimproc", "adjustment"]
         for table in tables:
             try:
                 cursor.execute(f"ANALYZE TABLE {table}")
-                # Must fetch results to avoid unread result error
                 results = cursor.fetchall()
                 logging.info(f"Analyzed table: {table}")
             except mysql.connector.Error as err:
@@ -55,6 +56,7 @@ def setup_indexes(database_name: str):
     finally:
         cursor.close()
         conn.close()
+        logging.info("Index setup complete")
 
 if __name__ == "__main__":
     import sys

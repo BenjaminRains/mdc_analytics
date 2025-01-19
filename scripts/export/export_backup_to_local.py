@@ -5,9 +5,10 @@ import mysql.connector
 from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
-from src.db_config import get_available_backups, connect_to_mysql_localhost
+from src.db_config import get_available_backups, connect_to_mysql_localhost, connect_to_mysql_mdcserver
 from src.utils.connection_test import test_mysql_connection
 from .setup_local_indexes import setup_indexes
+from typing import List
 
 # Load environment variables
 load_dotenv()
@@ -24,7 +25,7 @@ def test_connections():
     try:
         # Test MDC connection
         logging.info("Testing MDC server connection...")
-        mdc_conn = connect_to_mysql_localhost()
+        mdc_conn = connect_to_mysql_mdcserver()
         mdc_conn.ping(reconnect=True)
         logging.info("MDC server connection successful")
         
@@ -60,26 +61,56 @@ def test_connections():
             local_conn.close()
         raise
 
+def get_required_tables() -> List[str]:
+    """List of tables required for the treatment journey dataset"""
+    return [
+        'procedurelog',
+        'procedurecode',
+        'patient',
+        'paysplit',
+        'payment',
+        'claimproc',
+        'adjustment',
+        'definition'
+    ]
+
+def validate_tables(connection, database: str, required_tables: List[str]) -> List[str]:
+    """Check which tables exist in the database"""
+    cursor = connection.cursor()
+    cursor.execute(f"SHOW TABLES FROM {database}")
+    existing_tables = {table[0] for table in cursor.fetchall()}
+    cursor.close()
+    
+    missing_tables = [table for table in required_tables if table not in existing_tables]
+    return missing_tables
+
+def get_table_count(connection) -> int:
+    """Get total number of tables in the database"""
+    cursor = connection.cursor()
+    cursor.execute("SHOW TABLES")
+    tables = cursor.fetchall()
+    cursor.close()
+    return len(tables)
+
 def export_backup_to_local():
     """
-    Exports the latest backup from MDC server to local MySQL database
-    Uses bpr user for all operations
+    Exports the latest backup from MDC server to local MySQL database.
+    Returns the name of the created database.
     """
     try:
-        # Create data directories if they don't exist
-        data_dir = Path("data")
-        (data_dir / "raw").mkdir(parents=True, exist_ok=True)
-        (data_dir / "processed").mkdir(parents=True, exist_ok=True)
-        
-        # Validate required environment variables
-        required_vars = ['MDC_DB_PASSWORD', 'DB_PASSWORD']
-        missing_vars = [var for var in required_vars if not os.getenv(var)]
-        if missing_vars:
-            raise EnvironmentError(f"Missing required environment variables: {', '.join(missing_vars)}")
-        
         # Get latest backup name
-        backups = get_available_backups()
+        backups = get_available_backups()  # Now gets dynamic list of backups, excluding live DB
+        if not backups:
+            raise ValueError("No backup databases found on MDC server")
+            
         latest_backup = max(backups.items(), key=lambda x: x[1])[0]
+        logging.info(f"Latest backup found: {latest_backup}")
+        
+        # Get source table count
+        mdc_conn = connect_to_mysql_mdcserver(latest_backup)
+        source_table_count = get_table_count(mdc_conn)
+        logging.info(f"Source database has {source_table_count} tables")
+        mdc_conn.close()
         
         # Create local database name
         local_db_name = f"opendental_analytics_{latest_backup}"
@@ -104,28 +135,18 @@ def export_backup_to_local():
                 latest_backup
             ]
             
-            result = subprocess.run(
-                dump_cmd,
-                capture_output=True,
-                text=True,
-                check=True
-            )
+            subprocess.run(dump_cmd, capture_output=True, text=True, check=True)
             
-            # Step 2: Create local database using bpr user
+            # Step 2: Create local database
             logging.info(f"Creating local database {local_db_name}...")
             create_cmd = [
                 "mysql",
                 "-u", "bpr",
                 f"-p{os.getenv('DB_PASSWORD')}",
-                "-e", f"CREATE DATABASE IF NOT EXISTS {local_db_name}"
+                "-e", f"DROP DATABASE IF EXISTS {local_db_name}; CREATE DATABASE {local_db_name}"
             ]
             
-            subprocess.run(
-                create_cmd,
-                capture_output=True,
-                text=True,
-                check=True
-            )
+            subprocess.run(create_cmd, capture_output=True, text=True, check=True)
             
             # Step 3: Import to local database
             logging.info("Importing to local database...")
@@ -137,29 +158,23 @@ def export_backup_to_local():
                     local_db_name
                 ]
                 
-                subprocess.run(
-                    import_cmd,
-                    stdin=infile,
-                    capture_output=True,
-                    text=True,
-                    check=True
+                subprocess.run(import_cmd, stdin=infile, capture_output=True, text=True, check=True)
+            
+            # Validate table count
+            local_conn = connect_to_mysql_localhost(local_db_name)
+            local_table_count = get_table_count(local_conn)
+            logging.info(f"Local database has {local_table_count} tables")
+            local_conn.close()
+            
+            if local_table_count != source_table_count:
+                raise ValueError(
+                    f"Table count mismatch! Source: {source_table_count}, "
+                    f"Local: {local_table_count}"
                 )
             
             logging.info(f"Successfully created and populated {local_db_name}")
-            
-            # Set up indexes after successful import
-            setup_indexes(local_db_name)
-            
+            logging.info(f"All {source_table_count} tables transferred successfully")
             return local_db_name
-            
-        except subprocess.CalledProcessError as e:
-            logging.error(f"Command failed: {' '.join(e.cmd)}")
-            logging.error(f"Error output: {e.stderr}")
-            raise
-            
-        except Exception as e:
-            logging.error(f"Unexpected error: {str(e)}")
-            raise
             
         finally:
             # Cleanup
