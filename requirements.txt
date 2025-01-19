@@ -1,12 +1,21 @@
-mysql-connector-python==8.0.33  # Ensure compatibility with MySQL server
-pandas==1.5.3                   # For data manipulation
+# Database
+mysql-connector-python>=8.0.0
+python-dotenv>=0.19.0
+
+# Data processing
+pandas>=2.0.0
+pyarrow>=14.0.1  # For parquet support
+fastparquet>=2023.10.1  # For optimized parquet writing
+
+# Utilities
+tqdm>=4.65.0  # Optional: for progress bars
+
 numpy==1.24.3                   # For numerical computations
 matplotlib==3.7.1               # For data visualization
 seaborn==0.12.2                 # For statistical data visualization
 openpyxl==3.1.2                 # For working with Excel files (.xlsx)
 xlrd==2.0.1                     # For working with older Excel files (.xls)
 csvkit==1.0.7                   # For advanced CSV processing
-python-dotenv==1.0.0            # For environment variable management
 requests==2.31.0                # For making HTTP requests
 jupyter==1.0.0                  # For running Jupyter notebooks
 ipykernel==6.21.3               # Jupyter kernel for Python
