@@ -1,23 +1,39 @@
 # Database
 mysql-connector-python>=8.0.0
-python-dotenv>=0.19.0
+python-dotenv>=1.0.0  # Updated for latest features
 
 # Data processing
-pandas>=2.0.0
-pyarrow>=14.0.1  # For parquet support
-fastparquet>=2023.10.1  # For optimized parquet writing
+pandas>=2.2.0  # Updated for Python 3.11 compatibility
+pyarrow>=14.0.1
+fastparquet>=2024.2.0  # Updated to latest stable
+
+# Analysis and ML
+numpy>=1.26.4  # Updated for Python 3.11 optimization
+scikit-learn>=1.4.0  # Added for ML capabilities
+scipy>=1.12.0  # Added for scientific computing
+
+# Visualization
+matplotlib>=3.8.2
+seaborn>=0.13.2
+plotly>=5.18.0  # Added for interactive visualizations
+
+# Excel/CSV Support
+openpyxl>=3.1.2
+xlrd>=2.0.1
+csvkit>=1.3.0
+
+# Development Tools
+jupyter>=1.0.0
+ipykernel>=6.29.0
+black>=24.1.1  # Added for code formatting
+isort>=5.13.2  # Added for import sorting
+pylint>=3.0.3  # Added for code quality
 
 # Utilities
-tqdm>=4.65.0  # Optional: for progress bars
+tqdm>=4.66.1
+requests>=2.31.0
+loguru>=0.7.2
+dask>=2024.2.0  # Updated for better large dataset handling
 
-numpy==1.24.3                   # For numerical computations
-matplotlib==3.7.1               # For data visualization
-seaborn==0.12.2                 # For statistical data visualization
-openpyxl==3.1.2                 # For working with Excel files (.xlsx)
-xlrd==2.0.1                     # For working with older Excel files (.xls)
-csvkit==1.0.7                   # For advanced CSV processing
-requests==2.31.0                # For making HTTP requests
-jupyter==1.0.0                  # For running Jupyter notebooks
-ipykernel==6.21.3               # Jupyter kernel for Python
-dask==2023.5.0                  # For parallel computing and handling large datasets
-loguru==0.7.0                   # For improved logging capabilities
+# Performance
+numba>=0.58.1  # Added for performance optimization

@@ -1,0 +1,77 @@
+Treatment Journey ML Analysis Questions
+=====================================
+
+These questions can be analyzed using the treatment_journey_ml dataset to improve patient care and practice operations.
+
+Treatment Journey Questions
+-------------------------
+1. What factors best predict treatment plan acceptance?
+2. How does procedure complexity (duration, multi-visit) affect acceptance rates?
+3. What is the typical time between treatment planning and completion?
+4. How do seasonal patterns affect treatment acceptance?
+
+Financial Behavior Questions
+--------------------------
+1. What factors predict payment within 30/60/90 days?
+2. How does insurance status affect treatment acceptance?
+3. How do existing balances impact new treatment acceptance?
+4. What is the relationship between family financial history and individual payment behavior?
+5. How do payment patterns vary by procedure category?
+
+Communication Pattern Questions
+-----------------------------
+1. How does communication frequency affect treatment acceptance?
+2. Which communication method (text, email, phone) is most effective?
+3. What is the optimal timing for patient communications?
+4. How does recent communication activity correlate with payment behavior?
+
+Appointment Behavior Questions
+----------------------------
+1. How do missed appointments predict future treatment acceptance?
+2. What is the relationship between appointment frequency and treatment completion?
+3. How does family appointment history affect individual behavior?
+4. What appointment patterns indicate risk of treatment plan abandonment?
+
+Patient Demographics & History
+----------------------------
+1. How do age and gender affect treatment acceptance and completion?
+2. What is the impact of family dental history on individual treatment decisions?
+3. How does patient longevity with the practice affect treatment acceptance?
+4. What patient characteristics predict long-term treatment success?
+
+Family Influence Questions
+------------------------
+1. How does family procedure history influence individual treatment decisions?
+2. What is the correlation between family missed appointments and individual behavior?
+3. How do family payment patterns affect individual payment likelihood?
+4. What is the impact of family size on treatment acceptance?
+
+Financial Risk Assessment
+-----------------------
+1. What combination of factors indicates high risk for payment default?
+2. How accurately can we predict insurance coverage utilization?
+3. What patterns indicate potential financial barriers to treatment?
+4. How do adjustments and insurance payments affect patient payment behavior?
+
+Operational Insights
+------------------
+1. How does procedure duration affect scheduling and completion rates?
+2. What is the relationship between provider time and treatment acceptance?
+3. How do different procedure categories perform in terms of completion rates?
+4. What scheduling patterns optimize treatment acceptance and completion?
+
+Patient Engagement Metrics
+------------------------
+1. What communication patterns indicate high patient engagement?
+2. How does engagement level correlate with treatment success?
+3. What combination of factors predicts long-term patient retention?
+4. How do different communication strategies affect patient outcomes?
+
+Risk Stratification
+-----------------
+1. What factors identify high-risk patients for treatment abandonment?
+2. How can we predict likelihood of missed appointments?
+3. What patterns indicate potential financial default risk?
+4. How can we identify patients likely to need additional support?
+
+Note: These questions can be used to guide the development of machine learning models and statistical analyses using the treatment_journey_ml dataset. Each question may require different feature engineering approaches and modeling techniques.
