@@ -1,67 +1,36 @@
-OpenDental Data Export Tools
-===========================
-
 Overview
---------
-These scripts export data from OpenDental databases to CSV files for analysis. Data can be exported from either:
-- MDC server backup databases
-- Local OpenDental database
+The MDC Project is designed to bridge operational (OLTP) and analytical (OLAP) data workflows for a dental practice using OpenDental. By maintaining two distinct databases, this project enables the efficient capture and transformation of data, ultimately empowering advanced analytics such as machine learning, dashboard reporting, and financial analysis.
 
-The exports are configured to:
-- Pull the last 4 years of data
-- Process large tables in chunks
-- Mask sensitive information
-- Save to standardized CSV files
+Architecture
+OLTP Database
 
-Available Scripts
----------------
+Name: opendental
+Purpose: Day-to-day operations of the dental practice (scheduling, patient records, real-time transaction logging).
+Characteristics: Highly transactional, frequently updated during business hours.
+OLAP Database
 
-1. Export from MDC Server Backups (export_backup_data.py)
-2. Export from Local OpenDental Database (export_local_data.py)
+Name: mdc_analytics_opendentalbackup_01_03_2025
+Purpose: Data warehousing and analytical queries (patient behavior modeling, resource management, financial reporting, etc.).
+Characteristics: Heavily indexed to optimize read performance for various analytical workflows.
+Data Pipeline Components
+pipeline.py
 
+Description: Extracts data from the OLTP database (opendental) and loads it into the OLAP database (mdc_analytics_opendentalbackup_01_03_2025).
+Key Functions:
+Connect to both databases.
+Run extraction queries or procedures on the OLTP database.
+Load and/or append data into the OLAP database tables for analytical use.
+setup_indexes.py
 
-Directory Structure
------------------
-mdc_analytics/
-├── raw_data/ # CSV output directory
-├── scripts/
-│ └── export/
-│ ├── sql/ # SQL query files
-│ ├── export_backup_data.py
-│ └── export_local_data.py
-└── src/
-├── db_config.py # Database configurations
-└── file_paths.py # File path mappings
+Description: Creates and modifies indexes on the OLAP database tables to optimize query performance.
+Key Functions:
+Establish index strategies based on anticipated analytical queries.
+Transform the raw schema into a more efficient design suitable for OLAP processes.
+Other SQL Scripts
 
-
-Configured Tables
----------------
-Clinical Data:
-- appointment, appointmenttype, apptfield
-- procedurelog, procedurecode, procnote, proctp
-- perioexam, periomeasure
-- treatplan
-
-Financial Data:
-- adjustment, payment, payplan, paysplit
-- claim, claimpayment, claimproc
-- fee, insbluebook, insbluebooklog
-
-Reference Data:
-- carrier, definition, referral
-- schedule, recall
-
-Important Notes
--------------
-1. Never use the live "opendental" database
-2. Large tables are processed in chunks (default: 10,000 rows)
-3. Exports limited to past 4 years
-4. Sensitive data (SSN, etc.) is masked
-5. All data saved to: C:\Users\rains\mdc_analytics\raw_data\
-
-Requirements
------------
-- requirements.txt file contains all dependencies
-- Python 3.x
-- MySQL Connector
+Description: Includes a variety of data transformation and aggregation scripts to generate feature-rich datasets.
+Use Cases:
+Machine Learning: Building training datasets for predictive models.
+Dashboards/Reporting: Feeding aggregated metrics into Tableau or other BI tools.
+Financial & Operational Analysis: Generating specialized reports on transactions, procedures, patient details, and more.
 - Database access credentials
