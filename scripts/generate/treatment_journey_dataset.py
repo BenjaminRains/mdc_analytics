@@ -1,8 +1,9 @@
 import logging
 import pandas as pd
 from pathlib import Path
-from src.db_config import connect_to_mysql_localhost
+from src.db_config import connect_to_mariadb
 import mysql.connector
+import sys
 
 def generate_treatment_journey_dataset(local_db_name: str):
     """
@@ -27,7 +28,7 @@ def generate_treatment_journey_dataset(local_db_name: str):
     
     try:
         # Connect to the local database
-        conn = connect_to_mysql_localhost(local_db_name)
+        conn = connect_to_mariadb()
         
         # Execute query with progress updates
         chunks = []
@@ -52,6 +53,7 @@ def generate_treatment_journey_dataset(local_db_name: str):
         output_path = output_dir / f"treatment_journey_{local_db_name}.parquet"
         logging.info(f"Saving dataset to {output_path}")
         
+        # Overwrite existing parquet file
         df.to_parquet(
             output_path,
             engine='pyarrow',
