@@ -1,0 +1,3 @@
+there are two records with ProcDate = '1902-XX-XX'. These records need to be updated or ProcDate needs to be NULL
+
+investigate adjustment.Note = [empty]. There are 1000+ records with this value. 

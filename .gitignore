@@ -1,0 +1,191 @@
+# Ignore exported CSV files and parquet files
+*.csv
+*.parquet
+# Ignore temporary files
+*.tmp
+*.log
+
+# Ignore database configuration files
+*.db
+
+# Ignore all files in a specific directory
+/src/
+/temp/
+/data/
+/test/
+/logs/
+
+# Ignore OS-generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Ignore Python virtual environments
+venv/
+.env
+mdc_analytics_env/
+
+# Ignore IDE or editor settings
+.vscode/
+.idea/
+
+# Ignore compiled code
+*.class
+*.pyc
+*.o
+*.out
+
+# Ignore sensitive credential files (if any)
+config.yaml
+config.json
+credentials.txt
+
+# Add these new entries:
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb_checkpoints/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# ML specific
+*.h5
+*.pkl
+*.model
+*.joblib
+
+# Environment
+.python-version
+.env
+
+# Logs and databases
+*.log
+*.sqlite
+*.db-journal
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# Sensitive configuration files
+**/mdc_opendental_config.txt
+**/CDT Content End User License.txt
+
+# OpenDental specific
+**/opendental_diagnostics_config.txt
+**/opendental.config
+**/opendental.license
+**/CDT*.txt
+**/CDT*.pdf
+
+# Database credentials and configs
+**/*.config
+**/*.connection
+**/connection.json
+**/credentials.json
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs and diagnostics
+**/logs/
+**/diagnostics/
+**/*.log
+
+# Cache and temporary files
+**/__pycache__/
+**/.pytest_cache/
+**/.coverage
+**/htmlcov/
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Python
+**/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+*.pyc
+
+# Virtual Environments
+venv/
+mdc_analytics_env/
+.python-version
+
+# Environment Variables & Credentials
+.env*
+/src/connections/**/*.config
+/src/connections/**/*.connection
+/src/connections/**/connection.json
+/src/connections/**/credentials.json
+/src/db_config.py
+/src/file_paths.py
+
+# But track templates
+!/src/db_config.template.py
+!/src/file_paths.template.py
+!.env.template
+
+# Data and Export Files (with .gitkeep)
+/data/*
+!/data/.gitkeep
+/exports/*
+!/exports/.gitkeep
+/logs/*
+!/logs/.gitkeep
+/reports/figures/*
+!/reports/figures/.gitkeep
+/reports/model_results/*
+!/reports/model_results/.gitkeep
+/temp/*
+/test/*
+
+# IDE Settings
+.vscode/
+.idea/
+
+# OpenDental Specific
+**/opendental_diagnostics_config.txt
+**/opendental.config
+**/opendental.license
+**/CDT*.txt
+**/CDT*.pdf
+**/mdc_opendental_config.txt
+**/CDT Content End User License.txt
+
+# Keep these directories but ignore their contents
+/data/*
+!/data/.gitkeep
+/exports/*
+!/exports/.gitkeep
+/logs/*
+!/logs/.gitkeep
+/reports/figures/*
+!/reports/figures/.gitkeep
+/reports/model_results/*
+!/reports/model_results/.gitkeep
+
+# Sensitive Source Files
+/src/db_config.py
+/src/file_paths.py
+.env
+
+# Specific paths containing sensitive data
+/mdc_analytics/raw_data/
+/src/connections/
+
