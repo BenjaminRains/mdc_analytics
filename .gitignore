@@ -15,6 +15,7 @@
 /test/
 /logs/
 /notebooks/
+/scripts/utils/
 
 # Ignore OS-generated files
 .DS_Store
