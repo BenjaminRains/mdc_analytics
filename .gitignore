@@ -9,13 +9,13 @@
 *.db
 
 # Ignore all files in a specific directory
-/src/
 /temp/
 /data/
 /test/
 /logs/
 /notebooks/
-/scripts/utils/
+/src/connections/
+
 
 # Ignore OS-generated files
 .DS_Store
@@ -186,7 +186,4 @@ mdc_analytics_env/
 /src/file_paths.py
 .env
 
-# Specific paths containing sensitive data
-/mdc_analytics/raw_data/
-/src/connections/
 
