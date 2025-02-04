@@ -1,10 +1,17 @@
 import logging
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Union
 import mysql.connector
 from src.db_config import connect_to_mariadb
-from scripts.sql.treatment_journey_ml.index_configs import TREATMENT_JOURNEY_INDEXES
-from scripts.sql.database_setup.index_configs import BASE_INDEXES
+
+# Import base indexes
+from scripts.sql.database_setup.base_index_configs import BASE_INDEXES
+
+# Optional import for treatment journey indexes
+try:
+    from scripts.sql.treatment_journey_ml.ml_index_configs import TREATMENT_JOURNEY_INDEXES
+except ImportError:
+    TREATMENT_JOURNEY_INDEXES = []
 
 class IndexManager:
     """Manages database indexes for ETL jobs and base configuration"""
@@ -45,11 +52,17 @@ class IndexManager:
         except mysql.connector.Error as err:
             self.logger.error(f"Error getting indexes for {table}: {err}")
     
-    def setup_indexes(self, indexes: List[str]) -> None:
-        """Sets up provided index statements"""
+    def setup_indexes(self, indexes: Union[Path, List[str]]) -> None:
+        """Sets up provided index statements or reads from file"""
         self.logger.info(f"Setting up indexes for {self.database_name}")
         
         try:
+            # If indexes is a Path, read the file
+            if isinstance(indexes, Path):
+                index_statements = self.read_index_file(indexes)
+            else:
+                index_statements = indexes
+            
             conn = connect_to_mariadb()
             cursor = conn.cursor()
             
@@ -57,7 +70,7 @@ class IndexManager:
             cursor.execute(f"USE {self.database_name}")
             
             # Create indexes
-            for index in indexes:
+            for index in index_statements:
                 try:
                     cursor.execute(index)
                     conn.commit()

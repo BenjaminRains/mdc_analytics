@@ -55,6 +55,32 @@ output_path = main(
 )
 ```
 
+### Database Indexes
+The ETL job automatically sets up required indexes for optimal performance:
+
+```python
+# Treatment Journey specific indexes
+TREATMENT_JOURNEY_INDEXES = [
+    # Patient demographics
+    "CREATE INDEX idx_pat_ml_core ON patient (PatNum, PatStatus, Gender, BirthDate)",
+    "CREATE INDEX idx_pat_ml_insurance ON patient (HasIns, InsCarrier)",
+    
+    # Procedure tracking
+    "CREATE INDEX idx_proc_ml_core ON procedurelog (PatNum, ProcDate, ProcStatus, ProcFee)",
+    "CREATE INDEX idx_proc_ml_codes ON procedurelog (CodeNum, ProcStatus, ProcFee)",
+    
+    # Insurance and payments
+    "CREATE INDEX idx_claim_ml_core ON claim (PatNum, DateService, ClaimStatus)",
+    "CREATE INDEX idx_payment_ml_core ON payment (PatNum, PayDate, PayAmt, PayType)"
+]
+```
+
+These indexes support:
+- Fast patient demographic lookups
+- Efficient procedure history access
+- Optimized insurance claim processing
+- Quick payment tracking
+
 ### Output Files
 The ETL job produces separate files for each database connection:
 ```
@@ -88,14 +114,16 @@ csv_path = saved_paths['csv']
 
 1. **Setup**
    - Validates database connection
-   - Creates required indexes for performance
+   - Creates required ML-specific indexes
    - Ensures output directories exist
+   - Verifies SQL file locations
 
 2. **Extract**
+   - Uses optimized indexes for faster queries
    - Processes data in 10,000 row chunks
    - Supports large datasets
-   - Handles both MySQL and MariaDB connections
-   - Ensures proper connection cleanup
+   - Handles both MySQL and MariaDB
+   - Ensures proper cleanup
 
 3. **Transform**
    - Validates data against rules
@@ -145,10 +173,16 @@ VALIDATION_RULES = {
 - pyarrow: Parquet file handling
 - mysql-connector-python: Database connectivity
 
-## Required Files
-Place SQL files in `{base_dir}/sql/treatment_journey_ml/`:
-- `query.sql`: Main extraction query
-- `indexes.sql`: Index definitions
+## Required Files and Paths
+```
+{base_dir}/
+├── sql/
+│   └── treatment_journey_ml/
+│       ├── query.sql          # Main extraction query
+│       └── index_configs.py   # Index definitions
+└── processed/
+    └── treatment_journey_ml/  # Output directory
+```
 
 ## Error Handling
 - Comprehensive logging at each step
@@ -169,6 +203,13 @@ The ETL job calculates and logs:
 - Compressed file output
 - Connection pooling support
 
+## Performance Optimization
+- **Indexes**: ML-specific indexes for faster queries
+- **Chunking**: Processes large datasets in manageable chunks
+- **Compression**: Uses snappy compression for output files
+- **Connection**: Pooling support for better database performance
+- **Memory**: Efficient memory usage with chunked processing
+
 ## File Naming Convention
 Output files follow this pattern:
 ```
@@ -187,21 +228,30 @@ Run the test script to verify ETL functionality:
 python -m scripts.etl.treatment_journey_ml.test_etl
 ```
 
-The test script will:
-1. Run ETL for both MariaDB and MySQL
-2. Verify data quality
-3. Check file outputs
-4. Display basic statistics
+The test script:
+1. Verifies database connections
+2. Checks index creation
+3. Runs ETL for both MariaDB and MySQL
+4. Validates output data quality
+5. Displays performance metrics
+6. Ensures proper file creation
 
-## Metrics
-The ETL job calculates and logs:
-- Total procedures processed
-- Average procedure fee
-- 30-day payment rate
-- Insurance payment accuracy
+Example test output:
+```
+=== Testing MariaDB ETL ===
+Setting up indexes...
+Created index: idx_pat_ml_core
+Created index: idx_proc_ml_core
+Extracted 50,000 rows
+Transformed data shape: (50000, 15)
+Data saved to: .../treatment_journey_local_mariadb.parquet
 
-## Performance
-- Chunked data processing
-- Efficient database indexes
-- Compressed file output
-- Connection pooling support 
+Data Quality Checks:
+Total rows: 50,000
+Missing values: 123
+Age range: 0 - 98
+Average procedure fee: $234.56
+Insurance accuracy: 92.3%
+
+=== Testing MySQL ETL ===
+[Similar output for MySQL...] 

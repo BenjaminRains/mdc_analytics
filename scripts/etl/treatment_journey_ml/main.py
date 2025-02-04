@@ -10,6 +10,7 @@ from src.connections.factory import ConnectionFactory
 from src.file_paths import DataPaths
 from .transform import transform_data, calculate_metrics
 from .load import save_data
+from scripts.sql.treatment_journey_ml.index_configs import TREATMENT_JOURNEY_INDEXES
 
 class TreatmentJourneyETL(ETLJob):
     """ETL job for generating treatment journey dataset"""
@@ -29,12 +30,17 @@ class TreatmentJourneyETL(ETLJob):
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
         self.chunk_size = 10000
+        
+        # Use indexes directly from Python config
+        self.indexes = TREATMENT_JOURNEY_INDEXES
     
     def setup(self) -> None:
-        """Setup required indexes"""
+        """Setup required database indexes"""
         self.logger.info("Setting up indexes...")
         index_manager = IndexManager(self.database_name)
-        index_manager.setup_indexes(self.indexes_path)
+        
+        # Pass index list directly instead of file path
+        index_manager.setup_indexes(self.indexes)
     
     def extract(self) -> pd.DataFrame:
         """Execute main query with chunking"""

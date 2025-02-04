@@ -1,12 +1,13 @@
 """
 OpenDental Base Index Configurations
 
-This module defines comprehensive indexes supporting:
-1. Core business operations
+This module defines comprehensive indexes supporting core operations:
+1. Business operations
 2. Analytics and reporting
-3. Machine learning data extraction
+3. Data integrity validation
 4. Performance optimization
-5. Data integrity validation
+
+Note: ML-specific indexes are defined in treatment_journey_ml/ml_index_configs.py
 
 Index Naming Convention:
 - idx_[table]_[purpose]: Basic index pattern
