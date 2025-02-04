@@ -1,0 +1,3 @@
+*.sql linguist-language=SQL
+*.py linguist-language=Python
+scripts/sql/**/*.sql linguist-detectable=true 
