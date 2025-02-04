@@ -5,19 +5,38 @@
 
     -- Communication Features
     
-    -- Days since last communication (through guarantor)
-    (SELECT DATEDIFF(CURDATE(), DATE(MAX(commlog.CommDateTime))) 
-     FROM commlog 
-     JOIN patient p ON commlog.PatNum = p.PatNum
-     WHERE p.Guarantor = pat.Guarantor
-     AND commlog.CommType = 0
-     AND (
-         LOWER(SUBSTRING(commlog.Note, 1, 12)) LIKE 'patient text%' OR
-         LOWER(SUBSTRING(commlog.Note, 1, 10)) LIKE 'email sent%' OR
-         LOWER(SUBSTRING(commlog.Note, 1, 10)) LIKE 'phone call%' OR
-         LOWER(SUBSTRING(commlog.Note, 1, 5)) LIKE 'call%' OR
-         LOWER(SUBSTRING(commlog.Note, 1, 12)) LIKE 'left message%'
-     )) as DaysSinceLastComm,
+ -- Days since last communication (through guarantor)
+    CASE 
+        WHEN EXISTS (
+            SELECT 1 
+            FROM commlog 
+            JOIN patient p ON commlog.PatNum = p.PatNum
+            WHERE p.Guarantor = pat.Guarantor
+            AND commlog.CommType = 0
+            AND commlog.CommDateTime <= CURDATE()  -- Ensure no future dates
+            AND (
+                LOWER(SUBSTRING(commlog.Note, 1, 12)) LIKE 'patient text%' OR
+                LOWER(SUBSTRING(commlog.Note, 1, 10)) LIKE 'email sent%' OR
+                LOWER(SUBSTRING(commlog.Note, 1, 10)) LIKE 'phone call%' OR
+                LOWER(SUBSTRING(commlog.Note, 1, 5)) LIKE 'call%' OR
+                LOWER(SUBSTRING(commlog.Note, 1, 12)) LIKE 'left message%'
+            )
+        ) THEN 
+            (SELECT DATEDIFF(CURDATE(), DATE(MAX(commlog.CommDateTime))) 
+             FROM commlog 
+             JOIN patient p ON commlog.PatNum = p.PatNum
+             WHERE p.Guarantor = pat.Guarantor
+             AND commlog.CommType = 0
+             AND commlog.CommDateTime <= CURDATE()  -- Ensure no future dates
+             AND (
+                 LOWER(SUBSTRING(commlog.Note, 1, 12)) LIKE 'patient text%' OR
+                 LOWER(SUBSTRING(commlog.Note, 1, 10)) LIKE 'email sent%' OR
+                 LOWER(SUBSTRING(commlog.Note, 1, 10)) LIKE 'phone call%' OR
+                 LOWER(SUBSTRING(commlog.Note, 1, 5)) LIKE 'call%' OR
+                 LOWER(SUBSTRING(commlog.Note, 1, 12)) LIKE 'left message%'
+             ))
+        ELSE NULL  -- No valid communication records found
+    END as DaysSinceLastComm,
     
     -- Total communication counts by type (lifetime)
     (SELECT COUNT(*) 

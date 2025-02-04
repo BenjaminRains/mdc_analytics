@@ -34,23 +34,27 @@ class IndexManager:
             return indexes
     
     def drop_custom_indexes(self, cursor, table: str) -> None:
-        """Drops all indexes that start with 'idx_' from a table"""
+        """Drops ML-specific indexes (those that start with 'idx_ml_')"""
         try:
             cursor.execute(f"SHOW INDEX FROM {table}")
             indexes = cursor.fetchall()
             
-            # Get list of custom index names (starting with 'idx_')
-            custom_indexes = [idx[2] for idx in indexes if idx[2].startswith('idx_')]
+            # Get list of ML-specific index names
+            ml_indexes = [idx[2] for idx in indexes if idx[2].startswith('idx_ml_')]
             
-            for index_name in custom_indexes:
+            for index_name in ml_indexes:
                 try:
                     cursor.execute(f"DROP INDEX {index_name} ON {table}")
-                    self.logger.info(f"Dropped index {index_name} from {table}")
+                    self.logger.info(f"Dropped ML index {index_name} from {table}")
                 except mysql.connector.Error as err:
-                    self.logger.warning(f"Error dropping index {index_name}: {err}")
+                    self.logger.warning(f"Error dropping ML index {index_name}: {err}")
                     
         except mysql.connector.Error as err:
             self.logger.error(f"Error getting indexes for {table}: {err}")
+
+    def is_ml_index(self, index_name: str) -> bool:
+        """Check if an index is an ML-specific index"""
+        return index_name.lower().startswith('idx_ml_')
     
     def setup_indexes(self, indexes: Union[Path, List[str]]) -> None:
         """Sets up provided index statements or reads from file"""

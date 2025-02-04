@@ -3,11 +3,22 @@
 -- Last updated: 2025-01-31
 
 -- Main query for treatment journey dataset
-SELECT 
+
     -- Identifiers and Dates
     proc.ProcNum,
     proc.ProcDate,
     proc.DateTP as PlanDate,
+    
+    -- Treatment Planning Features (NEW)
+    CASE 
+        WHEN proc.DateTP = '0001-01-01' THEN NULL
+        ELSE DATEDIFF(proc.ProcDate, proc.DateTP)
+    END as DaysFromPlanToProc,
+    
+    CASE 
+        WHEN proc.DateTP = '0001-01-01' THEN 0
+        ELSE 1
+    END as WasPlanned,
     
     -- Patient Features
     proc.PatNum,
