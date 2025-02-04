@@ -3,6 +3,42 @@
 ## Overview
 This ETL pipeline processes OpenDental data to create datasets for treatment plan analysis and ML modeling. It handles patient demographics, procedure details, insurance data, and payment information.
 
+## Data Types
+
+### Input Data
+- **Patient Demographics**
+  - PatNum (INT): Unique patient identifier
+  - Gender (CHAR): Patient gender (M/F)
+  - PatientAge (INT): Age at procedure time
+  - HasInsurance (BOOL): Insurance coverage status
+
+- **Communication Data**
+  - TextCommCount (INT): Number of text communications
+  - EmailCommCount (INT): Number of email communications
+  - PhoneCommCount (INT): Number of phone communications
+  - DaysSinceLastComm (INT): Days since last communication
+
+- **Appointment Data**
+  - DaysSinceLastAppointment (INT): Days since last visit
+  - TotalAppointmentsLast2Years (INT): Appointment count
+  - DayOfWeek (INT): Day of procedure (0-6)
+
+- **Financial Data**
+  - Balance_0_30_Days (DECIMAL): Current balance
+  - Balance_31_60_Days (DECIMAL): 31-60 day balance
+  - Balance_61_90_Days (DECIMAL): 61-90 day balance
+  - Balance_Over_90_Days (DECIMAL): 90+ day balance
+  - InsuranceEstimate (DECIMAL): Expected insurance coverage
+
+### Output Data (Target Variables)
+- **Treatment Acceptance**
+  - target_accepted (BOOL): Treatment plan acceptance
+
+- **Payment Timeline**
+  - target_paid_30d (BOOL): Paid within 30 days
+  - target_paid_60d (BOOL): Paid within 60 days
+  - target_paid_90d (BOOL): Paid within 90 days
+
 ## Components
 
 ### Core Classes
