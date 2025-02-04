@@ -165,43 +165,79 @@ FROM FeeSchedStats
 WHERE ProcedureCount > 0 OR PatientCount > 0 OR ProviderCount > 0
 ORDER BY ProcedureCount DESC, PatientCount DESC;
 
--- 3d. Fee Schedule Coverage Analysis
-WITH ProcedureCounts AS (
+-- 3c. Fee Schedule Distribution Analysis (Optimized)
+WITH ActiveFeeScheds AS (
+    -- First get only active fee schedules to limit joins
     SELECT 
-        proc.ProcNum,
-        CASE WHEN pat_fee.FeeNum IS NOT NULL THEN 1 ELSE 0 END as Has_Patient_Fee,
-        CASE WHEN prov_fee.FeeNum IS NOT NULL THEN 1 ELSE 0 END as Has_Provider_Fee
+        fs.FeeSchedNum,
+        fs.Description,
+        fs.FeeSchedType,
+        fs.IsHidden
+    FROM feesched fs
+    WHERE fs.IsHidden = 0
+),
+PatientCounts AS (
+    -- Get patient counts separately
+    SELECT 
+        FeeSched,
+        COUNT(DISTINCT PatNum) as PatientCount
+    FROM patient 
+    WHERE FeeSched IN (SELECT FeeSchedNum FROM ActiveFeeScheds)
+    GROUP BY FeeSched
+),
+ProviderCounts AS (
+    -- Get provider counts separately
+    SELECT 
+        FeeSched,
+        COUNT(DISTINCT ProvNum) as ProviderCount
+    FROM provider 
+    WHERE FeeSched IN (SELECT FeeSchedNum FROM ActiveFeeScheds)
+    GROUP BY FeeSched
+),
+ProcedureCounts AS (
+    -- Get procedure counts separately with date filtering upfront
+    SELECT 
+        pat.FeeSched,
+        COUNT(DISTINCT proc.ProcNum) as ProcedureCount
     FROM procedurelog proc
     JOIN patient pat ON proc.PatNum = pat.PatNum
-    JOIN provider prov ON proc.ProvNum = prov.ProvNum
-    LEFT JOIN fee pat_fee ON proc.CodeNum = pat_fee.CodeNum 
-        AND pat_fee.FeeSched = pat.FeeSched
-        AND (pat_fee.ClinicNum = proc.ClinicNum OR pat_fee.ClinicNum = 0)
-    LEFT JOIN fee prov_fee ON proc.CodeNum = prov_fee.CodeNum 
-        AND prov_fee.FeeSched = prov.FeeSched
-        AND (prov_fee.ClinicNum = proc.ClinicNum OR prov_fee.ClinicNum = 0)
-    WHERE proc.ProcDate >= '2023-01-01'
+    WHERE proc.ProcDate >= '2023-01-01' 
         AND proc.ProcDate < '2024-01-01'
         AND proc.ProcStatus IN (1, 2, 5, 6)
+        AND pat.FeeSched IN (SELECT FeeSchedNum FROM ActiveFeeScheds)
+    GROUP BY pat.FeeSched
+),
+CodeCounts AS (
+    -- Get unique code counts separately
+    SELECT 
+        FeeSched,
+        COUNT(DISTINCT CodeNum) as UniqueCodesCount
+    FROM fee
+    WHERE FeeSched IN (SELECT FeeSchedNum FROM ActiveFeeScheds)
+    GROUP BY FeeSched
 )
 SELECT 
-    CASE 
-        WHEN Has_Patient_Fee = 1 AND Has_Provider_Fee = 1 THEN 'Both Fee Schedules'
-        WHEN Has_Patient_Fee = 1 THEN 'Patient Fee Schedule Only'
-        WHEN Has_Provider_Fee = 1 THEN 'Provider Fee Schedule Only'
-        ELSE 'No Fee Schedule'
-    END as FeeScheduleCoverage,
-    COUNT(*) as ProcedureCount,
-    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) as Percentage
-FROM ProcedureCounts
-GROUP BY 
-    CASE 
-        WHEN Has_Patient_Fee = 1 AND Has_Provider_Fee = 1 THEN 'Both Fee Schedules'
-        WHEN Has_Patient_Fee = 1 THEN 'Patient Fee Schedule Only'
-        WHEN Has_Provider_Fee = 1 THEN 'Provider Fee Schedule Only'
-        ELSE 'No Fee Schedule'
-    END
-ORDER BY ProcedureCount DESC;
+    fs.FeeSchedNum,
+    fs.Description,
+    CASE fs.FeeSchedType
+        WHEN 1 THEN 'Standard'
+        WHEN 2 THEN 'Insurance'
+        WHEN 3 THEN 'Sliding Scale'
+        ELSE 'Other'
+    END as FeeSchedType,
+    COALESCE(pc.PatientCount, 0) as PatientCount,
+    COALESCE(pr.ProviderCount, 0) as ProviderCount,
+    COALESCE(proc.ProcedureCount, 0) as ProcedureCount,
+    COALESCE(cc.UniqueCodesCount, 0) as UniqueCodesCount
+FROM ActiveFeeScheds fs
+LEFT JOIN PatientCounts pc ON fs.FeeSchedNum = pc.FeeSched
+LEFT JOIN ProviderCounts pr ON fs.FeeSchedNum = pr.FeeSched
+LEFT JOIN ProcedureCounts proc ON fs.FeeSchedNum = proc.FeeSched
+LEFT JOIN CodeCounts cc ON fs.FeeSchedNum = cc.FeeSched
+WHERE COALESCE(proc.ProcedureCount, 0) > 0 
+    OR COALESCE(pc.PatientCount, 0) > 0 
+    OR COALESCE(pr.ProviderCount, 0) > 0
+ORDER BY ProcedureCount DESC, PatientCount DESC;
 
 -- 4. Insurance Claims Validation
 SELECT 

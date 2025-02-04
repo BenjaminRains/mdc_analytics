@@ -187,4 +187,8 @@ mdc_analytics_env/
 /src/file_paths.py
 .env
 
+# Documentation with sensitive business info
+stakeholder_followup.md
+docs/stakeholder_followup.md
+
 

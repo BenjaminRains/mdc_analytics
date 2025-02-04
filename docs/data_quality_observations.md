@@ -77,3 +77,34 @@ Status counts across all appointments:
 - After cleaning, the distribution of cases aligns with clinical expectations
 - High percentage of multiple tooth cases suggests focus needed on comprehensive treatment planning 
 
+## Fee Schedule Analysis
+
+### Active Fee Schedule Distribution
+
+**Context:**
+- Total active fee schedules (IsHidden = 0): 5
+- Only 1 fee schedule actively used (FeeSchedNum = 55)
+
+**Fee Schedule Details:**
+1. Standard Fee Schedule (55):
+   - 2 patients assigned
+   - All office staff assigned (including providers, hygienists, and administrative staff)
+   - 10 procedures in 2023
+   - Marked as type "Other" despite "Standard" description
+
+2. Inactive but Visible Fee Schedules:
+   - Cleveland Cliffs (United Concordia) (8286)
+   - Werner Enterprises Inc. (United Concordia) (8287)
+   - Tri-Care (United Concordia) (8289)
+   - Liberty (8291)
+   - All marked as type "Other"
+   - No patients, providers, or procedures assigned
+   - Not hidden despite inactivity
+
+**Assessment:**
+- Potential configuration issues with fee schedule types (all marked as "Other")
+- Insurance-related fee schedules exist but are unused
+- All staff members using single fee schedule (#55)
+- Very low patient assignment rate (2 patients total)
+- Recommend reviewing if unused fee schedules should be hidden or properly assigned
+
