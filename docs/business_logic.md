@@ -342,61 +342,91 @@ Based on complete dataset analysis:
 
 1. **Primary Fee Schedules**
    - Standard (#55):
-     * 18,633 procedures
-     * 2,868 patients
+     * 18,633 procedures (documented: 20,724)
      * Average fee: $181.46
+     * Variance from documented: -10.1%
    - StandardServices (#54):
-     * 17,498 procedures
-     * 2,862 patients
+     * 17,498 procedures (documented: 19,672)
      * Average fee: $191.08
+     * Variance from documented: -11.1%
 
 2. **Employer/Organization Fee Schedules**
    - US STEEL (#8278):
      * 14,590 procedures
-     * 2,417 patients
      * Average fee: $162.02
+     * Consistent monthly volume
    - Methodist Hosp OON (#8274):
      * 14,433 procedures
-     * 2,379 patients
      * Average fee: $193.04
-   - Community Healthcare System (#1642):
-     * 14,259 procedures
-     * 2,385 patients
-     * Average fee: $191.77
+     * Highest organization rate
 
 3. **Insurance Carrier Fee Schedules**
    - Cleveland Cliffs (#8286):
      * 13,451 procedures
-     * 2,416 patients
-     * Average fee: $151.78
+     * Documented avg: $580.52
+     * Actual avg: $151.78
+     * Historical range: $140-160
+     * Adjustment patterns:
+       - 18,398 increases
+       - 9,662 reductions
    - Liberty (#8291):
      * 13,240 procedures
-     * 2,377 patients
-     * Average fee: $184.32
+     * Documented avg: $312.20
+     * Actual avg: $184.32
+     * Historical range: $160-220
+     * Adjustment patterns:
+       - 23,801 increases
+       - 117 reductions
 
 ### Fee Schedule Patterns
 
-1. **Usage Characteristics**
-   - Consistent monthly distribution
-   - ~15-17% patient-to-procedure ratio
-   - Limited price differentiation ($151-$193 range)
-   - All major schedules actively used
+1. **Historical Trends (2022-2024)**
+   - Cleveland Cliffs:
+     * Lower volatility
+     * Consistent $140-160 range
+     * No evidence of documented $580.52
+   - Liberty:
+     * Higher volatility
+     * Seasonal patterns visible
+     * No evidence of documented $312.20
 
-2. **Fee Structure**
-   - Standard schedule (#55) used as default
-   - Organization-specific pricing shows moderate variation
-   - Base fees cluster tightly ($150-$200 range)
-   - Maximum fees vary significantly ($1,950-$17,500)
-   - Zero minimum fees across all schedules
+2. **Seasonal Patterns**
+   - Mid-year peaks (months 5-7)
+   - Year-end adjustments (months 11-12)
+   - Consistent monthly volumes
+   - Predictable variation ranges
 
-3. **Business Rules**
-   - Each procedure requires fee schedule assignment
-   - Fee schedules should link to:
-     * Insurance carriers
-     * Employers
-     * Organizations
-     * Standard pricing
-   - Multiple fee schedules possible per organization
+3. **Fee Structure**
+   - Standard schedules: $181-191
+   - Organization schedules: $162-193
+   - Insurance schedules: $151-184
+   - Most common procedures:
+     * Evaluations: $60-109
+     * Preventive: $31-108
+     * Basic diagnostic: $33-76
+
+### Implementation Details
+
+1. **Fee Determination Process**
+   - Base fee from fee schedule (fee.Amount)
+   - Adjustments applied based on:
+     * Insurance requirements
+     * Contract terms
+     * Seasonal patterns
+     * Volume considerations
+
+2. **Fee Schedule Hierarchy**
+   ```
+   Patient -> Insurance/Employer -> Fee Schedule -> Base Fee
+                                              -> Actual ProcFee
+   ```
+
+3. **Validation Requirements**
+   - Monitor fee schedule accuracy
+   - Track adjustment patterns
+   - Validate against contracts
+   - Review seasonal variations
+   - Check volume reporting
 
 ### Key Relationships
 - Procedures (procedurelog) link to fees through CodeNum

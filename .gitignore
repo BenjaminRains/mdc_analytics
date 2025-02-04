@@ -191,4 +191,26 @@ mdc_analytics_env/
 stakeholder_followup.md
 docs/stakeholder_followup.md
 
+# Raw Data Files - anywhere in the project
+**/*.csv
+**/*.parquet
+**/*.xlsx
+**/*.xls
+**/*.json
+**/*.xml
+**/*.txt
+**/*.dat
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+
+# Jupyter Notebooks - anywhere in the project
+**/*.ipynb
+.ipynb_checkpoints
+**/.ipynb_checkpoints
+
+# Keep template notebooks
+!templates/**/*.ipynb
+!examples/**/*.ipynb
+
 
