@@ -125,8 +125,9 @@ SELECT
     -- Target Variables
     CASE WHEN proc.ProcStatus = 2 THEN 1 ELSE 0 END as target_accepted,
     
-    -- Payment Target Variables
+    -- Payment Target Variables (Modified to exclude zero fees)
     CASE 
+        WHEN proc.ProcFee <= 0 THEN NULL  -- Exclude zero/negative fees
         WHEN proc.ProcFee <= COALESCE(
             (SELECT SUM(ps.SplitAmt) FROM paysplit ps WHERE ps.ProcNum = proc.ProcNum), 0
         ) + COALESCE(cp.InsPayAmt, 0) + COALESCE(
@@ -135,19 +136,21 @@ SELECT
         ELSE 0 
     END as target_fully_paid,
     
-    CASE WHEN EXISTS (
-        SELECT 1 
-        FROM paysplit ps 
-        JOIN payment pay ON ps.PayNum = pay.PayNum
-        WHERE ps.ProcNum = proc.ProcNum 
-        AND DATEDIFF(pay.PayDate, proc.ProcDate) <= 30
-    ) OR EXISTS (
-        SELECT 1
-        FROM claimproc cp2
-        WHERE cp2.ProcNum = proc.ProcNum
-        AND cp2.Status = 1  -- Received
-        AND DATEDIFF(cp2.DateCP, proc.ProcDate) <= 30
-    ) THEN 1 ELSE 0 END as target_paid_30d
+    CASE 
+        WHEN proc.ProcFee <= 0 THEN NULL  -- Exclude zero/negative fees
+        WHEN EXISTS (
+            SELECT 1 
+            FROM paysplit ps 
+            JOIN payment pay ON ps.PayNum = pay.PayNum
+            WHERE ps.ProcNum = proc.ProcNum 
+            AND DATEDIFF(pay.PayDate, proc.ProcDate) <= 30
+        ) OR EXISTS (
+            SELECT 1
+            FROM claimproc cp2
+            WHERE cp2.ProcNum = proc.ProcNum
+            AND cp2.Status = 1  -- Received
+            AND DATEDIFF(cp2.DateCP, proc.ProcDate) <= 30
+        ) THEN 1 ELSE 0 END as target_paid_30d
 
 FROM procedurelog proc
 LEFT JOIN patient pat ON proc.PatNum = pat.PatNum
@@ -167,5 +170,6 @@ LEFT JOIN claimpayment cpy ON cp.ClaimPaymentNum = cpy.ClaimPaymentNum
 WHERE proc.ProcDate >= '2023-01-01'
     AND proc.ProcDate < '2024-01-01'
     AND proc.ProcStatus IN (1, 2, 5, 6)
+    AND proc.ProcFee > 0  -- Add this condition to main WHERE clause
 
 ORDER BY proc.ProcDate DESC;
