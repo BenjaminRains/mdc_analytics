@@ -335,3 +335,108 @@ Based on complete dataset analysis:
 2. Multiple procedures may exist for single tooth
 3. Patient status affects treatment planning
 4. Historical procedures provide context for current status 
+
+## Fee Schedule System
+
+### Fee Schedule Usage (2024 Analysis)
+
+1. **Primary Fee Schedules**
+   - Standard (#55):
+     * 18,633 procedures
+     * 2,868 patients
+     * Average fee: $181.46
+   - StandardServices (#54):
+     * 17,498 procedures
+     * 2,862 patients
+     * Average fee: $191.08
+
+2. **Employer/Organization Fee Schedules**
+   - US STEEL (#8278):
+     * 14,590 procedures
+     * 2,417 patients
+     * Average fee: $162.02
+   - Methodist Hosp OON (#8274):
+     * 14,433 procedures
+     * 2,379 patients
+     * Average fee: $193.04
+   - Community Healthcare System (#1642):
+     * 14,259 procedures
+     * 2,385 patients
+     * Average fee: $191.77
+
+3. **Insurance Carrier Fee Schedules**
+   - Cleveland Cliffs (#8286):
+     * 13,451 procedures
+     * 2,416 patients
+     * Average fee: $151.78
+   - Liberty (#8291):
+     * 13,240 procedures
+     * 2,377 patients
+     * Average fee: $184.32
+
+### Fee Schedule Patterns
+
+1. **Usage Characteristics**
+   - Consistent monthly distribution
+   - ~15-17% patient-to-procedure ratio
+   - Limited price differentiation ($151-$193 range)
+   - All major schedules actively used
+
+2. **Fee Structure**
+   - Standard schedule (#55) used as default
+   - Organization-specific pricing shows moderate variation
+   - Base fees cluster tightly ($150-$200 range)
+   - Maximum fees vary significantly ($1,950-$17,500)
+   - Zero minimum fees across all schedules
+
+3. **Business Rules**
+   - Each procedure requires fee schedule assignment
+   - Fee schedules should link to:
+     * Insurance carriers
+     * Employers
+     * Organizations
+     * Standard pricing
+   - Multiple fee schedules possible per organization
+
+### Key Relationships
+- Procedures (procedurelog) link to fees through CodeNum
+- Fee schedules (feesched) define pricing structure
+- Organizations may have multiple fee schedules
+- Insurance plans tied to specific fee schedules
+- Patient assignments determine applicable fees
+
+### Fee Schedule Implementation
+
+1. **ProcFee Determination**
+   - ProcFee in procedurelog represents final charged amount
+   - Base fee comes from fee schedule (fee.Amount)
+   - Actual ProcFee may differ from fee schedule amount due to:
+     * Insurance adjustments
+     * Provider discretion
+     * Special circumstances
+     * Package pricing
+
+2. **Fee Schedule Hierarchy**
+   ```
+   Patient -> Insurance/Employer -> Fee Schedule -> Base Fee
+                                              -> Actual ProcFee
+   ```
+
+### Data Patterns
+
+1. **Fee Variations**
+   - Standard schedules show consistent pricing ($181-191)
+   - Organization schedules vary moderately:
+     * Highest: Methodist Hosp OON ($193.04)
+     * Lowest: US STEEL ($162.02)
+   - Insurance carriers show expected variation:
+     * Cleveland Cliffs ($151.78)
+     * Liberty ($184.32)
+
+2. **Usage Volume**
+   - Standard schedules handle highest volume:
+     * #55: 18,633 procedures/year
+     * #54: 17,498 procedures/year
+   - Organization schedules: 14,200-14,600 procedures/year
+   - Insurance schedules: ~13,300 procedures/year
+   - Consistent monthly distribution 

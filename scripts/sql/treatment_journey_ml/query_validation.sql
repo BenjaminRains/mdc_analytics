@@ -297,4 +297,22 @@ FROM procedurelog proc
 JOIN patient pat ON proc.PatNum = pat.PatNum
 WHERE proc.ProcDate >= '2023-01-01'
     AND proc.ProcDate < '2024-01-01'
-    AND proc.ProcStatus IN (1, 2, 5, 6); 
+    AND proc.ProcStatus IN (1, 2, 5, 6);
+
+-- Analyze procedure fees and their relationship to fee schedules
+SELECT 
+    f.FeeSched,
+    fs.Description,
+    COUNT(DISTINCT pl.ProcNum) as ProcedureCount,
+    COUNT(DISTINCT pl.PatNum) as PatientCount,
+    ROUND(AVG(pl.ProcFee), 2) as AvgProcFee,
+    MIN(pl.ProcDate) as FirstProcDate,
+    MAX(pl.ProcDate) as LastProcDate
+FROM procedurelog pl
+JOIN fee f ON pl.CodeNum = f.CodeNum 
+JOIN feesched fs ON f.FeeSched = fs.FeeSchedNum
+WHERE pl.ProcStatus = 2  -- Completed procedures
+    AND pl.ProcDate >= '2023-01-01'
+    AND pl.ProcDate < '2024-01-01'
+GROUP BY f.FeeSched, fs.Description
+ORDER BY ProcedureCount DESC; 
