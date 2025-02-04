@@ -2,10 +2,7 @@ import logging
 from pathlib import Path
 from typing import List, Dict, Union
 import mysql.connector
-from src.db_config import connect_to_mariadb
-
-# Import base indexes
-from scripts.sql.database_setup.base_index_configs import BASE_INDEXES
+from src.connections.factory import ConnectionFactory
 
 # Optional import for treatment journey indexes
 try:
@@ -14,11 +11,16 @@ except ImportError:
     TREATMENT_JOURNEY_INDEXES = []
 
 class IndexManager:
-    """Manages database indexes for ETL jobs and base configuration"""
+    """Manages database indexes for ETL jobs and ML configuration"""
     
     def __init__(self, database_name: str):
         self.database_name = database_name
         self.logger = logging.getLogger(self.__class__.__name__)
+        # Create connection factory instance
+        self.connection = ConnectionFactory.create_connection(
+            connection_type='local_mariadb',
+            database=database_name
+        )
     
     def read_index_file(self, index_path: Path) -> List[str]:
         """Read index definitions from SQL file"""
@@ -67,7 +69,7 @@ class IndexManager:
             else:
                 index_statements = indexes
             
-            conn = connect_to_mariadb()
+            conn = self.connection.connect()
             cursor = conn.cursor()
             
             # Select the database
@@ -92,7 +94,7 @@ class IndexManager:
         finally:
             if 'cursor' in locals():
                 cursor.close()
-            if 'conn' in locals() and conn.is_connected():
+            if 'conn' in locals():
                 conn.close()
             self.logger.info("Index setup complete")
     
@@ -106,9 +108,104 @@ class IndexManager:
         self.logger.info("Setting up base indexes...")
         self.setup_indexes(BASE_INDEXES)
 
+    def show_table_indexes(self, table_name: str) -> None:
+        """Display all indexes for a given table"""
+        try:
+            conn = self.connection.connect()
+            cursor = conn.cursor()
+            
+            cursor.execute(f"SHOW INDEX FROM {table_name}")
+            indexes = cursor.fetchall()
+            
+            self.logger.info(f"\nIndexes for table {table_name}:")
+            for idx in indexes:
+                self.logger.info(f"Index: {idx[2]}, Columns: {idx[4]}")
+                
+        except mysql.connector.Error as err:
+            self.logger.error(f"Error showing indexes: {err}")
+        finally:
+            if 'cursor' in locals():
+                cursor.close()
+            if 'conn' in locals():
+                conn.close()
+
+    def drop_deprecated_indexes(self, cursor, table: str) -> None:
+        """Drops deprecated indexes (those that start with lowercase 'idx_')"""
+        try:
+            cursor.execute(f"SHOW INDEX FROM {table}")
+            indexes = cursor.fetchall()
+            
+            # Get list of deprecated index names (lowercase idx_)
+            # System indexes use uppercase IDX_ so they won't be affected
+            deprecated_indexes = [
+                idx[2] for idx in indexes 
+                if (idx[2].startswith('idx_') and 
+                    not idx[2].startswith('idx_ml_') and
+                    not idx[2].startswith('IDX_'))  # Exclude system indexes
+            ]
+            
+            if deprecated_indexes:
+                self.logger.info(f"Found {len(deprecated_indexes)} deprecated indexes in {table}")
+                for index_name in deprecated_indexes:
+                    try:
+                        cursor.execute(f"DROP INDEX {index_name} ON {table}")
+                        self.logger.info(f"Dropped deprecated index {index_name} from {table}")
+                    except mysql.connector.Error as err:
+                        self.logger.warning(f"Error dropping deprecated index {index_name}: {err}")
+            else:
+                self.logger.info(f"No deprecated indexes found in {table}")
+                    
+        except mysql.connector.Error as err:
+            self.logger.error(f"Error getting indexes for {table}: {err}")
+
     def setup_treatment_journey_indexes(self) -> None:
         """Setup indexes specific to treatment journey dataset"""
-        self.setup_indexes(TREATMENT_JOURNEY_INDEXES)
+        try:
+            # Use the connection from factory
+            conn = self.connection.connect()
+            cursor = conn.cursor()
+            
+            # Get list of tables that need ML indexes
+            tables = ['procedurelog', 'patient', 'fee', 'feesched', 'provider', 
+                     'claim', 'claimproc', 'payment', 'appointment', 'adjustment',
+                     'procedurecode', 'claimpayment', 'paysplit']
+            
+            # First drop deprecated indexes
+            self.logger.info("Dropping deprecated indexes...")
+            for table in tables:
+                self.drop_deprecated_indexes(cursor, table)
+            
+            # Then drop any existing ML indexes
+            self.logger.info("Dropping existing ML indexes...")
+            for table in tables:
+                self.drop_custom_indexes(cursor, table)
+            
+            # Create new ML indexes
+            self.logger.info("Creating new ML indexes...")
+            for index in TREATMENT_JOURNEY_INDEXES:
+                try:
+                    cursor.execute(index)
+                    conn.commit()
+                    self.logger.info(f"Created index: {index}")
+                except mysql.connector.Error as err:
+                    if err.errno == 1061:  # Duplicate key name
+                        self.logger.info(f"Index already exists: {index}")
+                    else:
+                        self.logger.error(f"Error creating index: {err}")
+                        
+            # Verify final index state
+            self.logger.info("\nFinal index state:")
+            for table in tables:
+                self.show_table_indexes(table)
+                
+        except Exception as e:
+            self.logger.error(f"Error during index setup: {str(e)}")
+            raise
+        finally:
+            if 'cursor' in locals():
+                cursor.close()
+            if 'conn' in locals():
+                conn.close()
 
 if __name__ == "__main__":
     import argparse
