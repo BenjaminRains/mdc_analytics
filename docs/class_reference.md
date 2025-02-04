@@ -35,9 +35,9 @@
 **Purpose**: Factory for creating database connections
 **Location**: `src/connections/factory.py`
 **Class Methods**:
-- `create_connection(connection_type, database=None, diagnostics_path=None, use_root=False) -> DatabaseConnection`
-- `create_pooled_connection(connection_type, pool_name, database=None, use_root=False) -> PooledDatabaseConnection`
-- `_get_config(connection_type, database, use_root) -> ConnectionConfig`
+- `create_connection(connection_type, database=None, use_root=False) -> DatabaseConnection`: Create a database connection
+- `create_pooled_connection(connection_type, pool_name, database=None, use_root=False) -> PooledDatabaseConnection`: Create a pooled connection
+- `_get_config(connection_type, database, use_root) -> ConnectionConfig`: Get connection configuration
 
 ### LocalMySQLConnection
 **Purpose**: Handles local MySQL database connections
@@ -50,6 +50,25 @@
 **Location**: `src/connections/local.py`
 **Methods**:
 - `connect() -> MySQLConnection`: Establish MariaDB connection
+
+### ClinicServerConnection
+**Purpose**: Base class for clinic server connections with business hours protection
+**Location**: `src/connections/clinic_servers.py`
+**Methods**:
+- `connect() -> MySQLConnection`: Connect with business hours check
+- `_is_business_hours() -> bool`: Check if current time is during business hours (8am-6pm)
+
+### MDCServerConnection
+**Purpose**: MDC specific server connection implementation
+**Location**: `src/connections/clinic_servers.py`
+**Inherits**: ClinicServerConnection
+**Methods**: Inherits all methods from ClinicServerConnection
+
+## Connection Types
+Available connection types for use with ConnectionFactory:
+- `'local_mysql'`: Local MySQL server connection
+- `'local_mariadb'`: Local MariaDB server connection
+- `'mdc'`: MDC clinic server connection with business hours protection
 
 ## ETL Framework
 
@@ -86,19 +105,3 @@
 - `setup_indexes_from_file(index_path: Path)`: Sets up indexes from SQL file
 - `setup_base_indexes()`: Setup comprehensive base indexes
 - `setup_treatment_journey_indexes()`: Setup treatment journey specific indexes
-
-## OpenDental Integration
-
-### OpenDentalConfig
-**Purpose**: Configuration details for OpenDental installation
-**Location**: `src/connections/opendental_config.py`
-**Class Methods**:
-- `from_diagnostics_file(file_path: Path) -> OpenDentalConfig`: Parse OpenDental diagnostics file
-
-### OpenDentalValidator
-**Purpose**: Validates OpenDental version and configuration requirements
-**Location**: `src/connections/opendental_config.py`
-**Methods**:
-- `validate_version(min_version: str = "24.3.0.0") -> bool`: Check version requirements
-- `validate_storage_engine(required_engine: str = "MyISAM") -> bool`: Check storage engine
-- `validate_all() -> bool`: Run all validation checks
