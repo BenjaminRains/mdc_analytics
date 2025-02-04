@@ -20,9 +20,22 @@ def setup_indexes(conn, indexes: Dict[str, List[str]]) -> None:
             except Exception as e:
                 logging.warning(f"Failed to create index {idx}: {e}")
 
-def extract_data(database_name: str, query_path: Path, indexes: Dict[str, List[str]]) -> pd.DataFrame:
-    """Extract data using SQL query"""
-    conn = ConnectionFactory.create_connection('local_mariadb', database_name)
+def extract_data(
+    database_name: str, 
+    query_path: Path, 
+    indexes: Dict[str, List[str]],
+    connection_type: str = 'local_mariadb'  # Added parameter with default
+) -> pd.DataFrame:
+    """
+    Extract data using SQL query
+    
+    Args:
+        database_name: Name of the database to connect to
+        query_path: Path to SQL query file
+        indexes: Dictionary of indexes to create
+        connection_type: Type of connection to use ('local_mariadb' or 'local_mysql')
+    """
+    conn = ConnectionFactory.create_connection(connection_type, database_name)
     
     try:
         # Setup indexes
