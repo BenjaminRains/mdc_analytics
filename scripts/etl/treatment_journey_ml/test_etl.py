@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 
 from scripts.etl.treatment_journey_ml.main import TreatmentJourneyETL, main
+from scripts.sql.treatment_journey_ml.ml_index_configs import TREATMENT_JOURNEY_INDEXES
 
 def setup_logging():
     """Configure logging with timestamp"""

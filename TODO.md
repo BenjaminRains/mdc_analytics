@@ -21,6 +21,13 @@
   - [ ] Analyze InsurancePaymentAccuracy distribution
   - [ ] Identify patterns in payment discrepancies
 
+## ETL Infrastructure Tasks
+- [ ] Fix SQL file dependencies
+  - [ ] Move query.sql to scripts/sql/treatment_journey_ml/
+  - [ ] Update ETL to use Python-based index configs
+  - [ ] Validate all index columns exist in tables
+  - [ ] Fix InsCarrier index error in patient table
+
 ## Feature Engineering Ideas
 - [ ] Create age brackets/groups
 - [ ] Develop composite insurance reliability score
