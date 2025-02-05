@@ -36,20 +36,29 @@ class IndexManager:
             return indexes
     
     def drop_custom_indexes(self, cursor, table: str) -> None:
-        """Drops ML-specific indexes (those that start with 'idx_ml_')"""
+        """Drops custom indexes (those that start with 'idx_ml_' or lowercase 'idx_')"""
         try:
             cursor.execute(f"SHOW INDEX FROM {table}")
             indexes = cursor.fetchall()
             
-            # Get list of ML-specific index names
-            ml_indexes = [idx[2] for idx in indexes if idx[2].startswith('idx_ml_')]
+            # Get list of custom index names (ML indexes and lowercase idx_)
+            custom_indexes = [
+                idx[2] for idx in indexes 
+                if (idx[2].startswith('idx_ml_') or  # ML indexes
+                    (idx[2].startswith('idx_') and   # Lowercase indexes
+                     not idx[2].startswith('IDX_'))) # Exclude system indexes
+            ]
             
-            for index_name in ml_indexes:
-                try:
-                    cursor.execute(f"DROP INDEX {index_name} ON {table}")
-                    self.logger.info(f"Dropped ML index {index_name} from {table}")
-                except mysql.connector.Error as err:
-                    self.logger.warning(f"Error dropping ML index {index_name}: {err}")
+            if custom_indexes:
+                self.logger.info(f"Found {len(custom_indexes)} custom indexes in {table}")
+                for index_name in custom_indexes:
+                    try:
+                        cursor.execute(f"DROP INDEX {index_name} ON {table}")
+                        self.logger.info(f"Dropped custom index {index_name} from {table}")
+                    except mysql.connector.Error as err:
+                        self.logger.warning(f"Error dropping custom index {index_name}: {err}")
+            else:
+                self.logger.info(f"No custom indexes found in {table}")
                     
         except mysql.connector.Error as err:
             self.logger.error(f"Error getting indexes for {table}: {err}")
