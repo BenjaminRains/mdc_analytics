@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import List, Dict, Union
+from typing import List, Union
 import mysql.connector
 from src.connections.factory import ConnectionFactory
 
@@ -112,11 +112,6 @@ class IndexManager:
         indexes = self.read_index_file(index_path)
         self.setup_indexes(indexes)
     
-    def setup_base_indexes(self) -> None:
-        """Setup comprehensive base indexes for the database"""
-        self.logger.info("Setting up base indexes...")
-        self.setup_indexes(BASE_INDEXES)
-
     def show_table_indexes(self, table_name: str) -> None:
         """Display all indexes for a given table"""
         try:
