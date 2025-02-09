@@ -1,7 +1,7 @@
 ## Procedure Status (procedurelog.ProcStatus)
 
 ### Status Values and Meanings
-
+NOTE: The UI shows **Status: ExstCurPro, ExstOther, Referred, Condition**
 1. **ProcStatus = 1: Treatment Planned**
    - Represents planned/scheduled procedures
    - No completion dates (DateComplete = '0001-01-01')
@@ -37,7 +37,7 @@
    - Purpose needs further investigation
    - No appointment links
 
-6. **ProcStatus = 6: Ordered/Planned** (7.23%)
+6. **ProcStatus = 6: Ordered/Planned #Referred?# ** (7.23%)
    - Common procedure types:
      - Preventive care (fluoride, cleanings, evaluations)
      - Diagnostic procedures (various X-rays)
@@ -48,7 +48,7 @@
    - Includes tracking codes (Post Op, Tooth Watch)
    - Actively managed procedures awaiting scheduling
 
-7. **ProcStatus = 7: Not Accepted** (1.03%)
+7. **ProcStatus = 7: Unknown** (1.03%)
    - No completion dates
    - No appointment links
    - Likely represents declined treatment plans
