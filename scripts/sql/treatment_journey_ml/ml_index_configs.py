@@ -11,44 +11,49 @@ Note: Core business indexes are defined in database_setup/base_index_configs.py
 """
 
 TREATMENT_JOURNEY_INDEXES = [
-    # Patient demographics
-    "CREATE INDEX IF NOT EXISTS idx_ml_pat_guarantor ON patient (Guarantor)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_pat_birth ON patient (Birthdate)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_pat_insurance ON patient (HasIns)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_pat_feesched ON patient (FeeSched)",
+    # Core Procedure Analysis Indexes
+    "CREATE INDEX IF NOT EXISTS idx_ml_proc_core ON procedurelog (ProcDate, ProcStatus, ProcFee, CodeNum, ProvNum)",
+    "CREATE INDEX IF NOT EXISTS idx_ml_proc_historical ON procedurelog (CodeNum, ProvNum, ProcDate, ProcFee)",
     
-    # Procedure tracking
-    "CREATE INDEX IF NOT EXISTS idx_ml_proc_date_status ON procedurelog (ProcDate, ProcStatus)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_proc_patient ON procedurelog (PatNum, ProcDate)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_proc_code ON procedurelog (CodeNum)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_proc_clinic ON procedurelog (ClinicNum)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_proc_patient_status ON procedurelog (PatNum, ProcStatus, ProcDate, ProcFee)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_proc_date_fee ON procedurelog (ProcDate, ProcStatus, ProcFee)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_proc_provider_fee ON procedurelog (ProvNum, ProcDate, ProcStatus, ProcFee)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_proc_clinic_fee ON procedurelog (ClinicNum, ProcDate, ProcStatus, ProcFee)",
+    # Fee Analysis
+    "CREATE INDEX IF NOT EXISTS idx_ml_fee_core ON fee (CodeNum, Amount)",
     
-    # Fee Schedule related
-    "CREATE INDEX IF NOT EXISTS idx_ml_fee_lookup ON fee (FeeSched, CodeNum, ClinicNum, ProvNum, Amount)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_feesched_core ON feesched (FeeSchedNum, FeeSchedType, IsHidden)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_provider_feesched ON provider (ProvNum, FeeSched)",
+    # Insurance Processing
+    "CREATE INDEX IF NOT EXISTS idx_ml_claimproc_core ON claimproc (ProcNum, InsPayAmt, InsPayEst, Status, ClaimNum)",
     
-    # Insurance claims
-    "CREATE INDEX IF NOT EXISTS idx_ml_claim_dates ON claim (DateSent, DateReceived, ClaimStatus)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_claim_status ON claim (ClaimStatus, ClaimNum)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_claimproc_proc ON claimproc (ProcNum, Status, InsPayEst, InsPayAmt)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_claimproc_patient ON claimproc (PatNum, ProcDate, Status)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_claimproc_payment ON claimproc (ClaimPaymentNum)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_claimproc_dates ON claimproc (DateCP, ProcDate)",
+    # Payment Analysis
+    "CREATE INDEX IF NOT EXISTS idx_ml_paysplit_payment ON paysplit (ProcNum, PayNum, SplitAmt)",
+    "CREATE INDEX IF NOT EXISTS idx_ml_payment_core ON payment (PayNum, PayDate)",
+    "CREATE INDEX IF NOT EXISTS idx_ml_payment_window ON payment (PayDate)",
     
-    # Payment tracking
-    "CREATE INDEX IF NOT EXISTS idx_ml_claimpayment ON claimpayment (ClaimPaymentNum, CheckAmt, IsPartial)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_paysplit_proc ON paysplit (ProcNum, PayNum, SplitAmt)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_payment_date ON payment (PayDate)",
+    # Adjustment Tracking
+    "CREATE INDEX IF NOT EXISTS idx_ml_adj_core ON adjustment (ProcNum, DateEntry, AdjAmt)",
+    "CREATE INDEX IF NOT EXISTS idx_ml_adj_type ON adjustment (ProcNum, AdjType)",
     
-    # Other
-    "CREATE INDEX IF NOT EXISTS idx_ml_appt_patient ON appointment (PatNum, AptDateTime)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_adj_proc ON adjustment (ProcNum, AdjAmt)",
-    "CREATE INDEX IF NOT EXISTS idx_ml_proccode_cat ON procedurecode (ProcCat, CodeNum)"
+    # Supporting Lookups
+    "CREATE INDEX IF NOT EXISTS idx_ml_proccode_lookup ON procedurecode (CodeNum, ProcCat)",
+    "CREATE INDEX IF NOT EXISTS idx_ml_proccode_category ON procedurecode (CodeNum, ProcCode)",
+    "CREATE INDEX IF NOT EXISTS idx_ml_patient_core ON patient (PatNum, Birthdate, Gender, HasIns)",
+    "CREATE INDEX IF NOT EXISTS idx_ml_definition_lookup ON definition (DefNum, ItemName)",
+    "CREATE INDEX IF NOT EXISTS idx_ml_claim_lookup ON claim (ClaimNum)",
+    
+    # Treatment Plan and History Analysis
+    "CREATE INDEX IF NOT EXISTS idx_ml_proc_tp ON procedurelog (DateTP, ProcDate, ProcFee)",
+    "CREATE INDEX IF NOT EXISTS idx_ml_proc_patient_hist ON procedurelog (PatNum, ProcDate, CodeNum, ProcStatus)",
+    "CREATE INDEX IF NOT EXISTS idx_ml_proc_code_hist ON procedurelog (CodeNum, ProcDate, ProcStatus, ProcFee)",
+    
+    # For historical fee analysis
+    "CREATE INDEX IF NOT EXISTS idx_ml_proc_fee_hist ON procedurelog (CodeNum, ProcDate, ProcFee, ProvNum)",
+    
+    # For appointment history
+    "CREATE INDEX IF NOT EXISTS idx_ml_proc_appt_hist ON procedurelog (PatNum, ProcDate, CodeNum, ProcStatus)",
+    
+    # For acceptance rate calculations
+    "CREATE INDEX IF NOT EXISTS idx_ml_proc_acceptance ON procedurelog (CodeNum, ProcDate, ProcStatus, DateTP, ProcFee)",
+    
+    # For payment tracking
+    "CREATE INDEX IF NOT EXISTS idx_ml_payment_tracking ON payment (PayDate)",
+    "CREATE INDEX IF NOT EXISTS idx_ml_paysplit_proc_pay ON paysplit (ProcNum, PayNum, SplitAmt)"
 ]
 
 # Documentation for ML-specific indexes
@@ -78,4 +83,12 @@ INDEX_DOCUMENTATION = {
     "idx_ml_appt_patient": "Appointment patient tracking",
     "idx_ml_adj_proc": "Adjustment procedure tracking",
     "idx_ml_proccode_cat": "Procedure code category tracking"
-} 
+}
+
+# System indexes that were accidentally dropped and need to be restored
+SYSTEM_INDEXES = [
+    "CREATE INDEX IDX_TEMPIMAGECONV_PATNUM ON tempimageconv (patnum)",
+    "CREATE INDEX IDX_TEMPIMAGECONV2_FILENAME ON tempimageconv2 (filename)",
+    "CREATE INDEX IDX_TEMPIMAGECONV2_ISDELETED ON tempimageconv2 (IsDeleted)",
+    "CREATE INDEX IDX_TEMPIMAGECONV2_PATNUM ON tempimageconv2 (patnum)"
+] 
