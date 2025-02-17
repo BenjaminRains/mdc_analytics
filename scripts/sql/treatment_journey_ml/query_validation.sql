@@ -54,41 +54,6 @@ WHERE proc.ProcDate >= '2023-01-01'
 GROUP BY pat.Gender
 ORDER BY ProcedureCount DESC;
 
--- 3a. Fee Schedule Hierarchy Analysis
-SELECT 
-    proc.ProcNum,
-    proc.CodeNum,
-    pat.FeeSched as Patient_FeeSched,
-    prov.FeeSched as Provider_FeeSched,
-    COALESCE(pat_fs.Description, 'NULL') as Patient_FeeSchedDesc,
-    COALESCE(prov_fs.Description, 'NULL') as Provider_FeeSchedDesc,
-    proc.ProcFee as ActualFee,
-    pat_fee.Amount as PatientFeeScheduleAmount,
-    prov_fee.Amount as ProviderFeeScheduleAmount,
-    CASE 
-        WHEN pat_fee.Amount IS NOT NULL THEN 'Patient'
-        WHEN prov_fee.Amount IS NOT NULL THEN 'Provider'
-        ELSE 'Missing'
-    END as FeeSource
-FROM procedurelog proc
-JOIN patient pat ON proc.PatNum = pat.PatNum
-JOIN provider prov ON proc.ProvNum = prov.ProvNum
--- Patient's fee schedule path
-LEFT JOIN feesched pat_fs ON pat.FeeSched = pat_fs.FeeSchedNum
-LEFT JOIN fee pat_fee ON proc.CodeNum = pat_fee.CodeNum 
-    AND pat_fee.FeeSched = pat.FeeSched
-    AND (pat_fee.ClinicNum = proc.ClinicNum OR pat_fee.ClinicNum = 0)
--- Provider's fee schedule path
-LEFT JOIN feesched prov_fs ON prov.FeeSched = prov_fs.FeeSchedNum
-LEFT JOIN fee prov_fee ON proc.CodeNum = prov_fee.CodeNum 
-    AND prov_fee.FeeSched = prov.FeeSched
-    AND (prov_fee.ClinicNum = proc.ClinicNum OR prov_fee.ClinicNum = 0)
-WHERE proc.ProcDate >= '2023-01-01'
-    AND proc.ProcDate < '2024-01-01'
-    AND proc.ProcStatus IN (1, 2, 5, 6)
-    AND pat_fs.IsHidden = 0
-LIMIT 1000;
-
 -- 3b. Fee Schedule Usage Summary
 SELECT 
     'Total Procedures' as Metric,

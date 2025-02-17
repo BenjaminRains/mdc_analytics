@@ -3,13 +3,13 @@
 -- Last updated: 2025-01-31
 
 -- Main query for treatment journey dataset
-
+SELECT
     -- Identifiers and Dates
     proc.ProcNum,
     proc.ProcDate,
     proc.DateTP as PlanDate,
     
-    -- Treatment Planning Features (NEW)
+    -- Treatment Planning Features
     CASE 
         WHEN proc.DateTP = '0001-01-01' THEN NULL
         ELSE DATEDIFF(proc.ProcDate, proc.DateTP)
@@ -29,20 +29,8 @@
     END as PatientAge,
     pat.Gender,
     CASE WHEN pat.HasIns != '' THEN 1 ELSE 0 END as HasInsurance,
-
-    -- Fee Schedule Features
-    fs.Description as FeeScheduleType,
-    CASE 
-        WHEN f.Amount IS NULL THEN proc.ProcFee
-        ELSE f.Amount 
-    END as StandardFee,
-    CASE 
-        WHEN proc.ProcFee = f.Amount THEN 1
-        WHEN f.Amount IS NULL THEN NULL
-        ELSE proc.ProcFee / f.Amount 
-    END as FeeRatio,
     
-    -- Insurance Features (NEW)
+    -- Insurance Features
     CASE 
         WHEN cp.Status = 1 THEN cp.InsPayEst  -- Received
         WHEN cp.Status = 0 THEN cp.InsPayEst  -- Not received
@@ -57,7 +45,7 @@
         ELSE NULL 
     END as InsurancePaymentAccuracy,
     
-    -- Claim Status Features (NEW)
+    -- Claim Status Features
     CASE 
         WHEN c.ClaimStatus = 'S' THEN 'Sent'
         WHEN c.ClaimStatus = 'R' THEN 'Received'
@@ -76,25 +64,14 @@
         ELSE NULL 
     END as DaysToClaimResponse,
     
-    -- Insurance Processing Features (NEW)
+    -- Insurance Processing Features
     CASE 
         WHEN cp.Status = 1 AND c.DateReceived != '0001-01-01' 
         THEN DATEDIFF(cp.DateCP, c.DateReceived)
         ELSE NULL 
     END as DaysToPaymentAfterReceipt,
     
-    -- Historical Insurance Features (NEW)
-    COALESCE((
-        SELECT AVG(cp2.InsPayAmt / cp2.InsPayEst) * 100
-        FROM claimproc cp2
-        WHERE cp2.PatNum = proc.PatNum
-        AND cp2.ProcDate < proc.ProcDate
-        AND cp2.ProcDate >= DATE_SUB(proc.ProcDate, INTERVAL 2 YEAR)
-        AND cp2.InsPayEst > 0
-        AND cp2.Status = 1
-    ), NULL) as Historical_Insurance_Payment_Accuracy,
-    
-    -- Insurance Claim Payment Features (NEW)
+    -- Insurance Claim Payment Features
     COALESCE(cpy.CheckAmt, 0) as InsuranceCheckAmount,
     CASE 
         WHEN cpy.IsPartial = 1 THEN 'Partial'
@@ -113,14 +90,6 @@
         AND p2.ProcDate >= DATE_SUB(proc.ProcDate, INTERVAL 2 YEAR)
     ), NULL) as Avg_Days_To_Payment,
     
-    -- Fee Schedule Context
-    CASE 
-        WHEN fs.FeeSchedType = 1 THEN 'Standard'
-        WHEN fs.FeeSchedType = 2 THEN 'Insurance'
-        WHEN fs.FeeSchedType = 3 THEN 'Sliding Scale'
-        ELSE 'Other'
-    END as FeeScheduleCategory,
-    
     -- Procedure Features
     pc.ProcCat,
     pc.ProcCode,
@@ -136,7 +105,7 @@
     -- Target Variables
     CASE WHEN proc.ProcStatus = 2 THEN 1 ELSE 0 END as target_accepted,
     
-    -- Payment Target Variables (Modified to exclude zero fees)
+    -- Payment Target Variables
     CASE 
         WHEN proc.ProcFee <= 0 THEN NULL  -- Exclude zero/negative fees
         WHEN proc.ProcFee <= COALESCE(
@@ -168,11 +137,6 @@ LEFT JOIN patient pat ON proc.PatNum = pat.PatNum
 LEFT JOIN procedurecode pc ON proc.CodeNum = pc.CodeNum
 LEFT JOIN appointment appt ON proc.PatNum = appt.PatNum 
     AND proc.ProcDate = DATE(appt.AptDateTime)
-LEFT JOIN fee f ON proc.CodeNum = f.CodeNum 
-    AND f.FeeSched = pat.FeeSched
-    AND (f.ClinicNum = proc.ClinicNum OR f.ClinicNum = 0)
-LEFT JOIN feesched fs ON f.FeeSched = fs.FeeSchedNum
-LEFT JOIN feeschedgroup fsg ON fs.FeeSchedNum = fsg.FeeSchedNum
 -- Insurance Related Joins
 LEFT JOIN claimproc cp ON proc.ProcNum = cp.ProcNum
 LEFT JOIN claim c ON cp.ClaimNum = c.ClaimNum
@@ -181,6 +145,6 @@ LEFT JOIN claimpayment cpy ON cp.ClaimPaymentNum = cpy.ClaimPaymentNum
 WHERE proc.ProcDate >= '2023-01-01'
     AND proc.ProcDate < '2024-01-01'
     AND proc.ProcStatus IN (1, 2, 5, 6)
-    AND proc.ProcFee > 0  -- Add this condition to main WHERE clause
+    AND proc.ProcFee > 0
 
 ORDER BY proc.ProcDate DESC;
