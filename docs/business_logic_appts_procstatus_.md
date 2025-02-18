@@ -37,7 +37,8 @@ NOTE: The UI shows **Status: ExstCurPro, ExstOther, Referred, Condition**
    - Purpose needs further investigation
    - No appointment links
 
-6. **ProcStatus = 6: Ordered/Planned #Referred?# ** (7.23%)
+6. **ProcStatus = 6: Ordered/Planned** (7.23%)
+   - Represents procedures that have been ordered/planned but not yet scheduled
    - Common procedure types:
      - Preventive care (fluoride, cleanings, evaluations)
      - Diagnostic procedures (various X-rays)
@@ -47,6 +48,7 @@ NOTE: The UI shows **Status: ExstCurPro, ExstOther, Referred, Condition**
    - No appointment links yet
    - Includes tracking codes (Post Op, Tooth Watch)
    - Actively managed procedures awaiting scheduling
+   - Note: While ~15% of cancelled appointments use this status, this is not its primary purpose
 
 7. **ProcStatus = 7: Unknown** (1.03%)
    - No completion dates
@@ -153,20 +155,16 @@ Based on complete dataset analysis:
 ### Recording Methods
 
 1. **Appointment Status (AptStatus = 5)**
-   - 145 appointments (2.77% of all appointments)
-   - 142 unique patients
-   - Used to mark broken appointments in the appointment table
+   - Used to mark broken/missed appointments in the appointment table
    - Represents immediate no-shows or same-day breaks
 
 2. **Procedure Codes**
-   - D9986/626 (Missed Appointments):
-     - 891 occurrences (795 ProcStatus=2, 96 ProcStatus=6)
-     - 806 unique patients
-   - D9987/627 (Cancelled Appointments):
-     - 3,208 occurrences (2,726 ProcStatus=2, 481 ProcStatus=6, 1 ProcStatus=7)
-     - 2,294 unique patients
-   - Primarily recorded with ProcStatus = 2 (~85%)
-   - Remainder mostly recorded with ProcStatus = 6 (~15%)
+   - D9986/626 (Missed Appointments)
+   - D9987/627 (Cancelled Appointments)
+   - Status Distribution:
+     - ~85% recorded with ProcStatus = 2 (Completed)
+     - ~15% recorded with ProcStatus = 6 (Ordered/Planned)
+     - Rare cases with other ProcStatus values
 
 ### Key Relationships
 - Two separate tracking systems:
@@ -174,7 +172,7 @@ Based on complete dataset analysis:
   2. Procedure codes (D9986/D9987) for administrative recording
 - Both systems should be considered for complete missed/cancelled appointment analysis
 - No significant overlap between the two methods
-- Cancellations (D9987) are more common than missed appointments (D9986) 
+- Cancellations (D9987) are more common than missed appointments (D9986)
 
 ## Adjustment Table Analysis
 
