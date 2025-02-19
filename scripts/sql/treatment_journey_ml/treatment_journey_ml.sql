@@ -109,6 +109,35 @@ AdjustmentDetails AS (
         WHERE pl.ProcNum = a.ProcNum
         AND pl.ProcStatus = 2
     )
+),
+PaymentSplitMetrics AS (
+    -- Add payment split pattern analysis
+    SELECT 
+        ps.ProcNum,
+        COUNT(*) as split_count,
+        SUM(ps.SplitAmt) as total_split_amount,
+        p.PayAmt as payment_amount,
+        ps.UnearnedType as unearned_type
+    FROM paysplit ps
+    JOIN payment p ON ps.PayNum = p.PayNum
+    GROUP BY ps.ProcNum, p.PayAmt, ps.UnearnedType
+    HAVING ABS(SUM(ps.SplitAmt) - p.PayAmt) < 0.01  -- Verify split integrity
+),
+InsuranceAccuracy AS (
+    -- Track insurance estimate accuracy
+    SELECT 
+        cp.ProcNum,
+        cp.InsPayEst,
+        cp.InsPayAmt,
+        CASE
+            WHEN cp.InsPayAmt = cp.InsPayEst THEN 'exact_match'
+            WHEN cp.InsPayAmt > cp.InsPayEst THEN 'over_estimate'
+            WHEN cp.InsPayAmt < cp.InsPayEst THEN 'under_estimate'
+            ELSE 'no_estimate'
+        END as estimate_accuracy,
+        CASE WHEN cp.InsPayAmt > cp.InsPayEst * 1.1 THEN 1 ELSE 0 END as significant_overpayment
+    FROM claimproc cp
+    WHERE cp.Status = 1  -- Only active claims
 )
 
 SELECT DISTINCT
@@ -188,10 +217,15 @@ SELECT DISTINCT
         WHEN pl.ProcStatus = 2 
             AND pl.CodeNum NOT IN (626, 627)  -- Not a cancellation/missed appt
             AND (
-                -- Payment is valid
-                COALESCE(cp.InsPayAmt, 0) >= pl.ProcFee
-                OR (COALESCE(cp.InsPayAmt, 0) + COALESCE(adj.TotalAdjustments, 0) >= pl.ProcFee)
-                OR (pl.ProcFee - COALESCE(cp.InsPayAmt, 0) - COALESCE(adj.TotalAdjustments, 0) >= 0)
+                pl.ProcFee = 0  -- Zero fee procedures are automatically successful
+                OR (
+                    -- Payment is valid AND claim is active
+                    cp.Status = 1  -- Only consider active claims
+                    AND (
+                        COALESCE(cp.InsPayAmt, 0) >= pl.ProcFee
+                        OR (COALESCE(cp.InsPayAmt, 0) + COALESCE(adj.TotalAdjustments, 0) >= pl.ProcFee)
+                    )
+                )
             ) THEN 'completed_and_paid'
         
         -- Completed but payment issues
@@ -212,10 +246,15 @@ SELECT DISTINCT
         WHEN pl.ProcStatus = 2 
             AND pl.CodeNum NOT IN (626, 627)  -- Not a cancellation
             AND (
-                -- Payment is valid (using our existing payment logic)
-                COALESCE(cp.InsPayAmt, 0) >= pl.ProcFee
-                OR (COALESCE(cp.InsPayAmt, 0) + COALESCE(adj.TotalAdjustments, 0) >= pl.ProcFee)
-                OR (pl.ProcFee - COALESCE(cp.InsPayAmt, 0) - COALESCE(adj.TotalAdjustments, 0) >= 0)
+                pl.ProcFee = 0  -- Zero fee procedures are automatically successful
+                OR (
+                    -- Payment is valid AND claim is active
+                    cp.Status = 1  -- Only consider active claims
+                    AND (
+                        COALESCE(cp.InsPayAmt, 0) >= pl.ProcFee
+                        OR (COALESCE(cp.InsPayAmt, 0) + COALESCE(adj.TotalAdjustments, 0) >= pl.ProcFee)
+                    )
+                )
             ) THEN 1
         ELSE 0
     END as target_journey_success,
@@ -231,7 +270,77 @@ SELECT DISTINCT
         SELECT GROUP_CONCAT(CONCAT(ad.adjustment_type, ': ', ad.AdjAmt) SEPARATOR '; ')
         FROM AdjustmentDetails ad
         WHERE ad.ProcNum = pl.ProcNum
-    ) as adjustment_breakdown
+    ) as adjustment_breakdown,
+
+    -- Add Payment Split Analysis
+    psm.split_count,
+    CASE 
+        WHEN psm.split_count BETWEEN 1 AND 3 THEN 'normal_split'
+        WHEN psm.split_count BETWEEN 4 AND 15 THEN 'complex_split'
+        WHEN psm.split_count > 15 THEN 'review_needed'
+        ELSE 'no_splits'
+    END as split_pattern,
+    
+    -- Add Payment Type Context
+    CASE 
+        WHEN psm.unearned_type = 0 THEN 'regular_payment'
+        WHEN psm.unearned_type = 288 THEN 'prepayment'
+        WHEN psm.unearned_type = 439 THEN 'treatment_plan_prepayment'
+        ELSE 'unknown_type'
+    END as payment_type,
+    
+    -- Enhanced Insurance Payment Validation
+    ia.estimate_accuracy,
+    ia.significant_overpayment,
+    CASE 
+        WHEN ia.InsPayAmt IS NOT NULL AND ia.InsPayEst IS NOT NULL 
+        THEN ABS(ia.InsPayAmt - ia.InsPayEst) / NULLIF(ia.InsPayEst, 0) 
+        ELSE NULL 
+    END as insurance_estimate_variance,
+    
+    -- Enhanced Payment Validation Status
+    CASE
+        WHEN pv.validation_status = 'insurance_overpaid' 
+            AND ia.significant_overpayment = 1 THEN 'investigate_overpayment'
+        WHEN psm.split_count > 15 THEN 'review_split_pattern'
+        WHEN pl.ProcFee = 0 THEN 'zero_fee_valid'
+        WHEN psm.unearned_type IN (288, 439) THEN 'prepayment_valid'
+        WHEN pv.validation_status = 'exactly_covered' 
+            AND psm.split_count BETWEEN 1 AND 3 THEN 'standard_valid'
+        ELSE pv.validation_status
+    END as enhanced_validation_status,
+    
+    -- Refined Journey Success Definition
+    CASE
+        WHEN journey_stage = 'completed' 
+        AND pl.CodeNum NOT IN (626, 627)  -- Not a cancellation
+        AND (
+            -- Zero fee success path
+            pl.ProcFee = 0
+            OR
+            -- Non-insurance success path
+            (HasInsurance = 0 
+             AND split_pattern = 'normal_split'
+             AND COALESCE(TotalAdjustments, 0) >= OriginalFee)
+            OR
+            -- Insurance success path
+            (HasInsurance = 1 
+             AND cp.Status = 1  -- Active claim
+             AND ActualInsurancePayment IS NOT NULL
+             AND (
+                 -- Full insurance coverage
+                 ActualInsurancePayment >= OriginalFee
+                 OR
+                 -- Partial coverage with valid split
+                 (ActualInsurancePayment + COALESCE(TotalAdjustments, 0) >= OriginalFee
+                  AND split_pattern = 'normal_split')
+             )
+             AND significant_overpayment = 0
+            )
+        )
+        THEN 1
+        ELSE 0
+    END as refined_journey_success
 
 FROM FilteredProcs pl
 LEFT JOIN patient pat ON pl.PatNum = pat.PatNum
@@ -244,6 +353,8 @@ LEFT JOIN CategoryMetrics cm ON pl.CodeNum = cm.CodeNum
 LEFT JOIN HistoricalFees hf ON pl.CodeNum = hf.CodeNum AND pl.ProvNum = hf.ProvNum
 LEFT JOIN PatientHistory ph ON pl.PatNum = ph.PatNum
 LEFT JOIN PaymentValidation pv ON pl.ProcNum = pv.ProcNum
+LEFT JOIN PaymentSplitMetrics psm ON pl.ProcNum = psm.ProcNum
+LEFT JOIN InsuranceAccuracy ia ON pl.ProcNum = ia.ProcNum
 
 GROUP BY pl.ProcNum
 ORDER BY pl.ProcDate DESC;

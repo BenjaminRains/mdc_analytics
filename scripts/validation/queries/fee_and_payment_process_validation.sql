@@ -53,8 +53,8 @@ FROM
 JOIN 
     definition d ON a.AdjType = d.DefNum
 WHERE 
-    a.AdjDate >= DATE_SUB(CURRENT_DATE, INTERVAL 4 YEAR); 
-LIMIT 1000000; 
+    a.AdjDate >= DATE_SUB(CURRENT_DATE, INTERVAL 4 YEAR)
+LIMIT 1000000;
 
 
 -- Query 3: Expanded Query to investigate how insurance documents the fee and the process of insurance payment.
@@ -71,13 +71,21 @@ SELECT
     cp.InsPayEst,
     cp.InsPayAmt,
     cp.WriteOff,
-    c.DateService, 
+    c.DateService,
     c.PlanNum,
     c.PatNum,
+    -- Add Status to understand claim state
+    cp.Status as ClaimStatus,
+    -- Add fields to track payment variations
+    CASE WHEN cp.InsPayAmt <> cp.InsPayEst THEN 1 ELSE 0 END as payment_differs_from_estimate,
+    CASE WHEN cp.WriteOff > 0 THEN 1 ELSE 0 END as has_writeoff,
+    -- Add fee schedule info
     fs.Description AS fee_schedule_description,
     fs.FeeSchedType,
+    -- Add insurance details
     ip.GroupName AS insurance_group_name,
     ip.PlanType AS insurance_plan_type,
+    -- Add bluebook tracking
     ibb.InsPayAmt AS bluebook_ins_pay_amt,
     ibb.AllowedOverride AS bluebook_allowed_override,
     ibbl.AllowedFee AS bluebook_log_allowed_fee,
@@ -95,9 +103,26 @@ LEFT JOIN
 LEFT JOIN 
     insbluebooklog ibbl ON cp.ClaimProcNum = ibbl.ClaimProcNum
 WHERE 
+    -- Only look at meaningful claim statuses
     cp.Status IN (1, 2) 
+    -- Ensure we have some payment activity
+    AND (cp.InsPayAmt > 0 OR cp.InsPayEst > 0 OR cp.WriteOff > 0)
+    -- Recent claims only
     AND c.DateService >= DATE_SUB(CURRENT_DATE, INTERVAL 4 YEAR)
+    -- Ensure we capture variations in payment patterns
+    AND EXISTS (
+        SELECT 1 
+        FROM claimproc cp2 
+        WHERE cp2.ProcNum = cp.ProcNum 
+        AND cp2.InsPayAmt <> cp2.InsPayEst
+    )
+ORDER BY 
+    -- Order to help spot patterns
+    ip.GroupName,
+    c.DateService,
+    ABS(cp.InsPayAmt - cp.InsPayEst) DESC
 LIMIT 1000000;
+
 
 
 -- Query 4 to check patient and insurance payment records in payment and paysplit
@@ -113,18 +138,25 @@ SELECT
     p.PatNum,
     ps.SplitAmt,
     ps.ProcNum,
-    ps.UnearnedType, -- linked to definition.DefNum
-    d.Descript,
-    d.DefNum
+    CASE 
+        WHEN ps.UnearnedType = 0 THEN 'Regular Payment'
+        WHEN ps.UnearnedType = 288 THEN 'Prepayment'
+        WHEN ps.UnearnedType = 439 THEN 'Treat Plan Prepayment'
+        ELSE 'Unknown Type'
+    END AS PaymentType,
+    ps.UnearnedType,
+    d.ItemName
 FROM 
     payment p
-JOIN 
+LEFT JOIN 
     paysplit ps ON p.PayNum = ps.PayNum
-JOIN 
-    definition d ON ps.UnearnedType = d.DefNum -- Join with definition table
+LEFT JOIN 
+    definition d ON ps.UnearnedType = d.DefNum 
 WHERE 
     p.PayAmt <> 0
     AND p.PayDate >= DATE_SUB(CURRENT_DATE, INTERVAL 4 YEAR)
+ORDER BY 
+    p.PayNum, ps.SplitAmt DESC
 LIMIT 1000000;
 
 -- Notes on claimpayment links:

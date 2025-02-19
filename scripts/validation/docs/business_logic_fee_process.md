@@ -1,3 +1,128 @@
+# Treatment Journey Business Logic
+
+## Overview
+This document outlines the business logic for tracking procedures from treatment planning through payment completion in OpenDental. It serves as the foundation for the treatment journey ML analysis.
+
+## Core Components
+
+### 1. Procedure Fees
+- **Base Fee (`procedurelog.ProcFee`)**
+  - Represents the clinic's fee for the procedure
+  - Set before insurance, adjustments, or discounts
+  - Can differ from standard fee (`fee.Amount`)
+  - One procedure can have a consistent ProcFee despite varying standard fees
+
+- **Fee Schedule System (`fee`)**
+  - Multiple fee schedules can exist for the same procedure
+  - Each fee entry has a unique `FeeNum`
+  - Standard fees can vary significantly for the same procedure
+  - Historical fee records are maintained
+  - Links:
+    - `procedurelog.CodeNum` → `fee.CodeNum`
+    - `fee.OldCode` tracks CDT codes (e.g., "D1204")
+
+- **Procedure Codes (`procedurecode`)**
+  - Uses CDT (Code on Dental Procedures) standard
+  - Each procedure has a description and CodeNum
+  - Same CodeNum maintains consistent meaning across tables
+
+### 2. Insurance Claims
+- **Claim Status (`claimproc.Status`)**
+  - Status = 1 (34.39%): Active claims
+    - Associated with completed procedures
+    - Valid for payment validation
+    - Can have pending or completed payments
+  
+  - Status = 3 (57.84%): Adjustment entries
+    - Not linked to active procedures
+    - Represents voided claims or corrections
+    - Should be excluded from payment validation
+
+  - Other Statuses
+    - Status = 0 (0.63%): New/pending claims
+    - Status = 2 (0.77%): Pre-authorizations
+    - Status = 4 (2.88%): Payment adjustments
+    - Status = 6 (2.25%): Voided estimates
+    - Status = 7 (1.24%): Currently unused (possibly legacy or reserved)
+
+### 3. Payments and Adjustments
+- **Insurance Payments**
+  - Tracked in `claimproc` table
+    - `InsPayAmt`: Actual payment received
+    - `InsPayEst`: Estimated payment
+    - `WriteOff`: Amount written off
+  - Insurance amounts are separate from clinic fees
+
+- **Adjustments (`adjustment`)**
+  - `adjustment.AdjAmt`: Stores fee modifications
+    - Can be negative (reductions) or positive (additions)
+    - Range from small amounts (e.g., $0.50) to large amounts (e.g., $14,530)
+    - Common adjustments include insurance write-offs and courtesy discounts
+
+  - **Adjustment Types** (from `definition` table):
+    - Type 473: Warranty adjustments ("WARRANTY/NO CHARGE")
+    - Type 474: Provider discretionary discounts ("NO CHARGE PER DR KAMP")
+    - Type 475: No charge for specific items ("NC FOR ADMIRA PROTECT")
+    - Type 481: Balance adjustments
+    - Type 488: Standard discount amount ($125 common)
+    - Type 186: Small balance adjustments
+    - Type 188: Insurance-related adjustments
+    - Type 472: Insurance contractual write-offs
+    - Type 9: Minor balance adjustments
+
+  - **Documentation**
+    - `AdjNote`: Captures reason for adjustment
+      - Provider authorizations
+      - Warranty claims
+      - Insurance-related notes
+      - Patient communication notes
+    
+  - **Common Scenarios**
+    - Insurance contractual adjustments
+    - Provider courtesy discounts
+    - Warranty/redo work
+    - Balance corrections
+    - Monthly service discounts
+    - Insurance out-of-network adjustments
+
+  - **Authorization**
+    - Most significant adjustments require provider approval (noted in AdjNote)
+    - Some adjustments are automatic (insurance contractual)
+    - Standard discount amounts appear to be pre-authorized
+
+- **Patient Payments**
+  - Managed through `payment` and `paysplit` tables
+  - Can be split across multiple procedures
+
+## Journey Success Criteria
+For the treatment_journey_ml.sql analysis:
+
+1. **Completed Procedure**
+   - `ProcStatus = 2`
+   - Not a cancellation (CodeNum NOT IN (626, 627))
+
+2. **Valid Payment**
+   - Zero fee procedures are automatically successful
+   - For non-zero fees:
+     - Active claim (Status = 1)
+     - Either:
+       - Full insurance payment (InsPayAmt >= ProcFee)
+       - Full coverage through insurance + adjustments
+
+## Key Tables
+- `procedurelog`: Core procedure information
+- `claimproc`: Insurance claim processing
+- `adjustment`: Fee adjustments and discounts
+- `payment`/`paysplit`: Patient payments
+- `fee`: Standard fee schedule
+- `definition`: Lookup values for types/categories
+
+## Notes for Analysis
+1. Only consider Status = 1 claims for payment validation
+2. Exclude Status = 3 claims (adjustments/voids)
+3. Zero-fee procedures are considered successful completions
+4. Track both insurance and adjustment amounts for full payment picture
+
 # Business Logic: Fee to Payment Process
 
 ## Overview
@@ -12,11 +137,14 @@ This document outlines the business logic for the fee assignment, adjustment, an
 - **Hypothesis**: `procedurelog.ProcFee` is populated from `fee.Amount` based on `procedurecode.CodeNum`.
 
 ## Adjustments
-- **Adjustment Types**:
-  - `adjustment.AdjAmt`: Represents discounts or other fee modifications.
-  - `adjustment.AdjType`: Links to `definition.DefNum` for adjustment categorization.
-- **Adjustment Logic**:
-  - **Hypothesis**: Discounts are stored in `adjustment.AdjAmt` and categorized by `AdjType`.
+- **Adjustment Records (`adjustment` table)**
+  - `adjustment.AdjAmt`: Stores all fee modifications including:
+    - Discounts
+    - Write-offs
+    - Other fee adjustments
+  - `adjustment.AdjType`: Links to `definition.DefNum` for categorization
+    - Each adjustment type has a specific meaning defined in the definition table
+    - Helps track the reason for each adjustment
 
 ## Payments
 - **Payment Sources**:
@@ -61,7 +189,7 @@ This document outlines the business logic for the fee assignment, adjustment, an
 
 This document serves as a readme for the business logic of the fee to payment process. It includes fee-related tables and their business logic. Fee fields are found in the following tables: `procedurelog`, `fee`, `feesched`, `adjustment`, `claimproc`, `claim`.
 
-- **Procedurelog.ProcFee**: The clinic fee for the procedure before insurance, adjustments, discounts, write-offs. (Strong Hypothesis)
+- **Procedurelog.ProcFee**: The clinic fee for the procedure before insurance, adjustments, discounts. (Strong Hypothesis)
 
 ### Investigations
 - `pl.ProcFee` =? `f.Amount` from FeeSchedule table. **Investigate**
@@ -91,7 +219,6 @@ This document serves as a readme for the business logic of the fee to payment pr
 - NOTE: claim.ClaimType contains values 'P', 'S'. P could be a partial claim, or it could be a primary claim. Needs investigation. 
 - NOTE: claim.ClaimStatus contains values 'W', 'H', 'S', and others. Investigate the meaning of each. 
 
-
 payments are separate from fees. Payments can come from insurance and patients. 
 payment related tables: payment, paysplit, claimpayment, 
 
@@ -119,39 +246,6 @@ NOTE: paysplit.ProcNum links to procedurelog.ProcNum. Some values are 0 because 
 - Note: `paysplit.PatNum` links to `patient.PatNum`.
 - Note: `paysplit.UnearnedType` needs investigation. Check `definition.DefNum`.
 - Note: `paysplit.ProcNum` links to `procedurelog.ProcNum`. Some values are 0 because they aren't linked to a procedure.
-
-QUERY 1 from: fee_and_payment_process_validation.sql
-Purpose: To validate the fee population logic in the procedurelog table by comparing recorded procedure fees with clinic fees and procedure descriptions.
-Selected Columns:
-pl.ProcNum: The unique identifier for each procedure.
-pl.CodeNum: The code number associated with the procedure, used to link with fee and procedure description.
-pl.ProcFee: The fee recorded for the procedure in the procedurelog.
-pl.PatNum: The patient number, identifying the patient who underwent the procedure.
-pl.ProcDate: The date when the procedure was performed.
-f.Amount AS clinic_fee: The fee amount from the fee table, representing the clinic's standard fee for the procedure.
-pc.Descript AS procedure_description: A descriptive name for the procedure, retrieved from the procedurecode table.
-Joins:
-The query joins the procedurelog table with the fee table using the CodeNum field to compare the recorded procedure fee with the clinic's standard fee.
-It also joins the procedurelog table with the procedurecode table using the CodeNum field to retrieve descriptive names for the procedures.
-Filters:
-The query filters records to include only those procedures with a ProcStatus of 2, which typically indicates completed procedures.
-It restricts the results to procedures performed within the last four years, using the DATE_SUB function to calculate the date range.
-
-
-QUERY 2 from: fee_and_payment_process_validation.sql
-This SQL query is designed to analyze how discounts and adjustments are applied within a healthcare system by examining records in the adjustment table. It also provides context for each adjustment by joining with the definition table to retrieve descriptive names for adjustment types.
-Purpose: To understand the application of discounts and other adjustments by examining adjustment records over the past four years.
-Selected Columns:
-a.AdjNum: The unique identifier for each adjustment record.
-a.AdjAmt: The amount of the adjustment, which could represent a discount or other financial modification.
-a.AdjType: The type of adjustment, represented by a numerical code.
-a.PatNum: The patient number, identifying the patient associated with the adjustment.
-a.AdjDate: The date when the adjustment was applied.
-d.ItemName AS adjustment_type_name: A descriptive name for the adjustment type, retrieved from the definition table.
-Joins:
-The query joins the adjustment table with the definition table using the AdjType and DefNum fields. This join allows the query to replace numerical adjustment type codes with human-readable names, making the data easier to interpret.
-Filters:
-The query filters records to include only those adjustments that occurred within the last four years. This is achieved using the DATE_SUB function to calculate the date range.
 
 
 ### Query 3 Insurance Fee Documentation: fee_and_payment_process_validation.sql
@@ -218,3 +312,234 @@ Joins claimproc with claimpayment on ClaimPaymentNum.
 Filters:
 Filters for cp.Status values of 1 or 2.
 Limits the results to claims with a DateService within the last 4 years.
+
+## Insurance Claims Status (claimproc.Status)
+Based on analysis of the claimproc table, we've identified key status values:
+
+### Status = 1 (34.39% of claims)
+- Represents active/valid claims
+- Associated with completed procedures (ProcStatus = 2)
+- Can have:
+  - No payments (InsPayEst = 0, InsPayAmt = 0)
+  - Pending payments (InsPayEst > 0, InsPayAmt = 0)
+  - Completed payments (InsPayEst > 0, InsPayAmt > 0)
+- DateInsFinalized can be pending ('0001-01-01') or have actual dates
+
+### Status = 3 (57.84% of claims)
+- Most common status
+- Not linked to active procedures (no matches in procedurelog)
+- Characteristics:
+  - Always has FeeBilled = 0
+  - Always has InsPayEst = 0
+  - Can have non-zero InsPayAmt (including negative values)
+  - Never has DateInsFinalized (always '0001-01-01')
+- Likely represents adjustment entries, voided claims, or payment corrections
+
+### Status = 0 (0.63% of claims)
+- Appears to represent new or pending insurance claims
+- Characteristics:
+  - Has FeeBilled values (non-zero)
+  - May have InsPayEst values (estimated insurance payments)
+  - Always has InsPayAmt = 0 (no actual payments yet)
+  - DateInsFinalized is always '0001-01-01' (not finalized)
+  - No WriteOffs
+  - May have DedApplied (deductible amounts)
+  - InsEstTotal matches InsPayEst
+- Likely represents claims that have been submitted but not yet processed by insurance
+
+### Status = 2 (0.77% of claims)
+- Appears to represent pre-authorization or pre-estimate claims
+- Characteristics:
+  - Has significant FeeBilled values (often larger procedures)
+  - Usually has InsPayEst values (estimated insurance payments)
+  - Always has InsPayAmt = 0 (no actual payments)
+  - DateCP is often '0001-01-01' (no payment date)
+  - DateInsFinalized is always '0001-01-01' (not finalized)
+  - No WriteOffs
+  - No DedApplied
+  - InsEstTotal matches InsPayEst
+- Likely represents claims that need pre-authorization or are in pre-estimate status
+
+### Status = 4 (2.88% of claims)
+- Appears to represent payment adjustments or corrections
+- Characteristics:
+  - Always has FeeBilled = 0
+  - Usually has InsPayEst = 0
+  - Has varying InsPayAmt values (both positive and negative)
+  - DateCP and DateInsFinalized usually match and are set
+  - No WriteOffs
+  - No DedApplied
+  - InsEstTotal often differs from InsPayAmt
+  - Can have negative payment amounts (indicating reversals/corrections)
+- Likely represents payment adjustments, corrections, or supplemental payments after the initial claim processing
+
+### Status = 6 (2.25% of claims)
+- Appears to represent voided or cancelled estimates
+- Characteristics:
+  - Always has FeeBilled = 0
+  - May have InsPayEst values (estimated insurance payments)
+  - Always has InsPayAmt = 0 (no actual payments)
+  - DateInsFinalized is always '0001-01-01' (never finalized)
+  - No WriteOffs
+  - No DedApplied
+  - InsEstTotal matches InsPayEst when present
+  - Many entries have all zero values
+- Likely represents voided estimates or cancelled claims before payment processing
+
+### Status = 7 (1.24% of claims)
+- No active records found in recent data
+- May be a legacy or reserved status
+- Further investigation needed to understand historical usage
+
+## Summary of Claim Status Values
+1. **Status = 0 (0.63%)**: New/pending insurance claims with no payments yet
+2. **Status = 1 (34.39%)**: Active claims with completed procedures
+3. **Status = 2 (0.77%)**: Pre-authorization or pre-estimate claims
+4. **Status = 3 (57.84%)**: Adjustment entries, voided claims, or payment corrections
+5. **Status = 4 (2.88%)**: Payment adjustments and supplemental payments
+6. **Status = 6 (2.25%)**: Voided or cancelled estimates
+7. **Status = 7 (1.24%)**: Currently unused (possibly legacy or reserved)
+
+### Investigation Needed
+Further analysis required for remaining status values:
+- Status = 7 (1.24%)
+
+### Insurance Claims and Fee Processing
+
+#### Fee Calculation Methods
+1. **UCR (Usual, Customary, and Reasonable) Fee**
+   - Typically calculated as 85% of the standard fee
+   - Example: "Rule Type: UCR Fee. Allowed amount: 164.05 (85% of UCR fee)"
+
+2. **Historical Claims Matching**
+   - Several matching methods used:
+     - Insurance Plan matching
+     - Insurance Carrier matching
+     - Insurance Group Number matching
+   - Uses either Average or Most Recent amounts
+
+#### Insurance Payment Structure
+- **Billed Amount** (`FeeBilled`): Original amount charged
+- **Estimated Payment** (`InsPayEst`): Expected insurance payment
+- **Actual Payment** (`InsPayAmt`): Amount insurance actually paid
+- **Write-off** (`WriteOff`): Amount written off by insurance
+
+#### Fee Schedule System
+- Standard fee schedule is baseline
+- Insurance companies may have their own fee schedules
+- Bluebook system tracks:
+  - `bluebook_ins_pay_amt`: Insurance payment history
+  - `bluebook_allowed_override`: Manual overrides
+  - `bluebook_log_allowed_fee`: Calculated allowed amounts
+
+#### Payment Determination Rules
+1. **Insurance Plan Based**
+   - Matches against specific insurance plan history
+   - Example: "Allowed fees from received claims with matching Insurance Plan"
+
+2. **Carrier Based**
+   - Uses broader carrier-level fee agreements
+   - Example: "Allowed fees from received claims with matching Insurance Carrier"
+
+3. **Group Based**
+   - Matches against insurance group history
+   - Example: "Allowed fees from received claims with matching Insurance Group Number"
+
+#### Key Validation Points
+1. Actual payments (`InsPayAmt`) can differ from estimates (`InsPayEst`)
+2. Multiple fee calculation methods may apply to same procedure
+3. Historical payment patterns influence future allowances
+4. Manual overrides are possible through bluebook system
+
+## Payment Types and Unearned Revenue
+
+### UnearnedType in PaySplit Table
+- **Type 0 (88.9% of splits)**
+  - Represents regular payments
+  - No definition entry (NULL in ItemName) - *Need to verify if this is correct*
+  - Most common type
+  - Direct payment applied to procedures
+
+- **Type 288 (10.9% of splits)**
+  - Represents prepayments
+  - Links to definition table with ItemName "Prepayment"
+  - Used when payment is received before procedures
+
+- **Type 439 (0.2% of splits)**
+  - Represents treatment plan prepayments
+  - Links to definition table with ItemName "Treat Plan Prepayment"
+  - Used for treatment plan deposits
+
+### Questions to Verify
+1. Why do regular payments (Type 0) not have definition entries?
+2. Are there any other UnearnedType values we should expect?
+3. Should we add validation to ensure UnearnedType values are always valid?
+
+## Payment Processing Findings
+
+### Payment Split Patterns
+1. **Split Distribution**
+   - 76% of payments have 1-3 splits
+     - 1 split: 32.3% (6,007 payments)
+     - 2 splits: 25.9% (4,818 payments)
+     - 3 splits: 18.5% (3,443 payments)
+   - Complex payments can have up to 51 splits
+   - Larger split counts correlate with higher payment amounts
+
+2. **Payment Types (UnearnedType)**
+   - Type 0 (Regular Payments): 99%
+     - Mean amount: $595.31
+     - High variability (std: $2,443.89)
+     - Can have negative amounts (adjustments/refunds)
+   - Type 288 (Prepayments): ~0.8%
+     - Mean amount: $1,465.10
+     - Used for advance payments
+   - Type 439 (Treatment Plan Prepayments): ~0.2%
+     - Mean amount: $6,518.78
+     - Highest average amount
+     - Used for large treatment plans
+
+3. **Zero-Amount Splits**
+   - Extremely rare (8 out of 49,409 splits = 0.016%)
+   - All zero splits are part of valid, balanced payments
+   - Occur in both regular payments and prepayments
+   - Often associated with unallocated portions of payments
+
+### Fee Distribution
+1. **Procedure Fee Patterns**
+   - Most fees cluster below $500
+   - Highest fees:
+     - Orthodontics (Code 479): $3,500
+     - Implant-supported dentures (Code 720): $3,380
+     - Immediate dentures (Codes 181, 182): ~$2,175
+   - No negative fees found in production data
+
+2. **Insurance Payment Accuracy**
+   - 96% of payments differ from estimates
+   - Very low overpayment rate (0.1% of claims)
+   - Strong correlation between estimates and actual payments
+   - Outliers typically represent complex procedures or multiple tooth treatments
+
+### Data Integrity
+1. **Payment Split Integrity**
+   - Perfect matching between PayAmt and sum(SplitAmt)
+   - No mismatches found in 18,573 payments analyzed
+   - Split amounts properly distribute total payment
+
+2. **Validation Rules**
+   - Flag payments with >15 splits for review
+   - Monitor zero-amount splits
+   - Track UnearnedType distribution changes
+   - Verify large payment amounts (>$10,000)
+   - Check negative payments for proper documentation
+
+### Business Process Implications
+1. **Payment Processing**
+   - Regular payments (Type 0) don't require definition entries
+   - Prepayments are properly tracked with specific types
+   - Split system handles complex payment scenarios effectively
+
+2. **Fee Management**
+   - Fee structure shows consistent patterns by procedure type
+   - Insurance estimates are generally conservative
+   - Payment tracking system maintains high data integrity
