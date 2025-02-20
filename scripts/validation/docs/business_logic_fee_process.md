@@ -7,121 +7,104 @@ This document outlines the business logic for tracking procedures from treatment
 
 ### 1. Procedure Fees
 - **Base Fee (`procedurelog.ProcFee`)**
-  - Represents the clinic's fee for the procedure
-  - Set before insurance, adjustments, or discounts
-  - Can differ from standard fee (`fee.Amount`)
-  - One procedure can have a consistent ProcFee despite varying standard fees
+  - Two primary standard tiers identified:
+    - $1,950 tier (197 procedures, 72 distinct dates)
+    - $1,288 tier (661 procedures, 214 distinct dates)
+  - Other procedures (16,368 procedures) average $135.37
+  - Large fee procedures (18 cases) average $8,067.06
 
 - **Fee Schedule System (`fee`)**
-  - Multiple fee schedules can exist for the same procedure
-  - Each fee entry has a unique `FeeNum`
-  - Standard fees can vary significantly for the same procedure
-  - Historical fee records are maintained
+  - Multiple fee schedules can exist for same procedure
+  - Each fee entry has unique `FeeNum`
   - Links:
     - `procedurelog.CodeNum` → `fee.CodeNum`
-    - `fee.OldCode` tracks CDT codes (e.g., "D1204")
-
-- **Procedure Codes (`procedurecode`)**
-  - Uses CDT (Code on Dental Procedures) standard
-  - Each procedure has a description and CodeNum
-  - Same CodeNum maintains consistent meaning across tables
+    - `fee.OldCode` tracks CDT codes
 
 ### 2. Insurance Claims
-- **Claim Status (`claimproc.Status`)**
+- **Claim Status Distribution (`claimproc.Status`)**
   - Status = 1 (34.39%): Active claims
-    - Associated with completed procedures
-    - Valid for payment validation
-    - Can have pending or completed payments
-  
+    - Can be in various payment states:
+      - No payments (InsPayEst = 0, InsPayAmt = 0)
+      - Pending payments (InsPayEst > 0, InsPayAmt = 0)
+      - Partial payments (InsPayAmt < InsPayEst)
+      - Complete payments (InsPayAmt ≥ InsPayEst)
   - Status = 3 (57.84%): Adjustment entries
-    - Not linked to active procedures
-    - Represents voided claims or corrections
-    - Should be excluded from payment validation
-
-  - Other Statuses
-    - Status = 0 (0.63%): New/pending claims
-    - Status = 2 (0.77%): Pre-authorizations
-    - Status = 4 (2.88%): Payment adjustments
-    - Status = 6 (2.25%): Voided estimates
-    - Status = 7 (1.24%): Currently unused (possibly legacy or reserved)
+    - Always has FeeBilled = 0
+    - Always has InsPayEst = 0
+    - Can have non-zero InsPayAmt (including negative)
+  - Status = 0 (0.63%): New claims
+  - Status = 2 (0.77%): Pre-authorizations
+  - Status = 4 (2.88%): Payment adjustments
+  - Status = 6 (2.25%): Voided estimates
+  - Status = 7 (1.24%): Legacy/unused
 
 ### 3. Payments and Adjustments
 - **Insurance Payments**
-  - Tracked in `claimproc` table
-    - `InsPayAmt`: Actual payment received
-    - `InsPayEst`: Estimated payment
-    - `WriteOff`: Amount written off
-  - Insurance amounts are separate from clinic fees
+  - Must be dated before the as_of_date for AR calculations
+  - Payments after as_of_date should not affect historical AR
+  - Future-dated payments should be excluded from AR totals
 
 - **Adjustments (`adjustment`)**
-  - `adjustment.AdjAmt`: Stores fee modifications
-    - Can be negative (reductions) or positive (additions)
-    - Range from small amounts (e.g., $0.50) to large amounts (e.g., $14,530)
-    - Common adjustments include insurance write-offs and courtesy discounts
-
-  - **Adjustment Types** (from `definition` table):
-    - Type 473: Warranty adjustments ("WARRANTY/NO CHARGE")
-    - Type 474: Provider discretionary discounts ("NO CHARGE PER DR KAMP")
-    - Type 475: No charge for specific items ("NC FOR ADMIRA PROTECT")
+  - Common Issues Identified:
+    - Decimal point errors (e.g., -$27,680 should be -$276.80)
+    - Large negative adjustments (69 cases, total $137,192)
+    - Times larger than fee: ranging from 1.02x to 83.88x
+  
+  - **Adjustment Types**:
+    - Type 473: Warranty adjustments
+    - Type 474: Provider discretionary
     - Type 481: Balance adjustments
-    - Type 488: Standard discount amount ($125 common)
-    - Type 186: Small balance adjustments
-    - Type 188: Insurance-related adjustments
-    - Type 472: Insurance contractual write-offs
-    - Type 9: Minor balance adjustments
+    - Type 488: Standard discounts
+    - Types 186/188: Insurance-related
 
-  - **Documentation**
-    - `AdjNote`: Captures reason for adjustment
-      - Provider authorizations
-      - Warranty claims
-      - Insurance-related notes
-      - Patient communication notes
-    
-  - **Common Scenarios**
-    - Insurance contractual adjustments
-    - Provider courtesy discounts
-    - Warranty/redo work
-    - Balance corrections
-    - Monthly service discounts
-    - Insurance out-of-network adjustments
+### 4. Payment Processing
+- **AR Aging Calculation**
+  - Based on fixed reference date (as_of_date)
+  - Aging buckets:
+    - Current: ≤30 days (39.3% of AR)
+    - 30-60 days (11.7% of AR)
+    - 60-90 days (12.7% of AR)
+    - 90+ days (36.2% of AR)
+  - Balance calculation must consider:
+    - Only payments before as_of_date
+    - Only adjustments before as_of_date
+    - Exclude future-dated transactions
 
-  - **Authorization**
-    - Most significant adjustments require provider approval (noted in AdjNote)
-    - Some adjustments are automatic (insurance contractual)
-    - Standard discount amounts appear to be pre-authorized
+## Validation Rules
+1. **Fee Validation**
+   - Flag fees outside standard tiers
+   - Monitor frequency of large fee procedures
+   - Check for decimal point errors in adjustments
 
-- **Patient Payments**
-  - Managed through `payment` and `paysplit` tables
-  - Can be split across multiple procedures
+2. **Payment Validation**
+   - Maximum 15 splits per payment
+   - Split difference tolerance: 0.01
+   - Payment-to-fee ratio: 0.95-1.05
+   - Review all zero-fee procedures with payments
 
-## Journey Success Criteria
-For the treatment_journey_ml.sql analysis:
+3. **Duplicate Detection**
+   - Check same-day procedures with identical fees
+   - Monitor sequential ProcNum patterns
+   - Track batch entry vs. manual entry patterns
 
-1. **Completed Procedure**
-   - `ProcStatus = 2`
-   - Not a cancellation (CodeNum NOT IN (626, 627))
+## Risk Management
+1. **High-Risk Patterns**
+   - Multiple procedures same day/fee
+   - Adjustments > 10x procedure fee
+   - Payments with >15 splits
+   - Zero-fee procedures with payments
 
-2. **Valid Payment**
-   - Zero fee procedures are automatically successful
-   - For non-zero fees:
-     - Active claim (Status = 1)
-     - Either:
-       - Full insurance payment (InsPayAmt >= ProcFee)
-       - Full coverage through insurance + adjustments
+2. **Monitoring Metrics**
+   - Track adjustment size distribution
+   - Monitor split pattern changes
+   - Review duplicate entry patterns
+   - Track payment-to-fee ratios
 
-## Key Tables
-- `procedurelog`: Core procedure information
-- `claimproc`: Insurance claim processing
-- `adjustment`: Fee adjustments and discounts
-- `payment`/`paysplit`: Patient payments
-- `fee`: Standard fee schedule
-- `definition`: Lookup values for types/categories
-
-## Notes for Analysis
-1. Only consider Status = 1 claims for payment validation
-2. Exclude Status = 3 claims (adjustments/voids)
-3. Zero-fee procedures are considered successful completions
-4. Track both insurance and adjustment amounts for full payment picture
+## Notes
+- Focus on standard fee tier compliance
+- Monitor adjustment decimal accuracy
+- Review batch entry procedures
+- Validate complex payment splits
 
 # Business Logic: Fee to Payment Process
 
@@ -543,3 +526,52 @@ Further analysis required for remaining status values:
    - Fee structure shows consistent patterns by procedure type
    - Insurance estimates are generally conservative
    - Payment tracking system maintains high data integrity
+
+### Payment Split Analysis Findings
+
+1. **Split Pattern Distribution**
+   - Average splits per payment: 9.15
+   - Normal splits (1-3): 12,653 cases
+   - Complex splits (4-15): 401 cases
+   - Review needed (>15): 16 cases
+   - Maximum observed splits: 16 per procedure
+
+2. **Payment Success Criteria Refinement**
+   - Zero fee procedures are automatically successful
+   - Normal split patterns (1-3):
+     - Must be within 5% of ProcFee (0.95 to 1.05 range)
+     - No split difference > 0.01
+   - Complex split patterns (4-15):
+     - Only valid with active insurance claims
+     - Must have Status = 1
+     - Total paid must be within 5% of ProcFee
+   - Review needed:
+     - Any procedure with >15 splits
+     - Split differences > 0.01
+     - Overpayment cases
+
+3. **Risk Patterns**
+   - High split counts correlate with payment issues
+   - Multiple small splits on large procedures need review
+   - Zero-fee procedures receiving payments require validation
+   - Split differences, even small ones, indicate potential issues
+
+4. **Payment Integrity Metrics**
+   - Split difference tolerance: 0.01
+   - Payment-to-fee ratio tolerance: 5%
+   - Maximum recommended splits: 15
+   - Minimum split amount: No specific limit, but small splits need review
+
+### Business Process Implications
+
+1. **Payment Processing Guidelines**
+   - Normal splits (1-3) are preferred for standard procedures
+   - Complex splits (4-15) should only occur with insurance involvement
+   - Any procedure requiring >15 splits needs management review
+   - Zero-fee procedures should not have payment splits
+
+2. **Risk Management**
+   - Monitor split pattern distributions monthly
+   - Review all procedures with >15 splits
+   - Investigate procedures with payment-to-fee ratios outside 0.95-1.05 range
+   - Track overpayment cases for process improvement
