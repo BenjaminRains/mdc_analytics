@@ -108,3 +108,108 @@ Status counts across all appointments:
 - Very low patient assignment rate (2 patients total)
 - Recommend reviewing if unused fee schedules should be hidden or properly assigned
 
+## Fee and Payment Issues (2023)
+
+### Large Negative Adjustments
+
+**Context:**
+- Total negative adjustments analyzed: 69 cases
+- Total amount: $137,191.85
+- Date range: January 2023 - December 2023
+
+**Key Findings:**
+1. Decimal Point Errors:
+   - Most severe case: -$27,680 on $330 procedure (83.9x fee)
+   - Common pattern: 100x multiplier suggests decimal shift
+   - Example: -$14,340 on $0 fee procedure needs review
+
+2. Adjustment Size Distribution:
+   - >10x procedure fee: 7 cases
+   - 5x-10x procedure fee: 18 cases
+   - 2x-5x procedure fee: 31 cases
+   - 1x-2x procedure fee: 13 cases
+
+### Duplicate Procedure Entries
+
+**Context:**
+- Total possible duplicates: 15,151 procedures
+- Total amount: $2,888,140.60
+- Primary affected fee tiers: $1,950 and $1,288
+
+**Notable Patterns:**
+1. Batch Entry Cases:
+   - 2023-06-21: 13 identical $1,950 procedures ($25,350)
+   - 2023-03-01: 11 identical $1,950 procedures ($21,450)
+   - 2023-03-22: 14 identical $1,288 procedures ($18,032)
+
+2. Entry Patterns:
+   - Sequential ProcNums indicate batch entry
+   - Same-day, same-fee entries without sequential ProcNums suggest manual duplicates
+   - Most common dates show 8-14 duplicate entries
+
+### Fee Schedule Analysis
+
+**Context:**
+- Standard fee tiers identified:
+  - $1,950 tier: 197 procedures across 72 dates
+  - $1,288 tier: 661 procedures across 214 dates
+  - Other procedures: 16,368 procedures averaging $135.37
+
+**Data Quality Issues:**
+1. Fee Schedule Assignment:
+   - Only 1 active fee schedule (FeeSchedNum = 55)
+   - Only 2 patients assigned to fee schedules
+   - All staff using single fee schedule
+
+2. Large Fee Outliers:
+   - 18 procedures with fees averaging $8,067.06
+   - 13 procedures with large unpaid balances totaling $110,969
+
+## Payment Processing Issues
+
+### Split Payment Patterns
+
+**Context:**
+- Normal splits (1-3): 76% of payments
+- Complex splits (4-15): Requires insurance
+- Problematic splits (>15): 16 cases need review
+
+**Data Quality Concerns:**
+1. Split Amount Issues:
+   - Small split amounts (<$1) requiring review
+   - Multiple splits on zero-fee procedures
+   - Complex split patterns without active insurance
+
+2. Payment Validation:
+   - Payment-to-fee ratios outside 0.95-1.05 range
+   - Split differences exceeding 0.01 tolerance
+   - Overpayment cases requiring investigation
+
+## Recommendations
+
+1. Immediate Actions:
+   - Review and correct decimal point errors in adjustments
+   - Investigate duplicate procedure entries
+   - Validate large fee procedures
+   - Review complex split payment cases
+
+2. Process Improvements:
+   - Implement decimal point validation for adjustments
+   - Add duplicate entry detection
+   - Enhance fee schedule assignment
+   - Strengthen payment split validation
+
+3. Monitoring:
+   - Track adjustment size distributions
+   - Monitor duplicate entry patterns
+   - Review payment split complexity
+   - Validate fee schedule usage
+
+## Assessment
+The 2023 data quality issues appear concentrated in three main areas:
+1. Adjustment entry errors (especially decimal points)
+2. Duplicate procedure entries (both batch and manual)
+3. Complex payment splits requiring validation
+
+These issues suggest the need for enhanced validation controls and regular monitoring procedures.
+
