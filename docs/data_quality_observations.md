@@ -213,3 +213,6 @@ The 2023 data quality issues appear concentrated in three main areas:
 
 These issues suggest the need for enhanced validation controls and regular monitoring procedures.
 
+there are two records with ProcDate = '1902-XX-XX'. These records need to be updated or ProcDate needs to be NULL
+
+investigate adjustment.Note = [empty]. There are 1000+ records with this value. 
