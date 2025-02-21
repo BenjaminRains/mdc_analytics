@@ -188,8 +188,6 @@ mdc_analytics_env/
 .env
 
 # Documentation with sensitive business info
-stakeholder_followup.md
-docs/stakeholder_followup.md
 
 # Raw Data Files - anywhere in the project
 **/*.csv
@@ -203,6 +201,9 @@ docs/stakeholder_followup.md
 **/*.db
 **/*.sqlite
 **/*.sqlite3
+
+# But keep data flow diagram
+!docs/data_flow_diagram.txt
 
 # Jupyter Notebooks - anywhere in the project
 **/*.ipynb
