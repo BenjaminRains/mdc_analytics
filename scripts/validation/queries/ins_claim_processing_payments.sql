@@ -47,9 +47,17 @@
  *    - Metric1: PatNum
  *    - Metric2: PlanNum
  *    - Metric3: CarrierNum
- *    - Metric4: DateEffective
- *    - Metric5: DateTerm
- *    - Metric6: plan_status ('Valid'/'Invalid')
+ *    - Metric4: DateEffective (when insurance coverage begins)
+ *    - Metric5: DateTerm (when ins coverage ends '0001-01-01' means open-ended)
+ *    - Metric6: plan_status - Indicates if claim date falls within valid insurance coverage:
+ *        'Valid': When ALL of these are true:
+ *          - DateService >= DateEffective
+ *          - DateService <= DateTerm (or plan is open-ended)
+ *          - For open-ended plans (DateTerm = '0001-01-01'), treated as valid through '9999-12-31'
+ *        'Invalid': When ANY of these are true:
+ *          - DateService < DateEffective
+ *          - DateService > DateTerm (for plans with specific end dates)
+ *          - DateService outside the plan's effective coverage period
  *    - Metric7: NULL
  *    - Metric8: NULL
  *
@@ -62,23 +70,23 @@
  *
  *    Claim Payment Matching section:
  *    - Metric1: ClaimNum
- *    - Metric2: InsPayAmt
- *    - Metric3: ProcFee
- *    - Metric4: DedApplied
- *    - Metric5: WriteOff
- *    - Metric6: total_accounted
- *    - Metric7: unaccounted_amount
- *    - Metric8: payment_status
+ *    - Metric2: InsPayAmt (amount paid by insurance)
+ *    - Metric3: ProcFee (Original proc fee from procedurelog)
+ *    - Metric4: DedApplied (deductible applied to the claim)
+ *    - Metric5: WriteOff (write-off amount)
+ *    - Metric6: total_accounted (sum of InsPayAmt, DedApplied, WriteOff)
+ *    - Metric7: unaccounted_amount (difference between ProcFee and total_accounted)
+ *    - Metric8: payment_status (Underpaid, Balanced, Overpaid)
  *
  *    Plan and Carrier Analysis section:
- *    - Metric1: active_plans
- *    - Metric2: total_claims
- *    - Metric3: unique_patients
+ *    - Metric1: active_plans (number of active plans)
+ *    - Metric2: total_claims (total claims processed by the carrier)
+ *    - Metric3: unique_patients 
  *    - Metric4: avg_days_to_payment
  *    - Metric5: total_payments
  *    - Metric6: total_writeoffs
  *    - Metric7: total_deductibles
- *    - Metric8: unverified_claims
+ *    - Metric8: unverified_claims (number of claims that have not been verified)
  *
  * Expected Validation Ranges:
  * - days_since_verification: 0-365 (normal), >365 (flag)
