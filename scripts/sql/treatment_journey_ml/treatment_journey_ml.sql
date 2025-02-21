@@ -2,7 +2,29 @@
  * Procedure Payment Journey Query
  * Tracks procedures from offering through payment completion, with detailed adjustment analysis
  */
-WITH ClaimProcSummary AS (
+WITH ExcludedCodes AS (
+    SELECT CodeNum 
+    FROM procedurecode 
+    WHERE ProcCode IN (
+        -- Administrative/Documentation
+        '~GRP~', 'D9987', 'D9986',  -- Notes and cancellations
+        'Watch', 'Ztoth',           -- Monitoring
+        'D0350',                    -- Photos
+        '00040', 'D2919',          -- Post-proc
+        '00051',                    -- Scans
+        -- Patient Management
+        'D9992',                    -- Care coordination
+        'D9995', 'D9996',          -- Teledentistry
+        -- Evaluations/Exams
+        'D0190',                    -- Screening
+        'D0171',                    -- Re-evaluation
+        'D0140',                    -- Limited eval
+        'D9430',                    -- Office visit
+        'D0120'                     -- Periodic eval
+    )
+),
+
+ClaimProcSummary AS (
     SELECT 
         ProcNum,
         MAX(InsPayAmt) as InsPayAmt,
@@ -12,16 +34,17 @@ WITH ClaimProcSummary AS (
     FROM claimproc 
     GROUP BY ProcNum
 ),
+
+-- Main filter window - 2024-2025 - 1 year planned and completed procedures with a fee. 
 FilteredProcs AS (
     SELECT pl.*
     FROM procedurelog pl
-    WHERE pl.ProcDate >= '2023-01-01'
-        AND pl.ProcDate < '2024-01-01'
+    WHERE pl.ProcDate >= '2024-01-01'
+        AND pl.ProcDate < '2025-01-01'
         AND pl.ProcStatus IN (1, 2)
         AND pl.ProcFee > 0
 ),
 HistoricalMetrics AS (
-    -- Pre-calculate all historical metrics in one pass
     SELECT 
         pl_hist.CodeNum,
         pl_hist.PatNum,
@@ -85,9 +108,7 @@ PatientHistory AS (
     -- Pre-calculate patient-specific metrics
     SELECT 
         PatNum,
-        COUNT(CASE WHEN CodeNum IN (626, 627) AND ProcStatus IN (2, 6) THEN 1 END) as missed_cancelled_count,
-        COUNT(CASE WHEN CodeNum = 626 AND ProcStatus IN (2, 6) THEN 1 END) as missed_count,
-        COUNT(CASE WHEN CodeNum = 627 AND ProcStatus IN (2, 6) THEN 1 END) as cancelled_count
+        COUNT(CASE WHEN CodeNum IN (626, 627) AND ProcStatus IN (2, 6) THEN 1 END) as missed_cancelled_count
     FROM procedurelog
     WHERE ProcDate >= DATE_SUB('2024-01-01', INTERVAL 2 YEAR)
     GROUP BY PatNum
@@ -211,6 +232,40 @@ JourneyStage AS (
             ELSE 'other'
         END as journey_stage
     FROM FilteredProcs pl
+)
+
+WITH ARAgingBuckets AS (
+    SELECT 
+        pl.ProcNum,
+        CASE 
+            WHEN DATEDIFF('2025-01-01', pl.ProcDate) <= 30 THEN 'current'
+            WHEN DATEDIFF('2025-01-01', pl.ProcDate) <= 60 THEN '30_60'
+            WHEN DATEDIFF('2025-01-01', pl.ProcDate) <= 90 THEN '60_90'
+            ELSE '90_plus'
+        END as aging_bucket,
+        -- Add AR type classification
+        CASE 
+            WHEN cp.Status = 1 THEN 'insurance_ar'
+            ELSE 'patient_ar'
+        END as ar_type
+    FROM FilteredProcs pl
+    LEFT JOIN ClaimProcSummary cp ON pl.ProcNum = cp.ProcNum
+)
+
+WITH CollectionStatus AS (
+    SELECT 
+        pl.ProcNum,
+        CASE
+            WHEN pl.ProcStatus = 1 AND pl.DateTP != '0001-01-01' THEN 'scheduled'
+            WHEN cp.Status = 1 AND cp.InsPayAmt = 0 THEN 'under_followup'
+            WHEN cp.Status = 1 AND cp.InsPayAmt < cp.InsPayEst THEN 'outstanding'
+            WHEN pv.remaining_balance > 0 AND 
+                 DATEDIFF('2025-01-01', pl.ProcDate) > 90 THEN 'followup_exhausted'
+            ELSE 'normal'
+        END as collection_status
+    FROM FilteredProcs pl
+    LEFT JOIN ClaimProcSummary cp ON pl.ProcNum = cp.ProcNum
+    LEFT JOIN PaymentValidation pv ON pl.ProcNum = pv.ProcNum
 )
 
 SELECT DISTINCT
@@ -438,7 +493,14 @@ SELECT DISTINCT
         ELSE 0
     END as refined_journey_success,
 
-    psm.total_paid
+    psm.total_paid,
+
+    -- Add AR aging bucket and type
+    ab.aging_bucket,
+    ab.ar_type,
+
+    -- Add collection status
+    cs.collection_status
 
 FROM FilteredProcs pl
 JOIN patient pat ON pl.PatNum = pat.PatNum
@@ -454,6 +516,8 @@ LEFT JOIN PaymentValidation pv ON pl.ProcNum = pv.ProcNum
 LEFT JOIN PaymentSplitMetrics psm ON pl.ProcNum = psm.ProcNum
 LEFT JOIN InsuranceAccuracy ia ON pl.ProcNum = ia.ProcNum
 LEFT JOIN JourneyStage js ON pl.ProcNum = js.ProcNum
+LEFT JOIN ARAgingBuckets ab ON pl.ProcNum = ab.ProcNum
+LEFT JOIN CollectionStatus cs ON pl.ProcNum = cs.ProcNum
 
 GROUP BY pl.ProcNum
 ORDER BY pl.ProcDate DESC;
