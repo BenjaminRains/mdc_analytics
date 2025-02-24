@@ -1,12 +1,6 @@
 -- Insurance vs Patient payment counts
 -- Uses PaymentSourceSummary CTE for consistent source categorization
 
-WITH TotalPayments AS (
-    SELECT 
-        SUM(payment_count) as total_count,
-        SUM(total_paid) as total_amount
-    FROM PaymentSourceSummary
-)
 SELECT 
     ps.payment_source,
     ps.payment_count,
