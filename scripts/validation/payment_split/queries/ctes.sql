@@ -35,6 +35,8 @@ CTE Dependency Order:
  18. PaymentDailyDetails: Extract daily payment patterns and metrics.
  19. FilterStats: Compute summary statistics for each payment filter category.
  20. ProblemPayments: Pre-filter payments flagged as problematic.
+ 21. ClaimMetrics: Analyze claim relationships for payment split analysis.
+ 22. ProblemClaimDetails: Detailed analysis of known problematic claims.
 ===============================================================================
 */
 
@@ -478,4 +480,40 @@ ProblemPayments AS (
     SELECT *
     FROM PaymentFilterDiagnostics
     WHERE filter_reason != 'Normal Payment'
+),
+
+-- 21. ClaimMetrics: Analyze claim relationships for payment split analysis.
+ClaimMetrics AS (
+    SELECT 
+        ps.PayNum,
+        COUNT(DISTINCT cp.ClaimProcNum) as claimproc_count,
+        GROUP_CONCAT(DISTINCT cp.ClaimNum) as claim_nums,
+        COUNT(DISTINCT CASE WHEN cp.ClaimNum IN (2536, 2542, 6519) THEN cp.ClaimNum END) as common_claim_count,
+        COUNT(DISTINCT cp.ClaimNum) as total_claim_count
+    FROM paysplit ps
+    JOIN payment p ON ps.PayNum = p.PayNum
+    JOIN claimproc cp ON ps.ProcNum = cp.ProcNum
+        AND cp.Status IN (1, 4, 5)
+        AND cp.InsPayAmt > 0
+    WHERE p.PayDate >= '2024-01-01'
+      AND p.PayDate < '2025-01-01'
+    GROUP BY ps.PayNum
+),
+
+-- 22. ProblemClaimDetails: Detailed analysis of known problematic claims.
+ProblemClaimDetails AS (
+    SELECT 
+        cp.ClaimNum,
+        cp.ClaimProcNum,
+        COUNT(DISTINCT p.PayNum) as payment_count,
+        COUNT(ps.SplitNum) as split_count,
+        MIN(ps.SplitAmt) as min_split_amt,
+        MAX(ps.SplitAmt) as max_split_amt,
+        COUNT(DISTINCT DATE(p.PayDate)) as active_days
+    FROM claimproc cp
+    JOIN paysplit ps ON cp.ProcNum = ps.ProcNum
+    JOIN payment p ON ps.PayNum = p.PayNum
+    WHERE cp.ClaimNum IN (2536, 2542, 6519)
+        AND p.PayDate BETWEEN '2024-10-30' AND '2024-11-05'
+    GROUP BY cp.ClaimNum, cp.ClaimProcNum
 )
