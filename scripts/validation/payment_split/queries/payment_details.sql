@@ -1,5 +1,7 @@
 -- Analyze individual payment details and their split patterns
 -- This query helps identify unusual payment behaviors and split patterns
+-- uses PaymentDetailsMetrics CTE from ctes.sql
+
 SELECT 
     pm.*,
     CASE 
