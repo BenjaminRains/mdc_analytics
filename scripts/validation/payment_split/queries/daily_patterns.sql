@@ -1,4 +1,6 @@
--- Investigate daily patterns of the payment process
+-- Investigate daily patterns of the payment process. 
+-- Uses PaymentDailyDetails CTE
+
 SELECT 
     PayDate,
     PayType,
