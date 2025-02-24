@@ -15,6 +15,11 @@ Key Metrics:
 - Data consistency checks
 */
 
+-- uses PaymentBaseCounts
+-- uses PaymentJoinDiagnostics
+-- uses PaymentSummary
+-- uses PaymentFilterDiagnostics
+
 -- Verification metrics queries
 SELECT * FROM (
     -- Base Payment Counts
