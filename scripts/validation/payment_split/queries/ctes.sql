@@ -61,37 +61,71 @@ PaymentMethodAnalysis AS (
     GROUP BY p.PayType, ps.payment_category
 ),
 
+PaymentSourceCategories AS (
+    -- Payment source categorization
+    SELECT 
+        p.PayNum,
+        p.PayAmt,
+        p.PayDate,
+        CASE 
+            WHEN p.PayType IN (417, 574, 634) THEN 'Insurance'
+            WHEN p.PayType = 0 THEN 'Transfer'
+            WHEN p.PayType = 72 THEN 'Refund'
+            WHEN EXISTS (
+                SELECT 1 
+                FROM paysplit ps2
+                JOIN claimproc cp2 ON ps2.ProcNum = cp2.ProcNum
+                WHERE ps2.PayNum = p.PayNum 
+                AND cp2.Status IN (1, 2, 4, 6)
+            ) THEN 'Insurance'
+            ELSE 'Patient'
+        END as payment_source
+    FROM payment p
+    WHERE p.PayDate >= '2024-01-01'
+      AND p.PayDate < '2025-01-01'
+),
+
+PaymentSourceSummary AS (
+    -- Summary metrics by source
+    SELECT 
+        pc.payment_source,
+        COUNT(*) AS payment_count,
+        SUM(pc.PayAmt) AS total_paid,
+        MIN(pc.PayDate) as min_date,
+        MAX(pc.PayDate) as max_date,
+        AVG(pc.PayAmt) as avg_payment
+    FROM PaymentSourceCategories pc
+    GROUP BY pc.payment_source
+),
+
 InsurancePaymentAnalysis AS (
     -- Insurance-specific payment metrics
     SELECT 
-        CASE 
-            WHEN p.PayType IN (417, 574, 634) THEN 'Insurance'
-            WHEN cp.InsPayAmt IS NOT NULL THEN 'Insurance'
-            ELSE 'Patient'
-        END AS payment_source,
-        COUNT(DISTINCT ps.PayNum) AS payment_count,
-        SUM(ps.SplitAmt) AS total_paid,
-        SUM(cp.InsPayAmt) AS insurance_paid,
-        SUM(cp.WriteOff) AS total_writeoff,
-        AVG(DATEDIFF(p.PayDate, pl.ProcDate)) AS avg_days_to_payment,
+        pss.payment_source,
+        pss.payment_count,
+        pss.total_paid,
+        pss.avg_payment,
         COUNT(DISTINCT cp.PlanNum) AS plan_count,
         COUNT(DISTINCT cp.ClaimNum) AS claim_count,
         COUNT(DISTINCT CASE WHEN p.PayType IN (417, 574, 634) THEN p.PayNum END) AS direct_ins_count,
         COUNT(DISTINCT CASE WHEN p.PayType IN (69, 70, 71) THEN p.PayNum END) AS check_cash_count,
-        COUNT(DISTINCT CASE WHEN p.PayType IN (391, 412) THEN p.PayNum END) AS card_count
-    FROM paysplit ps
-    JOIN payment p ON ps.PayNum = p.PayNum
-    JOIN procedurelog pl ON ps.ProcNum = pl.ProcNum
+        COUNT(DISTINCT CASE WHEN p.PayType IN (391, 412) THEN p.PayNum END) AS card_count,
+        AVG(CASE 
+            WHEN pl.ProcDate IS NOT NULL THEN DATEDIFF(p.PayDate, pl.ProcDate)
+            ELSE NULL 
+        END) AS avg_days_to_payment
+    FROM PaymentSourceCategories psc
+    JOIN payment p ON psc.PayNum = p.PayNum
+    JOIN PaymentSourceSummary pss ON psc.payment_source = pss.payment_source
+    LEFT JOIN paysplit ps ON p.PayNum = ps.PayNum
+    LEFT JOIN procedurelog pl ON ps.ProcNum = pl.ProcNum
     LEFT JOIN claimproc cp ON ps.ProcNum = cp.ProcNum
-        AND cp.Status IN (1, 2, 4, 6)  -- Only relevant claim statuses
-    WHERE p.PayDate >= '2024-01-01'
-      AND p.PayDate < '2025-01-01'
+        AND cp.Status IN (1, 2, 4, 6)
     GROUP BY 
-        CASE 
-            WHEN p.PayType IN (417, 574, 634) THEN 'Insurance'
-            WHEN cp.InsPayAmt IS NOT NULL THEN 'Insurance'
-            ELSE 'Patient'
-        END
+        pss.payment_source,
+        pss.payment_count,
+        pss.total_paid,
+        pss.avg_payment
 ),
 
 ProcedurePayments AS (
