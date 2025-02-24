@@ -4,39 +4,14 @@
 -- validates join integrity
 
 SELECT 
-    (SELECT COUNT(DISTINCT PayNum) 
-     FROM payment 
-     WHERE PayDate >= '2024-01-01' AND PayDate < '2025-01-01'
-    ) as base_count,
-    
-    (SELECT COUNT(DISTINCT p.PayNum)
-     FROM payment p
-     LEFT JOIN paysplit ps ON p.PayNum = ps.PayNum
-     WHERE p.PayDate >= '2024-01-01' AND p.PayDate < '2025-01-01'
-    ) as paysplit_count,
-    
-    (SELECT COUNT(DISTINCT p.PayNum)
-     FROM payment p
-     LEFT JOIN paysplit ps ON p.PayNum = ps.PayNum
-     LEFT JOIN claim c ON ps.ClaimNum = c.ClaimNum
-     LEFT JOIN claimproc cp ON c.ClaimNum = cp.ClaimNum 
-         AND cp.ProcNum = ps.ProcNum
-         AND cp.Status IN (1, 4, 5)
-         AND cp.InsPayAmt > 0
-     WHERE p.PayDate >= '2024-01-01' AND p.PayDate < '2025-01-01'
-    ) as claimproc_count,
-    
-    (SELECT COUNT(DISTINCT PayNum) 
-     FROM payment 
-     WHERE PayDate >= '2024-01-01' AND PayDate < '2025-01-01'
-    ) - 
-    (SELECT COUNT(DISTINCT p.PayNum)
-     FROM payment p
-     LEFT JOIN paysplit ps ON p.PayNum = ps.PayNum
-     LEFT JOIN claim c ON ps.ClaimNum = c.ClaimNum
-     LEFT JOIN claimproc cp ON c.ClaimNum = cp.ClaimNum 
-         AND cp.ProcNum = ps.ProcNum
-         AND cp.Status IN (1, 4, 5)
-         AND cp.InsPayAmt > 0
-     WHERE p.PayDate >= '2024-01-01' AND p.PayDate < '2025-01-01'
-    ) as missing_payments;
+    pbc.total_payments as base_count,
+    COUNT(DISTINCT CASE WHEN pjd.join_status != 'No Splits' THEN pjd.PayNum END) as paysplit_count,
+    COUNT(DISTINCT CASE WHEN pjd.join_status = 'Complete' THEN pjd.PayNum END) as claimproc_count,
+    pbc.total_payments - COUNT(DISTINCT CASE WHEN pjd.join_status = 'Complete' THEN pjd.PayNum END) as missing_payments,
+    -- Additional diagnostic information
+    AVG(ps.split_count) as avg_splits_per_payment,
+    COUNT(DISTINCT CASE WHEN ps.split_difference > 0.01 THEN ps.PayNum END) as mismatch_count
+FROM PaymentBaseCounts pbc
+CROSS JOIN PaymentJoinDiagnostics pjd
+LEFT JOIN PaymentSummary ps ON pjd.PayNum = ps.PayNum
+GROUP BY pbc.total_payments;
