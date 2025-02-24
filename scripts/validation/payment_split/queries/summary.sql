@@ -1,11 +1,22 @@
--- 1. Main Analysis Output
--- summary of payment split validation
--- payment counts and amounts
--- split patterns and timing
--- payment method distributions
--- insurance payment analysis
--- procedure payments
+/*
+Payment Split Analysis Query
+===========================
 
+Purpose:
+- Analyzes payment splits, procedures, and insurance relationships
+- Identifies problematic payment patterns
+- Generates summary metrics and detailed problem records
+
+Output Branches:
+1. Summary Branch: Aggregated metrics and patterns
+2. Problem Detail Branch: Individual problematic payments
+
+Date Range: 2024-01-01 to 2024-12-31
+*/
+-- Include/reference CTEs from ctes.sql
+-- (BasePayments, BaseSplits, PaymentSummary, etc. are defined there)
+
+-- Final output: union of summary and problem detail branches
 SELECT * FROM (
     -- Summary Branch
     SELECT 
@@ -18,9 +29,9 @@ SELECT * FROM (
         MAX(pma.reversal_count) AS total_reversals,
         SUM(CASE WHEN ipa.payment_source = 'Insurance' THEN ipa.payment_count ELSE 0 END) AS insurance_payments,
         SUM(CASE WHEN ipa.payment_source = 'Patient' THEN ipa.payment_count ELSE 0 END) AS patient_payments,
-        COUNT(CASE WHEN spa.split_pattern = 'normal_split' THEN 1 END) AS normal_split_count,
-        COUNT(CASE WHEN spa.split_pattern = 'complex_split' THEN 1 END) AS complex_split_count,
-        COUNT(CASE WHEN spa.split_pattern = 'review_needed' THEN 1 END) AS review_needed_count,
+        COUNT(CASE WHEN spa.split_pattern IN ('single_payment','double_payment','multiple_payment') THEN 1 END) AS normal_split_count,
+        COUNT(CASE WHEN spa.split_pattern = 'complex_payment' THEN 1 ELSE 0 END) AS complex_split_count,
+        COUNT(CASE WHEN spa.split_pattern = 'review_needed' THEN 1 ELSE 0 END) AS review_needed_count,
         AVG(spa.avg_days_to_payment) AS avg_days_to_payment,
         MAX(spa.payment_count) AS max_payments_per_procedure,
         AVG(spa.payment_count) AS avg_payments_per_procedure,
@@ -68,9 +79,16 @@ SELECT * FROM (
         0 AS prepayment_count,
         0 AS tp_prepayment_count,
         pfd.split_count AS missing_proc_count
-    FROM PaymentFilterDiagnostics pfd
+    FROM ProblemPayments pfd
     JOIN ProcedurePayments pp ON pfd.PayNum = pp.PayNum
     JOIN SplitPatternAnalysis spa ON pp.ProcNum = spa.ProcNum
-    WHERE pfd.filter_reason != 'Normal Payment'
 ) combined_results
 ORDER BY report_type DESC;
+
+/*
+Expected Results:
+- Summary row with aggregated metrics
+- Problem detail rows for non-normal payments
+- Split pattern distribution should match comments
+- Payment counts should align with base metrics
+*/
