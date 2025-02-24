@@ -278,6 +278,32 @@ PaymentFilterDiagnostics AS (
         CASE WHEN pd.PayAmt > 5000 THEN 1 ELSE 0 END as is_large_payment,
         CASE WHEN pd.split_count = 1 AND pd.proc_count = 1 THEN 1 ELSE 0 END as is_simple_payment
     FROM PaymentJoinDiagnostics pd
+),
+
+JoinStageCounts AS (
+    -- Analysis of payment progression through join stages
+    -- Tracks expected patterns and validates relationships
+    SELECT 
+        pbc.total_payments as base_count,
+        -- Split stages
+        COUNT(DISTINCT CASE WHEN pjd.join_status != 'No Splits' THEN pjd.PayNum END) as with_splits,
+        COUNT(DISTINCT CASE WHEN pjd.join_status NOT IN ('No Splits', 'No Procedures') THEN pjd.PayNum END) as with_procedures,
+        COUNT(DISTINCT CASE WHEN pjd.join_status = 'Complete' THEN pjd.PayNum END) as with_insurance,
+        -- Payment categories
+        COUNT(DISTINCT CASE WHEN pjd.join_status = 'No Insurance' AND pjd.PayAmt > 0 THEN pjd.PayNum END) as patient_payments,
+        COUNT(DISTINCT CASE WHEN pjd.join_status = 'No Procedures' AND pjd.PayAmt = 0 THEN pjd.PayNum END) as transfer_count,
+        COUNT(DISTINCT CASE WHEN pjd.join_status = 'No Procedures' AND pjd.PayAmt < 0 THEN pjd.PayNum END) as refund_count,
+        -- Split analysis
+        AVG(ps.split_count) as avg_splits_per_payment,
+        COUNT(DISTINCT CASE WHEN ps.split_difference > 0.01 THEN ps.PayNum END) as mismatch_count,
+        -- Additional metrics
+        COUNT(DISTINCT CASE WHEN pjd.split_count > 15 THEN pjd.PayNum END) as high_split_count,
+        COUNT(DISTINCT CASE WHEN pjd.split_count = 1 THEN pjd.PayNum END) as single_split_count,
+        COUNT(DISTINCT CASE WHEN pjd.PayAmt > 5000 THEN pjd.PayNum END) as large_payment_count
+    FROM PaymentBaseCounts pbc
+    CROSS JOIN PaymentJoinDiagnostics pjd
+    LEFT JOIN PaymentSummary ps ON pjd.PayNum = ps.PayNum
+    GROUP BY pbc.total_payments
 )
 
 -- Note: This file contains only CTEs. These are used by other queries for payment validation analysis.
