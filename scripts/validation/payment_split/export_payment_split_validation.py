@@ -52,20 +52,27 @@ def get_ctes() -> str:
     """Get common table expressions"""
     return load_query_file('ctes')
 
-def get_query(query_name: str, ctes: str) -> Dict[str, str]:
-    """Get a query by name and combine with CTEs"""
-    query_content = load_query_file(query_name)
+def get_query(query_name: str, ctes: str = None) -> dict:
+    """Combine CTEs with a query and create export configuration"""
+    query = load_query_file(query_name)
+    if ctes:
+        # Combine CTEs with the query
+        full_query = f"{ctes}\n{query}"
+    else:
+        full_query = query
+        
     return {
         'name': query_name,
-        'query': f"{ctes} {query_content}",
+        'query': full_query,
         'file': f'payment_split_validation_2024_{query_name}.csv'
     }
 
-def get_exports(ctes: Optional[str] = None) -> list:
-    """Get all export configurations"""
-    if ctes is None:
-        ctes = get_ctes()
-        
+def get_exports() -> list:
+    """Get all export configurations with CTEs"""
+    # Load CTEs once
+    ctes = load_query_file('ctes')
+    
+    # Return list of exports with CTEs attached
     return [
         get_query('summary', ctes),
         get_query('base_counts', ctes),
@@ -99,7 +106,7 @@ def export_validation_results(cursor, queries=None, output_dir=None):
     ctes = get_ctes()
     
     # Get all export configurations
-    exports = get_exports(ctes)
+    exports = get_exports()
     
     # Filter exports if specific queries requested
     if queries:
@@ -146,7 +153,7 @@ def parse_args():
     
     parser.add_argument(
         '--log-dir',
-        default='validation/logs',
+        default='scripts/validation/payment_split/logs',
         help='Directory to store log files'
     )
     
@@ -217,7 +224,7 @@ if __name__ == "__main__":
         if args.queries:
             logging.info(f"Running queries: {', '.join(args.queries)}")
         
-        # Create database connection using factory
+        # Create single database connection using factory
         factory = ConnectionFactory()
         connection = factory.create_connection(
             connection_type='local_mariadb',
@@ -225,12 +232,12 @@ if __name__ == "__main__":
             use_root=True
         )
         
-        # Create required indexes first
+        # Use single connection for both operations
         with connection.connect() as conn:
+            # First ensure indexes exist
             ensure_indexes(conn, args.database)
-        
-        # Now execute the exports with a fresh connection
-        with connection.connect() as conn:
+            
+            # Then execute queries using same connection
             cursor = conn.cursor(dictionary=True)
             export_validation_results(cursor, args.queries, args.output_dir)
             
