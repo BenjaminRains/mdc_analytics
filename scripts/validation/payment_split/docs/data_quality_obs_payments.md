@@ -44,6 +44,50 @@
   - May indicate data entry errors or legitimate adjustments
   - Requires manual review
 
+### 7. Excessive Split Patterns
+- **Critical Issue Identified**: October-November 2024
+  - 5 specific procedures showing identical patterns
+  - Claims affected: 2536, 2542, 6519
+  - Procedures: 61980, 108306, 61979, 108309, 95856
+
+- **Pattern Details**:
+  - 10,348 splits per procedure
+  - 492 payments involved per procedure
+  - Symmetric amounts (-$14,530 to +$14,530)
+  - All $0 net transfer payments
+  - Concentrated in 6-day period
+
+- **Impact**:
+  - Database performance concerns
+  - Data integrity questions
+  - Audit trail complexity
+  - Processing overhead
+
+### 8. Updated Monitoring Thresholds
+- **Split Count Alerts**:
+  - Warning: >100 splits per procedure
+  - Critical: >1000 splits per procedure
+  - Immediate review: >10000 splits per procedure
+
+- **Pattern Detection**:
+  - Identical split counts across procedures
+  - Symmetric negative/positive amounts
+  - High volume in short timeframe
+  - Multiple procedures showing same pattern
+
+### 9. Additional Recommendations
+- **Immediate**:
+  - Review transfer payment logic
+  - Implement split count limits
+  - Add symmetric split detection
+  - Monitor procedure-level split patterns
+
+- **Process Updates**:
+  - Document transfer payment rules
+  - Add procedure-level validations
+  - Create split pattern alerts
+  - Regular pattern analysis
+
 ## Recommendations
 
 ### 1. Data Entry Controls
