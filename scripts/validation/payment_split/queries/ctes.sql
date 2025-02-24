@@ -413,6 +413,23 @@ PaymentDailyDetails AS (
     JOIN claimproc cp ON ps.ProcNum = cp.ProcNum
     JOIN claim c ON cp.ClaimNum = c.ClaimNum
     WHERE p.PayDate >= DATEADD(month, -1, CURRENT_TIMESTAMP)  -- Configurable date range
+),
+
+FilterStats AS (
+    -- Summary statistics for each filter category
+    SELECT 
+        filter_reason,
+        COUNT(*) as payment_count,
+        ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 1) as percentage,
+        SUM(PayAmt) as total_amount,
+        AVG(PayAmt) as avg_amount,
+        SUM(has_multiple_splits_per_proc) as complex_split_count,
+        SUM(is_large_payment) as large_payment_count,
+        SUM(is_simple_payment) as simple_payment_count,
+        SUM(has_high_split_ratio) as high_ratio_count,
+        SUM(has_oversplit_claims) as oversplit_claim_count
+    FROM PaymentFilterDiagnostics
+    GROUP BY filter_reason
 )
 
 -- Note: This file contains only CTEs. These are used by other queries for payment validation analysis.
