@@ -1,5 +1,6 @@
 -- Insurance vs Patient payment counts
 -- Uses PaymentSourceSummary CTE for consistent source categorization
+-- uses TotalPayments CTE from ctes.sql
 
 SELECT 
     ps.payment_source,
