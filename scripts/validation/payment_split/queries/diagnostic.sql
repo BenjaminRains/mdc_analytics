@@ -1,6 +1,7 @@
 -- Diagnostic summary
 -- detailed diagnostic metrics by filter
 -- average splits, min/max amounts
+-- uses PaymentFilterDiagnostics CTE
 
 SELECT 
     'diagnostic_summary' as report_type,
