@@ -2,6 +2,7 @@
 -- Tracks payment progression through join stages
 -- Validates data relationships and identifies expected patterns
 -- Note: "missing" payments are often valid (patient payments, transfers, etc.)
+-- uses JoinStageCounts CTE from ctes.sql
 
 SELECT 
     base_count,
