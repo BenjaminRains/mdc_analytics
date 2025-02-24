@@ -1,20 +1,10 @@
 -- Filter summary
--- filter reason breakdown
--- payment counts and amounts by category
+-- filter reason breakdown with validation
+-- payment counts and amounts by category with expected percentages
+-- uses FilterStats CTE from ctes.sql
+-- uses PaymentFilterDiagnostics CTE from ctes.sql
 
 SELECT 
-    'filter_summary' as report_type,
-    filter_reason,
-    COUNT(*) as payment_count,
-    SUM(PayAmt) as total_amount
-FROM PaymentFilterDiagnostics
-GROUP BY filter_reason
-ORDER BY payment_count DESC;
-
--- Filter summary validation
--- Verify filter reason breakdown matches expected percentages
-SELECT 
-    'filter_validation' as report_type,
     filter_reason,
     payment_count,
     percentage,
@@ -41,6 +31,7 @@ SELECT
     large_payment_count,
     simple_payment_count,
     high_ratio_count,
-    oversplit_claim_count
+    oversplit_claim_count,
+    'filter_validation' as report_type
 FROM FilterStats
 ORDER BY payment_count DESC;
