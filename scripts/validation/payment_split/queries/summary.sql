@@ -14,7 +14,16 @@ Output Branches:
 Date Range: 2024-01-01 to 2024-12-31
 */
 -- Include/reference CTEs from ctes.sql
--- (BasePayments, BaseSplits, PaymentSummary, etc. are defined there)
+-- uses BasePayments
+-- uses BaseSplits
+-- uses PaymentSummary
+-- uses PaymentMethodAnalysis
+-- uses InsurancePaymentAnalysis
+-- uses ProcedurePayments
+-- uses SplitPatternAnalysis
+-- uses PaymentBaseCounts
+-- uses PaymentFilterDiagnostics
+-- uses ProblemPayments
 
 -- Final output: union of summary and problem detail branches
 SELECT * FROM (
@@ -44,7 +53,8 @@ SELECT * FROM (
         COUNT(CASE WHEN pp.UnearnedType = 439 THEN 1 ELSE 0 END) AS tp_prepayment_count,
         SUM(CASE WHEN pfd.filter_reason != 'Normal Payment' THEN 1 ELSE 0 END) AS problem_payment_count
     FROM PaymentBaseCounts pbc
-    CROSS JOIN PaymentFilterDiagnostics pfd
+    JOIN (SELECT DISTINCT 1 as join_key FROM PaymentFilterDiagnostics) pfd_key ON 1=1
+    LEFT JOIN PaymentFilterDiagnostics pfd ON 1=1
     LEFT JOIN PaymentSummary ps ON pfd.PayNum = ps.PayNum
     LEFT JOIN ProcedurePayments pp ON pfd.PayNum = pp.PayNum
     LEFT JOIN SplitPatternAnalysis spa ON pp.ProcNum = spa.ProcNum
