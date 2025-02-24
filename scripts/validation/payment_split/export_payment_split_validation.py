@@ -1,3 +1,20 @@
+"""
+Export Payment Split Validation Data
+
+This script connects to the specified database, ensures required indexes exist,
+loads a set of common table expressions (CTEs) from a separate file, and executes
+a series of SQL queries for payment split validation. The results for each query
+are exported to separate CSV files. The files are then analyzed in notebooks to
+identify and diagnose issues.
+
+Usage:
+    python export_payment_split_validation.py [--output-dir <path>] [--log-dir <path>]
+                                                [--database <dbname>] [--queries <names>]
+
+The list of queries and the common CTE definitions are stored as separate .sql files in
+the 'queries' directory. The CTE file is prepended to each query before execution.
+"""
+
 import pandas as pd
 import os
 from datetime import datetime
@@ -9,10 +26,9 @@ from pathlib import Path
 from typing import Dict, Optional
 
 def setup_logging(log_dir='scripts/validation/payment_split/logs'):
-    """Setup logging configuration"""
+    """Setup logging configuration."""
     # Ensure log directory exists
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
+    Path(log_dir).mkdir(parents=True, exist_ok=True)
     
     # Create log filename with timestamp
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -33,30 +49,29 @@ def setup_logging(log_dir='scripts/validation/payment_split/logs'):
     return log_file
 
 def ensure_directory_exists(directory):
-    """Create directory if it doesn't exist"""
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-        logging.info(f"Created directory: {directory}")
+    """Create directory if it doesn't exist."""
+    Path(directory).mkdir(parents=True, exist_ok=True)
+    logging.info(f"Ensured directory exists: {directory}")
 
 def load_query_file(query_name: str) -> str:
-    """Load a query from the queries directory"""
-    query_path = os.path.join(os.path.dirname(__file__), 'queries', f'{query_name}.sql')
+    """Load a query from the queries directory using pathlib."""
+    query_path = Path(__file__).parent / 'queries' / f'{query_name}.sql'
     try:
-        with open(query_path, 'r') as f:
+        with query_path.open('r') as f:
             return f.read()
     except Exception as e:
         logging.error(f"Error loading query file {query_name}: {str(e)}")
         raise
 
 def get_ctes() -> str:
-    """Get common table expressions"""
+    """Get common table expressions from the 'ctes.sql' file."""
     return load_query_file('ctes')
 
 def get_query(query_name: str, ctes: str = None) -> dict:
-    """Combine CTEs with a query and create export configuration"""
+    """Combine CTEs with a query and create export configuration."""
     query = load_query_file(query_name)
     if ctes:
-        # Combine CTEs with the query
+        # Prepend CTE definitions to the query.
         full_query = f"{ctes}\n{query}"
     else:
         full_query = query
@@ -67,12 +82,11 @@ def get_query(query_name: str, ctes: str = None) -> dict:
         'file': f'payment_split_validation_2024_{query_name}.csv'
     }
 
-def get_exports() -> list:
-    """Get all export configurations with CTEs"""
-    # Load CTEs once
-    ctes = load_query_file('ctes')
+def get_exports(ctes: str) -> list:
+    """Get all export configurations with CTEs attached.
     
-    # Return list of exports with CTEs attached
+    The CTEs are passed in as a parameter to avoid loading the file multiple times.
+    """
     return [
         get_query('summary', ctes),
         get_query('base_counts', ctes),
@@ -82,17 +96,20 @@ def get_exports() -> list:
         get_query('verification', ctes),
         get_query('problems', ctes),
         get_query('duplicate_joins', ctes),
-        get_query('join_stages', ctes)
+        get_query('join_stages', ctes),
+        get_query('daily_patterns', ctes),
+        get_query('payment_details', ctes),
+        get_query('containment', ctes),
     ]
 
 def export_validation_results(cursor, queries=None, output_dir=None):
     """
-    Export payment validation query results to separate CSV files
-    
+    Export payment validation query results to separate CSV files.
+
     Args:
-        cursor: Database cursor object
-        queries: List of query names to run (None for all)
-        output_dir: Directory to store output files (None for default)
+        cursor: Database cursor object.
+        queries: List of query names to run (None for all).
+        output_dir: Directory to store output files (None for default).
     """
     # Set default output directory if none provided
     if output_dir is None:
@@ -101,12 +118,12 @@ def export_validation_results(cursor, queries=None, output_dir=None):
     logging.info(f"Starting export to {output_dir}")
     ensure_directory_exists(output_dir)
     
-    # Common CTEs used by multiple queries
+    # Load common CTEs once
     logging.info("Loading CTEs")
     ctes = get_ctes()
     
-    # Get all export configurations
-    exports = get_exports()
+    # Get export configurations, passing in the loaded CTEs
+    exports = get_exports(ctes)
     
     # Filter exports if specific queries requested
     if queries:
@@ -126,7 +143,7 @@ def export_validation_results(cursor, queries=None, output_dir=None):
             # Convert to DataFrame
             df = pd.DataFrame(results)
             
-            # Write to CSV, mode='w' ensures overwrite
+            # Write to CSV (overwrite if file exists)
             output_path = os.path.join(output_dir, export['file'])
             if os.path.exists(output_path):
                 logging.info(f"Overwriting existing file: {export['file']}")
@@ -139,7 +156,7 @@ def export_validation_results(cursor, queries=None, output_dir=None):
             logging.error(f"Error exporting {export['name']}: {str(e)}", exc_info=True)
 
 def parse_args():
-    """Parse command line arguments"""
+    """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         description='Export payment validation data to CSV files',
         formatter_class=argparse.RawTextHelpFormatter
@@ -173,7 +190,7 @@ def parse_args():
     return parser.parse_args()
 
 def ensure_indexes(connection, database_name):
-    """Ensure required indexes exist for validation queries"""
+    """Ensure required indexes exist for validation queries."""
     logging.info("Checking and creating required payment validation indexes...")
     
     REQUIRED_INDEXES = [
@@ -215,10 +232,9 @@ if __name__ == "__main__":
         # Parse command line arguments
         args = parse_args()
         
-        # Setup logging first
+        # Setup logging
         log_file = setup_logging(args.log_dir)
         
-        # Log the arguments
         logging.info(f"Output directory: {args.output_dir}")
         logging.info(f"Database: {args.database}")
         if args.queries:
@@ -234,13 +250,13 @@ if __name__ == "__main__":
         
         # Use single connection for both operations
         with connection.connect() as conn:
-            # First ensure indexes exist
+            # Ensure required indexes exist
             ensure_indexes(conn, args.database)
             
-            # Then execute queries using same connection
+            # Execute queries and export results using the same connection
             cursor = conn.cursor(dictionary=True)
             export_validation_results(cursor, args.queries, args.output_dir)
             
     except Exception as e:
         logging.error("Fatal error in main execution", exc_info=True)
-        raise 
+        raise
