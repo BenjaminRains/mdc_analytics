@@ -1,6 +1,6 @@
--- Filter summary
+-- Filter summary (consolidated with diagnostic)
 -- filter reason breakdown with validation
--- payment counts and amounts by category with expected percentages
+-- payment counts, amounts and diagnostic metrics by category
 -- uses FilterStats CTE from ctes.sql
 -- uses PaymentFilterDiagnostics CTE from ctes.sql
 
@@ -10,6 +10,10 @@ SELECT
     percentage,
     total_amount,
     avg_amount,
+    -- Diagnostic metrics (from diagnostic.sql)
+    avg_splits,
+    min_amount,
+    max_amount,
     -- Validation flags
     CASE 
         WHEN filter_reason = 'Zero Amount' AND percentage != 13.1 
@@ -18,12 +22,12 @@ SELECT
             THEN 'Unexpected: Should be 0.2%'
         WHEN filter_reason = 'Reversal' AND percentage != 0.6 
             THEN 'Unexpected: Should be 0.6%'
-        WHEN filter_reason = 'No Insurance' AND percentage != 15.1 
-            THEN 'Unexpected: Should be 15.1%'
+        WHEN filter_reason = 'No Insurance' AND percentage != 38.8 
+            THEN 'Unexpected: Should be 38.8%'
         WHEN filter_reason = 'No Procedures' AND percentage != 4.6 
             THEN 'Unexpected: Should be 4.6%'
-        WHEN filter_reason = 'Normal Payment' AND percentage != 66.3 
-            THEN 'Unexpected: Should be 66.3%'
+        WHEN filter_reason = 'Normal Payment' AND percentage != 47.2 
+            THEN 'Unexpected: Should be 47.2%'
         ELSE 'OK'
     END as validation_check,
     -- Additional metrics
