@@ -133,6 +133,31 @@ Based on analysis, splits fall into three categories:
   - Fee consistency within batch
   - Appropriate timing spacing
 
+### 9. Transfer Payment Patterns
+- **Transfer Payments**: Internal accounting transactions
+  - Used for moving money between accounts/procedures
+  - Typically have offsetting positive/negative splits
+  - Should net to $0 total impact
+  - Normal pattern: 1-3 splits per procedure
+
+- **Split Pattern Warning Signs**:
+  - Excessive splits (>100 per procedure)
+  - Perfect symmetry in split amounts
+  - Identical patterns across procedures
+  - High volume of splits in short timeframe
+
+### 10. Procedure-Split Relationships
+- **Normal Pattern**:
+  - 1-3 splits per procedure
+  - Split amounts reflect actual procedure costs
+  - Mixed positive/negative allowed for adjustments
+  - Multiple procedures per payment common
+
+- **Maximum Limits**:
+  - Standard: 15 splits per payment
+  - Warning threshold: >100 splits per procedure
+  - Critical threshold: >1000 splits per procedure
+
 ## Next Steps for Documentation
 1. Add detailed insurance payment processing flow
 2. Document adjustment handling
