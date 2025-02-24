@@ -159,22 +159,35 @@ PaymentBaseCounts AS (
     -- Overall payment volume metrics
     SELECT 
         'base_counts' as metric,
-        COUNT(DISTINCT p.PayNum) as total_payments,
-        COUNT(DISTINCT ps.SplitNum) as total_splits,
-        COUNT(DISTINCT pl.ProcNum) as total_procedures,
+        COUNT(DISTINCT p.PayNum) as total_payments,        -- Should be 5,658
+        (SELECT COUNT(*) FROM paysplit ps2 
+         JOIN payment p2 ON ps2.PayNum = p2.PayNum 
+         WHERE p2.PayDate >= '2024-01-01' AND p2.PayDate < '2025-01-01') as total_splits,  -- Should be 35,291
+        (SELECT COUNT(DISTINCT pl2.ProcNum) 
+         FROM procedurelog pl2 
+         JOIN paysplit ps2 ON pl2.ProcNum = ps2.ProcNum
+         JOIN payment p2 ON ps2.PayNum = p2.PayNum
+         WHERE p2.PayDate >= '2024-01-01' AND p2.PayDate < '2025-01-01') as total_procedures,  -- Should be 17,286
         SUM(p.PayAmt) as total_amount,
         AVG(p.PayAmt) as avg_payment,
-        COUNT(CASE WHEN p.PayAmt < 0 THEN 1 END) as negative_payments,
-        COUNT(CASE WHEN p.PayAmt = 0 THEN 1 END) as zero_payments,
+        COUNT(CASE WHEN p.PayAmt < 0 THEN 1 END) as negative_payments,  -- Should be 36
+        COUNT(CASE WHEN p.PayAmt = 0 THEN 1 END) as zero_payments,      -- Should be 743
         MIN(p.PayDate) as min_date,
         MAX(p.PayDate) as max_date,
-        CAST(COUNT(DISTINCT ps.SplitNum) AS FLOAT) / NULLIF(COUNT(DISTINCT p.PayNum), 0) as avg_splits_per_payment,
-        CAST(COUNT(DISTINCT pl.ProcNum) AS FLOAT) / NULLIF(COUNT(DISTINCT p.PayNum), 0) as avg_procedures_per_payment
+        CAST((SELECT COUNT(*) FROM paysplit ps2 
+              JOIN payment p2 ON ps2.PayNum = p2.PayNum 
+              WHERE p2.PayDate >= '2024-01-01' AND p2.PayDate < '2025-01-01') AS FLOAT) / 
+            COUNT(DISTINCT p.PayNum) as avg_splits_per_payment,  -- Should be ~6.24
+        CAST((SELECT COUNT(DISTINCT pl2.ProcNum) 
+              FROM procedurelog pl2 
+              JOIN paysplit ps2 ON pl2.ProcNum = ps2.ProcNum
+              JOIN payment p2 ON ps2.PayNum = p2.PayNum
+              WHERE p2.PayDate >= '2024-01-01' AND p2.PayDate < '2025-01-01') AS FLOAT) / 
+            COUNT(DISTINCT p.PayNum) as avg_procedures_per_payment  -- Should be ~3.05
     FROM payment p
-    LEFT JOIN paysplit ps ON p.PayNum = ps.PayNum
-    LEFT JOIN procedurelog pl ON ps.ProcNum = pl.ProcNum
     WHERE p.PayDate >= '2024-01-01'
         AND p.PayDate < '2025-01-01'
+    GROUP BY 'base_counts'
 ),
 
 PaymentJoinDiagnostics AS (
