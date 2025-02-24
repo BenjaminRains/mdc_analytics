@@ -1,4 +1,5 @@
--- Analyze suspicious split patterns using shared CTE
+-- Analyze suspicious split patterns using SuspiciousSplitAnalysis CTE
+
 SELECT 
     PayDate,
     ClaimNum,
