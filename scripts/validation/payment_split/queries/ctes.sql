@@ -276,7 +276,22 @@ PaymentFilterDiagnostics AS (
         END as filter_reason,
         CASE WHEN pd.split_count > pd.proc_count * 2 THEN 1 ELSE 0 END as has_multiple_splits_per_proc,
         CASE WHEN pd.PayAmt > 5000 THEN 1 ELSE 0 END as is_large_payment,
-        CASE WHEN pd.split_count = 1 AND pd.proc_count = 1 THEN 1 ELSE 0 END as is_simple_payment
+        CASE WHEN pd.split_count = 1 AND pd.proc_count = 1 THEN 1 ELSE 0 END as is_simple_payment,
+        CASE 
+            WHEN split_count > 0 AND proc_count > 0 
+            AND (split_count::float / proc_count) > 10 
+            THEN 1 ELSE 0 
+        END as has_high_split_ratio,
+        CASE 
+            WHEN EXISTS (
+                SELECT 1 
+                FROM paysplit ps2 
+                JOIN claimproc cp2 ON ps2.ProcNum = cp2.ProcNum
+                WHERE ps2.PayNum = pd.PayNum
+                GROUP BY cp2.ClaimNum
+                HAVING COUNT(*) > 1000
+            ) THEN 1 ELSE 0 
+        END as has_oversplit_claims
     FROM PaymentJoinDiagnostics pd
 ),
 
@@ -304,6 +319,100 @@ JoinStageCounts AS (
     CROSS JOIN PaymentJoinDiagnostics pjd
     LEFT JOIN PaymentSummary ps ON pjd.PayNum = ps.PayNum
     GROUP BY pbc.total_payments
+),
+
+SuspiciousSplitAnalysis AS (
+    -- Tracks high-volume symmetric splits on monitored claims
+    SELECT 
+        ps.SplitNum as PaySplitNum,
+        ps.PayNum,
+        ps.ProcNum,
+        cp.ClaimNum,
+        ps.SplitAmt,
+        p.PayDate,
+        p.PayNote,
+        COUNT(*) OVER (PARTITION BY cp.ClaimNum) as splits_per_claim,
+        COUNT(*) OVER (PARTITION BY ps.PayNum) as splits_per_payment,
+        MIN(ps.SplitAmt) OVER (PARTITION BY ps.PayNum) as min_split_amt,
+        MAX(ps.SplitAmt) OVER (PARTITION BY ps.PayNum) as max_split_amt,
+        CASE 
+            WHEN COUNT(*) OVER (PARTITION BY cp.ClaimNum) > 1000 THEN 'High volume splits'
+            WHEN ABS(MIN(ps.SplitAmt) OVER (PARTITION BY ps.PayNum)) = 
+                 ABS(MAX(ps.SplitAmt) OVER (PARTITION BY ps.PayNum)) 
+                THEN 'Symmetric splits'
+            ELSE 'Normal pattern'
+        END as split_pattern
+    FROM paysplit ps
+    JOIN claimproc cp ON ps.ProcNum = cp.ProcNum
+    JOIN payment p ON ps.PayNum = p.PayNum
+    WHERE cp.ClaimNum IN (2536, 2542, 6519)
+        AND p.PayDate BETWEEN '2024-10-30' AND '2024-11-05'
+),
+
+PaymentDetailsBase AS (
+    -- Base payment and split information for detailed analysis
+    SELECT 
+        p.PayNum,
+        p.PayDate,
+        p.PayType,
+        p.PayAmt,
+        p.PayNote,
+        ps.SplitNum,
+        ps.SplitAmt,
+        ps.ProcNum,
+        cp.ClaimNum
+    FROM payment p
+    JOIN paysplit ps ON p.PayNum = ps.PayNum
+    JOIN claimproc cp ON ps.ProcNum = cp.ProcNum
+    JOIN claim c ON cp.ClaimNum = c.ClaimNum
+    WHERE p.PayDate >= DATEADD(month, -1, CURRENT_TIMESTAMP)
+),
+
+PaymentDetailsMetrics AS (
+    -- Calculate detailed metrics per payment
+    SELECT 
+        PayNum,
+        PayDate,
+        PayType,
+        PayAmt,
+        PayNote,
+        COUNT(SplitNum) as splits_in_payment,
+        COUNT(DISTINCT ClaimNum) as claims_in_payment,
+        COUNT(DISTINCT ProcNum) as procedures_in_payment,
+        MIN(SplitAmt) as min_split,
+        MAX(SplitAmt) as max_split,
+        SUM(SplitAmt) as total_split_amount,
+        ABS(PayAmt - SUM(SplitAmt)) as split_difference
+    FROM PaymentDetailsBase
+    GROUP BY 
+        PayNum,
+        PayDate,
+        PayType,
+        PayAmt,
+        PayNote
+),
+
+PaymentDailyDetails AS (
+    -- Daily payment patterns and metrics
+    SELECT 
+        p.PayNum,
+        p.PayDate,
+        p.PayType,
+        p.PayAmt,
+        p.PayNote,
+        ps.SplitNum,
+        ps.SplitAmt,
+        ps.ProcNum,
+        cp.ClaimNum,
+        cp.ClaimProcNum,
+        cp.Status as ProcStatus,
+        c.ClaimStatus,
+        c.DateService
+    FROM payment p
+    JOIN paysplit ps ON p.PayNum = ps.PayNum
+    JOIN claimproc cp ON ps.ProcNum = cp.ProcNum
+    JOIN claim c ON cp.ClaimNum = c.ClaimNum
+    WHERE p.PayDate >= DATEADD(month, -1, CURRENT_TIMESTAMP)  -- Configurable date range
 )
 
 -- Note: This file contains only CTEs. These are used by other queries for payment validation analysis.
