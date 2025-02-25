@@ -155,9 +155,9 @@ def get_exports(ctes: str) -> list:
 def process_single_export(export, factory, connection_type, database, output_dir):
     """Process a single export query and save results to CSV."""
     fresh_connection = None
+    start_time = datetime.now()
+    
     try:
-        start_time = datetime.now()
-        
         # Create a new connection for each query
         fresh_connection = factory.create_connection(connection_type, database)
         mysql_connection = fresh_connection.connect()
@@ -176,7 +176,8 @@ def process_single_export(export, factory, connection_type, database, output_dir
                     'success': True,
                     'rows': 0,
                     'duration': (datetime.now() - start_time).total_seconds(),
-                    'message': "No results returned"
+                    'message': "No results returned",
+                    'file': export['file']  # Add file key even for empty results
                 }
             
             # Write to CSV (overwrite if file exists)
@@ -199,7 +200,8 @@ def process_single_export(export, factory, connection_type, database, output_dir
             'success': False,
             'rows': 0,
             'duration': duration,
-            'error': str(e)
+            'error': str(e),
+            'file': export['file']  # Add file key even for failures
         }
     finally:
         # Always close the connection when done
