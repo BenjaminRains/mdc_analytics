@@ -138,3 +138,44 @@ Unpaid completed procedures follow a temporal pattern:
 - **April**: 131 unpaid procedures ($60,893.00, avg $464.83)
 - **August**: 126 unpaid procedures ($33,529.00, avg $266.10)
 - **June**: 117 unpaid procedures ($58,745.50, avg $502.10)
+
+## Business Rules
+
+### Status Transition Rules
+1. Valid procedure status transitions:
+   - Treatment Planned (1) → Completed (2) (primary intended flow)
+   - Treatment Planned (1) → Deleted (6) (for canceled procedures)
+   - Treatment Planned (1) → Referred (5) (when referring out)
+   - Any status → Deleted (6) (administrative correction)
+
+2. Statuses that should never transition once set:
+   - Existing Current (3) and Existing Other (4) (represent patient conditions)
+   - Condition (7) (permanent clinical notation)
+
+3. DateComplete field should only be populated when ProcStatus = 2 (Completed)
+
+### Payment Processing Rules
+1. Collection expectation varies by procedure category:
+   - Diagnostic procedures: Often $0 fee or write-off expected
+   - Preventive procedures: 95% collection expected
+   - Restorative procedures: 95-98% collection expected
+   - Major procedures (over $500): 98% collection expected
+
+2. Payment timing expectations:
+   - Insurance payments typically received 15-45 days after procedure completion
+   - Direct patient payments expected same-day for cash/card payments
+   - Procedures without payments after 90 days require validation
+
+3. Multi-procedure bundling:
+   - When multiple procedures are performed in a single visit, payment is often applied to the primary procedure
+   - Bundled procedures may have disproportionate payment distribution (some 0%, some >100%)
+
+### Procedure Code Validation Rules
+1. Certain codes must always have a fee (examples: crowns, fillings, extractions)
+2. Certain codes should always have zero fee (examples: status codes, administrative notes)
+3. Code-specific payment expectations based on insurance contracts vs. fee schedules
+
+### Appointment-Procedure Linkage Rules
+1. Completed procedures should be linked to an appointment (exception: emergency/walk-in visits)
+2. Multiple procedures can be linked to a single appointment
+3. Procedure.ProcDate should typically match Appointment.AptDateTime date
