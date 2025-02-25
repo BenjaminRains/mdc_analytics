@@ -12,8 +12,8 @@
 -- 3. PaymentActivity - Aggregates insurance and direct payments by procedure
 -- 4. SuccessCriteria - Evaluates business success criteria for each procedure
 -- 5. AppointmentDetails - Provides appointment information within date range
--- 6. ProcedureAppointmentSummary - Combines procedures with appointments and payments
--- 7. AppointmentStatusCategories - Standardizes appointment status code translations
+-- 6. AppointmentStatusCategories - Standardizes appointment status code translations
+-- 7. ProcedureAppointmentSummary - Combines procedures with appointments and payments
 -- 8. ProcedureMetrics - Calculates key metrics about procedures (counts, status, fees, payments)
 -- 9. ProcedurePairs - Identifies pairs of procedures performed on the same patient on the same day
 -- 10. CommonPairs - Counts the most frequent procedure pairs and their fees
@@ -99,6 +99,40 @@ PaymentActivity AS (
     GROUP BY pl.ProcNum, pl.ProcFee
 ),
 
+-- 5. APPOINTMENT DETAILS
+-- Provides appointment information within date range
+-- Used for joining procedures to appointments and tracking appointment status
+AppointmentDetails AS (
+    SELECT
+        a.AptNum,
+        a.AptDateTime,
+        a.AptStatus
+    FROM appointment a
+    WHERE a.AptDateTime >= '{{START_DATE}}' AND a.AptDateTime < '{{END_DATE}}'
+),
+
+-- 6. APPOINTMENT STATUS CATEGORIES
+-- Standardizes appointment status code translations
+-- Ensures consistent categorization of appointment statuses across reports
+AppointmentStatusCategories AS (
+    SELECT 
+        AptStatus,
+        CASE AptStatus
+            WHEN 1 THEN 'Scheduled'
+            WHEN 2 THEN 'Complete'
+            WHEN 3 THEN 'UnschedList'
+            WHEN 4 THEN 'ASAP'
+            WHEN 5 THEN 'Broken'
+            WHEN 6 THEN 'Planned'
+            WHEN 7 THEN 'CPHAScheduled'
+            WHEN 8 THEN 'PinBoard'
+            WHEN 9 THEN 'WebSchedNewPt'
+            WHEN 10 THEN 'WebSchedRecall'
+            ELSE 'Unknown'
+        END AS StatusDescription
+    FROM (SELECT DISTINCT AptStatus FROM AppointmentDetails) AS statuses
+),
+
 -- 4. SUCCESS CRITERIA
 -- Evaluates business success criteria based on procedure status, fee, and payment
 -- A procedure is considered successful if:
@@ -124,300 +158,224 @@ SuccessCriteria AS (
     LEFT JOIN PaymentActivity pa ON bp.ProcNum = pa.ProcNum
 ),
 
--- 5. APPOINTMENT DETAILS
--- Provides appointment information within the date range
--- Used to analyze relationships between procedures and appointments
-AppointmentDetails AS (
-    SELECT
-        a.AptNum,
-        a.AptDateTime,
-        a.AptStatus
-    FROM appointment a
-    WHERE a.AptDateTime >= '{{START_DATE}}' AND a.AptDateTime < '{{END_DATE}}'
-),
-
--- 6. PROCEDURE APPOINTMENT SUMMARY
--- Combines procedures with appointment and payment information
--- This CTE is used in appointment overlap analysis and other relationship queries
+-- 7. PROCEDURE APPOINTMENT SUMMARY
+-- Combines procedures with their associated appointments and payments
+-- Provides consolidated view of procedure execution and appointment information
 ProcedureAppointmentSummary AS (
     SELECT
-        bp.*,
+        bp.ProcNum,
+        bp.PatNum,
+        bp.ProcDate,
+        bp.ProcStatus,
+        bp.ProcFee,
+        bp.AptNum,
+        bp.DateComplete,
+        bp.ProcCode,
+        bp.Descript,
+        bp.CodeCategory,
         pa.total_paid,
         pa.payment_ratio,
-        pa.insurance_paid,
-        pa.direct_paid,
         ad.AptDateTime,
         ad.AptStatus,
-        CASE
-            WHEN bp.AptNum IS NULL THEN 'No Appointment'
-            WHEN ad.AptStatus = 1 THEN 'Scheduled'
-            WHEN ad.AptStatus = 2 THEN 'Complete'
-            WHEN ad.AptStatus = 3 THEN 'UnschedList'
-            WHEN ad.AptStatus = 4 THEN 'ASAP'
-            WHEN ad.AptStatus = 5 THEN 'Broken'
-            WHEN ad.AptStatus = 6 THEN 'Planned'
-            WHEN ad.AptStatus = 7 THEN 'PtNote'
-            WHEN ad.AptStatus = 8 THEN 'PtNoteCompleted'
-            ELSE 'Unknown'
-        END AS appointment_status
+        sc.is_successful
     FROM BaseProcedures bp
     LEFT JOIN PaymentActivity pa ON bp.ProcNum = pa.ProcNum
     LEFT JOIN AppointmentDetails ad ON bp.AptNum = ad.AptNum
-),
-
--- 7. APPOINTMENT STATUS CATEGORIES
--- Standardizes the mapping of appointment status codes to text descriptions
--- Used by multiple queries that need to categorize appointments
-AppointmentStatusCategories AS (
-    SELECT 
-        0 AS AptStatus, 'Unknown' AS StatusDescription
-    UNION SELECT 
-        1, 'Scheduled'
-    UNION SELECT 
-        2, 'Complete'
-    UNION SELECT 
-        3, 'UnschedList'
-    UNION SELECT 
-        4, 'ASAP'
-    UNION SELECT 
-        5, 'Broken'
-    UNION SELECT 
-        6, 'Planned'
-    UNION SELECT 
-        7, 'PtNote'
-    UNION SELECT 
-        8, 'PtNoteCompleted'
+    LEFT JOIN SuccessCriteria sc ON bp.ProcNum = sc.ProcNum
 ),
 
 -- 8. PROCEDURE METRICS
--- Calculates key metrics about procedures, including counts, status distribution, 
--- fee statistics, and payment patterns
--- This CTE is useful for dashboards and summary reports
+-- Calculates key metrics about procedures including counts, status, fees, and payments
+-- Used for dashboard metrics and summary reports
 ProcedureMetrics AS (
     SELECT
-        -- Basic counts
         COUNT(*) AS total_procedures,
-        COUNT(DISTINCT PatNum) AS unique_patients,
-        COUNT(DISTINCT ProcCode) AS unique_procedure_codes,
-        COUNT(DISTINCT AptNum) AS unique_appointments,
-        ROUND(COUNT(*) * 1.0 / COUNT(DISTINCT PatNum), 2) AS procedures_per_patient,
-        
-        -- Status counts and percentages
-        SUM(CASE WHEN ProcStatus = 1 THEN 1 ELSE 0 END) AS treatment_planned,
-        SUM(CASE WHEN ProcStatus = 2 THEN 1 ELSE 0 END) AS completed,
-        SUM(CASE WHEN ProcStatus = 3 THEN 1 ELSE 0 END) AS existing_current,
-        SUM(CASE WHEN ProcStatus = 4 THEN 1 ELSE 0 END) AS existing_other,
-        SUM(CASE WHEN ProcStatus = 5 THEN 1 ELSE 0 END) AS referred,
-        SUM(CASE WHEN ProcStatus = 6 THEN 1 ELSE 0 END) AS deleted,
-        SUM(CASE WHEN ProcStatus = 7 THEN 1 ELSE 0 END) AS condition_status,
-        SUM(CASE WHEN ProcStatus = 8 THEN 1 ELSE 0 END) AS invalid,
-        
-        -- Completion rate
-        ROUND(100.0 * SUM(CASE WHEN ProcStatus = 2 THEN 1 ELSE 0 END) / 
-              NULLIF(SUM(CASE WHEN ProcStatus IN (1,2) THEN 1 ELSE 0 END), 0), 2) AS completion_rate,
-        
-        -- Fee statistics
-        SUM(CASE WHEN ProcFee = 0 THEN 1 ELSE 0 END) AS zero_fee_count,
-        SUM(CASE WHEN ProcFee > 0 THEN 1 ELSE 0 END) AS with_fee_count,
-        MIN(CASE WHEN ProcFee > 0 THEN ProcFee END) AS min_fee,
-        MAX(ProcFee) AS max_fee,
-        ROUND(AVG(CASE WHEN ProcFee > 0 THEN ProcFee END), 2) AS avg_fee,
+        SUM(CASE WHEN ProcStatus = 2 THEN 1 ELSE 0 END) AS completed_procedures,
+        SUM(CASE WHEN ProcStatus = 1 THEN 1 ELSE 0 END) AS planned_procedures,
+        SUM(CASE WHEN ProcStatus = 6 THEN 1 ELSE 0 END) AS deleted_procedures,
+        SUM(CASE WHEN CodeCategory = 'Excluded' THEN 1 ELSE 0 END) AS excluded_procedures,
+        SUM(CASE WHEN ProcFee = 0 THEN 1 ELSE 0 END) AS zero_fee_procedures,
+        SUM(CASE WHEN ProcFee > 0 THEN 1 ELSE 0 END) AS with_fee_procedures,
+        AVG(CASE WHEN ProcStatus = 2 AND ProcFee > 0 THEN payment_ratio ELSE NULL END) AS avg_payment_ratio_completed,
+        SUM(CASE WHEN ProcStatus = 2 AND payment_ratio >= 0.95 THEN 1 ELSE 0 END) AS paid_95pct_plus_count,
+        SUM(CASE WHEN is_successful THEN 1 ELSE 0 END) AS successful_procedures,
+        ROUND(100.0 * SUM(CASE WHEN is_successful THEN 1 ELSE 0 END) / 
+               NULLIF(SUM(CASE WHEN ProcStatus = 2 THEN 1 ELSE 0 END), 0), 2) AS success_rate_pct,
         SUM(ProcFee) AS total_fees,
-        
-        -- Payment statistics
-        COUNT(DISTINCT CASE WHEN total_paid > 0 THEN ProcNum END) AS procedures_with_payment,
-        ROUND(COUNT(DISTINCT CASE WHEN total_paid > 0 THEN ProcNum END) * 100.0 / 
-              NULLIF(COUNT(*), 0), 2) AS payment_rate,
+        SUM(CASE WHEN ProcStatus = 2 THEN ProcFee ELSE 0 END) AS completed_fees,
         SUM(total_paid) AS total_payments,
-        ROUND(SUM(total_paid) * 100.0 / NULLIF(SUM(ProcFee), 0), 2) AS overall_payment_percentage,
-        SUM(CASE WHEN ProcStatus = 2 THEN total_paid ELSE 0 END) AS completed_payments,
-        ROUND(SUM(CASE WHEN ProcStatus = 2 THEN total_paid ELSE 0 END) * 100.0 / 
-              NULLIF(SUM(CASE WHEN ProcStatus = 2 THEN ProcFee ELSE 0 END), 0), 2) AS completed_payment_percentage
-    FROM (
-        SELECT bp.*, pa.total_paid
-        FROM BaseProcedures bp
-        LEFT JOIN PaymentActivity pa ON bp.ProcNum = pa.ProcNum
-    ) AS combined_data
+        ROUND(SUM(total_paid) / NULLIF(SUM(ProcFee), 0) * 100, 2) AS overall_payment_rate_pct
+    FROM ProcedureAppointmentSummary
 ),
 
 -- 9. PROCEDURE PAIRS
 -- Identifies pairs of procedures performed on the same patient on the same day
--- Used for bundling analysis and procedure relationship studies
+-- Used for analyzing common procedure combinations and bundling patterns
 ProcedurePairs AS (
     SELECT 
         p1.PatNum,
         p1.ProcDate,
         p1.ProcNum AS proc1_num,
-        p2.ProcNum AS proc2_num,
-        p1.CodeNum AS code1_num,
-        p2.CodeNum AS code2_num,
-        pc1.ProcCode AS proc1_code,
-        pc2.ProcCode AS proc2_code,
-        pc1.Descript AS proc1_desc,
-        pc2.Descript AS proc2_desc,
+        p1.ProcCode AS proc1_code,
         p1.ProcFee AS proc1_fee,
+        p2.ProcNum AS proc2_num,
+        p2.ProcCode AS proc2_code,
         p2.ProcFee AS proc2_fee,
-        p1.ProcStatus AS proc1_status,
-        p2.ProcStatus AS proc2_status
+        p1.ProcFee + p2.ProcFee AS combined_fee
     FROM BaseProcedures p1
     JOIN BaseProcedures p2 ON 
         p1.PatNum = p2.PatNum AND 
         p1.ProcDate = p2.ProcDate AND
-        p1.ProcNum < p2.ProcNum  -- Avoid duplicates
-    JOIN procedurecode pc1 ON p1.CodeNum = pc1.CodeNum
-    JOIN procedurecode pc2 ON p2.CodeNum = pc2.CodeNum
-    WHERE 
-        p1.CodeCategory = 'Standard' AND  -- Exclude special codes
-        p2.CodeCategory = 'Standard'
+        p1.ProcNum < p2.ProcNum -- Ensures each pair is counted only once
 ),
 
 -- 10. COMMON PAIRS
 -- Counts the most frequent procedure pairs and their associated fees
--- Used to identify common procedure bundling patterns
+-- Used for bundling analysis and procedure combination patterns
 CommonPairs AS (
     SELECT 
         proc1_code,
         proc2_code,
-        proc1_desc,
-        proc2_desc,
         COUNT(*) AS pair_count,
-        SUM(proc1_fee + proc2_fee) AS total_pair_fee,
-        ROUND(AVG(proc1_fee + proc2_fee), 2) AS avg_pair_fee
+        AVG(proc1_fee) AS avg_proc1_fee,
+        AVG(proc2_fee) AS avg_proc2_fee,
+        AVG(combined_fee) AS avg_combined_fee
     FROM ProcedurePairs
-    GROUP BY proc1_code, proc2_code, proc1_desc, proc2_desc
+    GROUP BY proc1_code, proc2_code
 ),
 
 -- 11. VISIT COUNTS
 -- Identifies patient visits with multiple procedures
--- Used to analyze procedure bundling by visit
+-- Used for analyzing bundling opportunities and visit optimization
 VisitCounts AS (
     SELECT
         PatNum,
         ProcDate,
-        COUNT(*) AS procedures_in_visit
+        COUNT(*) AS procedure_count,
+        SUM(ProcFee) AS total_fee
     FROM BaseProcedures
-    WHERE 
-        ProcStatus = 2 AND  -- Completed procedures
-        CodeCategory = 'Standard'  -- Standard codes
     GROUP BY PatNum, ProcDate
+    HAVING COUNT(*) > 1
 ),
 
 -- 12. BUNDLED PAYMENTS
 -- Calculates payment data for visits with multiple procedures
--- Used to analyze payment patterns based on bundle size
+-- Used for analyzing how bundled procedures are billed and paid
 BundledPayments AS (
     SELECT
-        v.PatNum,
-        v.ProcDate,
-        v.procedures_in_visit,
-        COUNT(DISTINCT pl.ProcNum) AS procedure_count,
-        SUM(pl.ProcFee) AS total_fee,
+        vc.PatNum,
+        vc.ProcDate,
+        vc.procedure_count,
+        vc.total_fee,
         SUM(pa.total_paid) AS total_paid,
-        CASE WHEN SUM(pl.ProcFee) > 0 
-            THEN SUM(pa.total_paid) / SUM(pl.ProcFee) 
-            ELSE NULL 
-        END AS payment_ratio,
-        CASE 
-            WHEN v.procedures_in_visit = 1 THEN 'Single Procedure'
-            WHEN v.procedures_in_visit BETWEEN 2 AND 3 THEN '2-3 Procedures'
-            WHEN v.procedures_in_visit BETWEEN 4 AND 5 THEN '4-5 Procedures'
-            ELSE '6+ Procedures'
-        END AS bundle_size
-    FROM VisitCounts v
-    JOIN BaseProcedures pl ON 
-        v.PatNum = pl.PatNum AND 
-        v.ProcDate = pl.ProcDate AND
-        pl.ProcStatus = 2 AND
-        pl.CodeCategory = 'Standard'
-    LEFT JOIN PaymentActivity pa ON pl.ProcNum = pa.ProcNum
-    GROUP BY v.PatNum, v.ProcDate, v.procedures_in_visit, bundle_size
+        SUM(pa.total_paid) / NULLIF(vc.total_fee, 0) AS payment_ratio,
+        COUNT(CASE WHEN pa.total_paid > 0 THEN 1 END) AS procedures_with_payment,
+        COUNT(CASE WHEN pa.total_paid = 0 THEN 1 END) AS procedures_without_payment
+    FROM VisitCounts vc
+    JOIN BaseProcedures bp ON vc.PatNum = bp.PatNum AND vc.ProcDate = bp.ProcDate
+    LEFT JOIN PaymentActivity pa ON bp.ProcNum = pa.ProcNum
+    GROUP BY vc.PatNum, vc.ProcDate, vc.procedure_count, vc.total_fee
 ),
 
 -- 13. EDGE CASES
 -- Identifies payment anomalies and edge cases in procedure billing
--- Used to flag unusual payment patterns that require investigation
+-- Used for exception reporting and data quality analysis
 EdgeCases AS (
-    SELECT 
-      pl.ProcNum,
-      pl.PatNum,
-      pl.ProcDate,
-      pl.ProcCode,
-      pl.Descript,
-      pl.ProcStatus,
-      pl.ProcFee,
-      COALESCE(pa.total_paid, 0) AS total_paid,
-      pa.payment_ratio,
-      CASE 
-        WHEN pl.ProcFee = 0 AND COALESCE(pa.total_paid, 0) > 0 THEN 'Zero_fee_payment'
-        WHEN pl.ProcFee > 0 AND COALESCE(pa.total_paid, 0) > pl.ProcFee * 1.05 THEN 'Significant_overpayment'
-        WHEN pl.ProcFee > 0 AND COALESCE(pa.total_paid, 0) > pl.ProcFee THEN 'Minor_overpayment'
-        WHEN pl.ProcStatus = 2 AND pl.ProcFee > 0 AND COALESCE(pa.total_paid, 0) = 0 THEN 'Completed_unpaid'
-        WHEN pl.ProcStatus = 2 AND pl.ProcFee > 0 AND COALESCE(pa.total_paid, 0) / pl.ProcFee < 0.50 THEN 'Completed_underpaid'
-        WHEN pl.ProcStatus != 2 AND COALESCE(pa.total_paid, 0) > 0 THEN 'Non_completed_with_payment'
-        ELSE 'Normal'
-      END AS edge_case_type
-    FROM BaseProcedures pl
-    LEFT JOIN PaymentActivity pa ON pl.ProcNum = pa.ProcNum
+    SELECT
+        bp.ProcNum,
+        bp.PatNum,
+        bp.ProcCode,
+        bp.ProcDate,
+        bp.ProcStatus,
+        bp.ProcFee,
+        pa.total_paid,
+        pa.payment_ratio,
+        CASE
+            WHEN bp.ProcStatus = 2 AND bp.ProcFee = 0 THEN 'Completed zero-fee'
+            WHEN bp.ProcStatus = 2 AND bp.ProcFee > 0 AND pa.total_paid = 0 THEN 'Completed unpaid'
+            WHEN bp.ProcStatus = 2 AND pa.payment_ratio > 1.05 THEN 'Overpaid'
+            WHEN bp.ProcStatus = 2 AND pa.payment_ratio BETWEEN 0.01 AND 0.50 THEN 'Significantly underpaid'
+            WHEN bp.ProcStatus = 6 AND pa.total_paid > 0 THEN 'Deleted with payment'
+            WHEN bp.ProcStatus = 1 AND pa.total_paid > 0 THEN 'Planned with payment'
+            ELSE NULL
+        END AS edge_case_type
+    FROM BaseProcedures bp
+    LEFT JOIN PaymentActivity pa ON bp.ProcNum = pa.ProcNum
+    WHERE 
+        (bp.ProcStatus = 2 AND bp.ProcFee = 0) OR
+        (bp.ProcStatus = 2 AND bp.ProcFee > 0 AND pa.total_paid = 0) OR
+        (bp.ProcStatus = 2 AND pa.payment_ratio > 1.05) OR
+        (bp.ProcStatus = 2 AND pa.payment_ratio BETWEEN 0.01 AND 0.50) OR
+        (bp.ProcStatus = 6 AND pa.total_paid > 0) OR
+        (bp.ProcStatus = 1 AND pa.total_paid > 0)
 ),
 
 -- 14. STANDARD FEES
 -- Compares procedure fees to standard fee schedules
--- Used to analyze fee variations and adherence to standard pricing
+-- Used for fee consistency analysis and pricing optimization
 StandardFees AS (
-    SELECT 
-        bp.ProcNum,
-        bp.CodeNum,
-        bp.ProcFee AS recorded_fee,
-        f.Amount AS standard_fee,
-        f.FeeSched,
-        fs.Description AS fee_schedule_desc,
-        CASE 
-            WHEN f.Amount = 0 THEN 'Zero Standard Fee'
-            WHEN bp.ProcFee = 0 AND f.Amount > 0 THEN 'Zero Fee Override'
-            WHEN bp.ProcFee > f.Amount THEN 'Above Standard'
-            WHEN bp.ProcFee < f.Amount THEN 'Below Standard'
-            WHEN bp.ProcFee = f.Amount THEN 'Matches Standard'
-            ELSE 'Fee Missing'
-        END AS fee_relationship
-    FROM BaseProcedures bp
-    LEFT JOIN fee f ON bp.CodeNum = f.CodeNum 
-        AND f.FeeSched = 55  -- Consider making this a parameter
-        AND f.ClinicNum = 0
-    LEFT JOIN feesched fs ON f.FeeSched = fs.FeeSchedNum
+    SELECT
+        ProcCode,
+        COUNT(*) AS procedure_count,
+        MIN(ProcFee) AS min_fee,
+        MAX(ProcFee) AS max_fee,
+        AVG(ProcFee) AS avg_fee,
+        STDDEV(ProcFee) AS fee_stddev,
+        COUNT(DISTINCT ProcFee) AS unique_fee_count
+    FROM BaseProcedures
+    WHERE ProcFee > 0
+    GROUP BY ProcCode
+    HAVING COUNT(*) > 5 -- Only include procedures with significant sample size
 ),
 
 -- 15. PROCEDURE ADJUSTMENTS
 -- Aggregates adjustment information for procedures
--- Used to analyze write-offs and other fee modifications
+-- Used for analyzing write-offs, discounts, and adjustment patterns
 ProcedureAdjustments AS (
     SELECT
         bp.ProcNum,
         bp.ProcFee,
-        COUNT(a.AdjNum) AS adjustment_count,
-        COALESCE(SUM(a.AdjAmt), 0) AS total_adjustments,
-        bp.ProcFee + COALESCE(SUM(a.AdjAmt), 0) AS adjusted_fee  -- Adjustments are typically negative
+        COALESCE(SUM(ca.WriteOff), 0) AS insurance_adjustments,
+        COALESCE(SUM(
+            CASE WHEN a.AdjType IN (1, 2) -- Positive adjustment types
+                THEN a.AdjAmt
+                ELSE 0
+            END), 0) AS positive_adjustments,
+        COALESCE(SUM(
+            CASE WHEN a.AdjType IN (3, 4) -- Negative adjustment types
+                THEN a.AdjAmt
+                ELSE 0
+            END), 0) AS negative_adjustments,
+        COALESCE(SUM(a.AdjAmt), 0) AS total_direct_adjustments,
+        COALESCE(SUM(ca.WriteOff), 0) + COALESCE(SUM(a.AdjAmt), 0) AS total_adjustments
     FROM BaseProcedures bp
+    LEFT JOIN claimproc ca ON bp.ProcNum = ca.ProcNum AND ca.WriteOff <> 0
     LEFT JOIN adjustment a ON bp.ProcNum = a.ProcNum
     GROUP BY bp.ProcNum, bp.ProcFee
 ),
 
 -- 16. PATIENT RESPONSIBILITY
 -- Calculates patient responsibility after payments and adjustments
--- Used to analyze financial burden on patients
+-- Used for analyzing patient financial burden and collection opportunities
 PatientResponsibility AS (
     SELECT
         bp.ProcNum,
+        bp.PatNum,
+        bp.ProcCode,
+        bp.ProcStatus,
         bp.ProcFee,
+        pa.insurance_paid,
+        pa.direct_paid,
         pa.total_paid,
         adj.total_adjustments,
-        bp.ProcFee - (pa.total_paid + ABS(adj.total_adjustments)) AS patient_responsibility,
-        CASE 
+        bp.ProcFee - COALESCE(pa.total_paid, 0) - COALESCE(adj.total_adjustments, 0) AS remaining_responsibility,
+        CASE
             WHEN bp.ProcFee = 0 THEN 'Zero Fee'
-            WHEN bp.ProcFee - (pa.total_paid + ABS(adj.total_adjustments)) <= 0 THEN 'Fully Covered'
-            WHEN bp.ProcFee - (pa.total_paid + ABS(adj.total_adjustments)) < bp.ProcFee * 0.2 THEN 'Mostly Covered'
-            WHEN bp.ProcFee - (pa.total_paid + ABS(adj.total_adjustments)) < bp.ProcFee * 0.5 THEN 'Partially Covered'
-            ELSE 'Primarily Patient Responsibility'
-        END AS responsibility_category
+            WHEN bp.ProcFee - COALESCE(pa.total_paid, 0) - COALESCE(adj.total_adjustments, 0) <= 0 THEN 'Fully Resolved'
+            WHEN pa.insurance_paid > 0 AND bp.ProcFee - COALESCE(pa.total_paid, 0) - COALESCE(adj.total_adjustments, 0) > 0 THEN 'Patient Portion Due'
+            WHEN pa.insurance_paid = 0 AND pa.direct_paid = 0 AND adj.total_adjustments = 0 THEN 'No Activity'
+            ELSE 'Partial Payment'
+        END AS responsibility_status
     FROM BaseProcedures bp
     LEFT JOIN PaymentActivity pa ON bp.ProcNum = pa.ProcNum
     LEFT JOIN ProcedureAdjustments adj ON bp.ProcNum = adj.ProcNum
@@ -425,52 +383,51 @@ PatientResponsibility AS (
 
 -- 17. FEE RANGES
 -- Categorizes procedures by fee amounts for analysis
--- Used to examine pricing patterns and payment behaviors across price points
+-- Used for financial segmentation and pricing tier analysis
 FeeRanges AS (
     SELECT
-        bp.ProcNum,
-        bp.ProcFee,
-        bp.ProcCode,
-        bp.ProcStatus,
-        bp.CodeCategory,
-        sf.fee_relationship,
-        pr.responsibility_category,
+        ProcNum,
+        ProcCode,
+        ProcStatus,
+        ProcFee,
         CASE
-            WHEN bp.ProcFee = 0 THEN 'Zero Fee'
-            WHEN bp.ProcFee < 100 THEN 'Under $100'
-            WHEN bp.ProcFee < 250 THEN '$100-$249'
-            WHEN bp.ProcFee < 500 THEN '$250-$499'
-            WHEN bp.ProcFee < 1000 THEN '$500-$999'
-            WHEN bp.ProcFee < 2000 THEN '$1000-$1999'
-            ELSE '$2000+'
+            WHEN ProcFee = 0 THEN 'Zero Fee'
+            WHEN ProcFee < 100 THEN 'Under $100'
+            WHEN ProcFee >= 100 AND ProcFee < 250 THEN '$100-$249'
+            WHEN ProcFee >= 250 AND ProcFee < 500 THEN '$250-$499'
+            WHEN ProcFee >= 500 AND ProcFee < 1000 THEN '$500-$999'
+            WHEN ProcFee >= 1000 AND ProcFee < 2500 THEN '$1000-$2499'
+            WHEN ProcFee >= 2500 THEN '$2500+'
         END AS fee_range
-    FROM BaseProcedures bp
-    JOIN StandardFees sf ON bp.ProcNum = sf.ProcNum
-    JOIN PatientResponsibility pr ON bp.ProcNum = pr.ProcNum
+    FROM BaseProcedures
 ),
 
 -- 18. UNPAID COMPLETED
 -- Identifies completed procedures with no payments
--- Used for accounts receivable and unpaid services analysis
+-- Used for accounts receivable analysis and collection targeting
 UnpaidCompleted AS (
-    SELECT 
-        pl.ProcNum,
-        pl.PatNum,
-        pl.ProcDate,
-        EXTRACT(MONTH FROM pl.ProcDate) AS proc_month,
-        pl.ProcFee,
-        pa.total_paid
-    FROM BaseProcedures pl
-    LEFT JOIN PaymentActivity pa ON pl.ProcNum = pa.ProcNum
-    WHERE pl.ProcStatus = 2 -- Completed
-      AND pl.ProcFee > 0 -- Has a fee
-      AND pl.CodeCategory = 'Standard' -- Not an excluded code
-      AND (pa.total_paid IS NULL OR pa.total_paid = 0) -- No payments
+    SELECT
+        bp.ProcNum,
+        bp.PatNum,
+        bp.ProcDate,
+        bp.DateComplete,
+        bp.ProcStatus,
+        bp.ProcCode,
+        bp.Descript,
+        bp.ProcFee,
+        bp.CodeCategory,
+        DATEDIFF(CURRENT_DATE, bp.DateComplete) AS days_since_completion
+    FROM BaseProcedures bp
+    LEFT JOIN PaymentActivity pa ON bp.ProcNum = pa.ProcNum
+    WHERE bp.ProcStatus = 2  -- Completed
+      AND bp.ProcFee > 0     -- Has a fee
+      AND (pa.total_paid IS NULL OR pa.total_paid = 0)  -- No payment
+      AND bp.CodeCategory = 'Standard'  -- Not excluded
 ),
 
 -- 19. PAYMENT RATIOS
 -- Categorizes procedures by payment percentage rates
--- Used for analyzing payment effectiveness and identifying partial payments
+-- Used for analyzing payment effectiveness and partial payment patterns
 PaymentRatios AS (
     SELECT
         pl.ProcNum,
@@ -498,38 +455,57 @@ PaymentRatios AS (
 
 -- 20. PAYMENT LINKS
 -- Calculates payment linkage metrics for procedures
--- Tracks direct payments, insurance payments, and payment timing
+-- Used for identifying payment tracking issues and linkage patterns
 PaymentLinks AS (
-    SELECT
-        pl.ProcNum,
-        pl.ProcStatus,
-        pl.ProcFee,
-        pl.ProcDate,
-        pl.DateComplete,
-        -- Count payment splits linked to this procedure
+    SELECT 
+        bp.ProcNum,
+        bp.ProcStatus,
+        bp.ProcFee,
+        bp.ProcDate,
+        bp.DateComplete,
+        -- Count linked payment splits
         COUNT(DISTINCT ps.SplitNum) AS paysplit_count,
-        -- Count claim procs linked to this procedure
+        -- Count linked claim procs with payment
         COUNT(DISTINCT cp.ClaimProcNum) AS claimproc_count,
-        -- Calculate total amounts by source
+        -- Payment amounts
         COALESCE(SUM(ps.SplitAmt), 0) AS direct_payment_amount,
         COALESCE(SUM(cp.InsPayAmt), 0) AS insurance_payment_amount,
-        -- Calculate total expected from insurance
-        COALESCE(SUM(cp.InsPayEst), 0) AS insurance_estimate_amount,
-        -- Calculate days from completion to payment
-        MIN(CASE WHEN ps.SplitAmt > 0 AND pl.DateComplete IS NOT NULL AND ps.DatePay IS NOT NULL THEN 
-            DATEDIFF(ps.DatePay, pl.DateComplete)
-        END) AS min_days_to_payment,
-        MAX(CASE WHEN ps.SplitAmt > 0 AND pl.DateComplete IS NOT NULL AND ps.DatePay IS NOT NULL THEN 
-            DATEDIFF(ps.DatePay, pl.DateComplete)
-        END) AS max_days_to_payment,
-        -- Flag if there are claimproc entries with zero InsPayAmt
-        MAX(CASE WHEN cp.ClaimProcNum IS NOT NULL AND cp.InsPayAmt = 0 THEN 1 ELSE 0 END) AS has_zero_insurance_payment
-    FROM BaseProcedures pl
-    LEFT JOIN paysplit ps ON pl.ProcNum = ps.ProcNum
-    LEFT JOIN claimproc cp ON pl.ProcNum = cp.ProcNum
-    WHERE pl.ProcFee > 0  -- Only look at procedures with fees
-      AND pl.CodeCategory = 'Standard'  -- Exclude special codes
-    GROUP BY pl.ProcNum, pl.ProcStatus, pl.ProcFee, pl.ProcDate, pl.DateComplete
+        -- Insurance estimate amount (expected insurance)
+        COALESCE(SUM(cp.InsEstTotal), 0) AS insurance_estimate_amount,
+        -- Days from procedure to payment metrics
+        MIN(CASE WHEN ps.SplitAmt > 0 THEN 
+            DATEDIFF(ps.DatePay, COALESCE(bp.DateComplete, bp.ProcDate))
+            END) AS min_direct_days_to_payment,
+        MIN(CASE WHEN cp.InsPayAmt > 0 THEN 
+            DATEDIFF(cp.DateCP, COALESCE(bp.DateComplete, bp.ProcDate))
+            END) AS min_insurance_days_to_payment,
+        LEAST(
+            COALESCE(MIN(CASE WHEN ps.SplitAmt > 0 THEN 
+                DATEDIFF(ps.DatePay, COALESCE(bp.DateComplete, bp.ProcDate))
+                END), 999999),
+            COALESCE(MIN(CASE WHEN cp.InsPayAmt > 0 THEN 
+                DATEDIFF(cp.DateCP, COALESCE(bp.DateComplete, bp.ProcDate))
+                END), 999999)
+        ) AS min_days_to_payment,
+        MAX(CASE WHEN ps.SplitAmt > 0 OR cp.InsPayAmt > 0 THEN 
+            GREATEST(
+                COALESCE(DATEDIFF(ps.DatePay, COALESCE(bp.DateComplete, bp.ProcDate)), 0),
+                COALESCE(DATEDIFF(cp.DateCP, COALESCE(bp.DateComplete, bp.ProcDate)), 0)
+            )
+            END) AS max_days_to_payment,
+        -- Flag for zero insurance payments with claims
+        CASE WHEN COUNT(DISTINCT cp.ClaimProcNum) > 0 AND 
+                  COALESCE(SUM(cp.InsPayAmt), 0) = 0 
+             THEN 1 ELSE 0 END AS has_zero_insurance_payment
+    FROM BaseProcedures bp
+    LEFT JOIN paysplit ps ON bp.ProcNum = ps.ProcNum
+    LEFT JOIN claimproc cp ON bp.ProcNum = cp.ProcNum
+    GROUP BY 
+        bp.ProcNum, 
+        bp.ProcStatus,
+        bp.ProcFee,
+        bp.ProcDate,
+        bp.DateComplete
 ),
 
 -- 21. LINKAGE PATTERNS
@@ -678,23 +654,4 @@ MonthlyData AS (
         SUM(pa.total_paid) AS total_payments,
         SUM(CASE WHEN pl.ProcStatus = 2 THEN pa.total_paid ELSE 0 END) AS completed_payments,
         -- Calculate unpaid metrics
-        SUM(CASE WHEN pl.ProcStatus = 2 AND pl.ProcFee > 0 AND pa.total_paid = 0 
-            THEN 1 ELSE 0 END) AS unpaid_completed_count,
-        SUM(CASE WHEN pl.ProcStatus = 2 AND pl.ProcFee > 0 AND pa.total_paid = 0 
-            THEN pl.ProcFee ELSE 0 END) AS unpaid_completed_fees,
-        -- Success rate
-        SUM(CASE WHEN sc.is_successful THEN 1 ELSE 0 END) AS successful_procedures,
-        ROUND(100.0 * SUM(CASE WHEN sc.is_successful THEN 1 ELSE 0 END) / 
-               NULLIF(SUM(CASE WHEN pl.ProcStatus = 2 THEN 1 ELSE 0 END), 0), 2) AS success_rate
-    FROM BaseProcedures pl
-    LEFT JOIN PaymentActivity pa ON pl.ProcNum = pa.ProcNum
-    LEFT JOIN SuccessCriteria sc ON pl.ProcNum = sc.ProcNum
-    GROUP BY proc_year, proc_month
-)
-
--- End of CTEs
--- Note: Your main query should follow this comment
--- Example usage:
--- SELECT * FROM BaseProcedures bp
--- JOIN PaymentActivity pa ON bp.ProcNum = pa.ProcNum
--- WHERE bp.ProcStatus = 2
+        SUM(CASE WHEN pl.ProcStatus = 2 AND pl.ProcFee >
