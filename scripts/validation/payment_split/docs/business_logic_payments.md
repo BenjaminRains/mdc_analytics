@@ -140,11 +140,12 @@ Based on analysis, splits fall into three categories:
   - Should net to $0 total impact
   - Normal pattern: 1-3 splits per procedure
 
-- **Split Pattern Warning Signs**:
-  - Excessive splits (>100 per procedure)
-  - Perfect symmetry in split amounts
-  - Identical patterns across procedures
-  - High volume of splits in short timeframe
+- **Expected Transfer Behavior**:
+  - Positive and negative splits should balance exactly
+  - Total payment amount should be $0.00
+  - Each affected procedure typically has 1-3 splits
+  - Transfer amounts should reflect actual procedure values
+  - Split creation should follow same validation rules as regular payments
 
 ### 10. Procedure-Split Relationships
 - **Normal Pattern**:
@@ -157,6 +158,21 @@ Based on analysis, splits fall into three categories:
   - Standard: 15 splits per payment
   - Warning threshold: >100 splits per procedure
   - Critical threshold: >1000 splits per procedure
+
+### 11. Payment Security Validation
+- **Transaction Level Validation**:
+  - Verify payment total matches sum of splits
+  - Maximum allowed splits: 15 per payment
+  - Non-negative split amounts enforced
+  - Payment dates must be valid for AR calculations
+  - Prevent duplicate payment records
+
+- **Procedure Relationship Validation**:
+  - Valid procedure references required
+  - Maximum 2 claims per procedure
+  - Split amounts proportional to procedure fees
+  - Zero-value procedures require special handling
+  - Transfer payments must net to zero
 
 ## Next Steps for Documentation
 1. Add detailed insurance payment processing flow
