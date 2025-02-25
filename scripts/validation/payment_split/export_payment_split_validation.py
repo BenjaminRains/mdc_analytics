@@ -303,7 +303,8 @@ def export_validation_results(connection_factory, connection_type, database, que
         logging.info("Query performance (slowest to fastest):")
         sorted_results = sorted(results, key=lambda x: x['duration'], reverse=True)
         for r in sorted_results:
-            status = "✓" if r['success'] else "✗"
+            # Use ASCII characters instead of Unicode checkmarks
+            status = "+" if r['success'] else "X"
             logging.info(f"  {status} {r['name']}: {r['duration']:.2f}s - {r.get('rows', 0):,} rows")
 
 def parse_args():
