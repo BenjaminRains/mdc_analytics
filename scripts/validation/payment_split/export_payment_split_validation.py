@@ -11,6 +11,9 @@ Usage:
     python export_payment_split_validation.py [--output-dir <path>] [--log-dir <path>]
                                                 [--database <dbname>] [--queries <names>]
                                                 [--connection-type <type>]
+                                                [--start-date <YYYY-MM-DD>]
+                                                [--end-date <YYYY-MM-DD>]
+                                                [--parallel]
 
 The list of queries and the common CTE definitions are stored as separate .sql files in
 the 'queries' directory. The CTE file is prepended to each query before execution.
@@ -24,7 +27,26 @@ from src.connections.factory import ConnectionFactory
 import argparse
 from scripts.base.index_manager import IndexManager
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, List
+import concurrent.futures
+from tqdm import tqdm
+import time
+
+# Query descriptions to provide context on what each query analyzes
+QUERY_DESCRIPTIONS = {
+    'summary': 'High-level summary of payment splits and associated metrics',
+    'base_counts': 'Basic count statistics of payments and procedures',
+    'source_counts': 'Analysis of payment sources and their distribution',
+    'filter_summary': 'Summary of how filters affect the dataset',
+    'diagnostic': 'Detailed diagnostic information for troubleshooting',
+    'verification': 'Verification of data integrity and consistency',
+    'problems': 'Identification of potential issues in payment splits',
+    'duplicate_joins': 'Analysis of duplicate join conditions',
+    'join_stages': 'Progression of join operations and their effects',
+    'daily_patterns': 'Day-by-day analysis of payment patterns',
+    'payment_details': 'Detailed information about individual payments',
+    'containment': 'Analysis of payment containment relationships',
+}
 
 def setup_logging(log_dir='scripts/validation/payment_split/logs'):
     """Setup logging configuration."""
@@ -64,9 +86,35 @@ def load_query_file(query_name: str) -> str:
         logging.error(f"Error loading query file {query_name}: {str(e)}")
         raise
 
-def get_ctes() -> str:
-    """Get common table expressions from the 'ctes.sql' file."""
-    return load_query_file('ctes')
+def get_ctes(start_date: Optional[str] = None, end_date: Optional[str] = None) -> str:
+    """
+    Get common table expressions from the 'ctes.sql' file.
+    
+    Args:
+        start_date: Optional start date filter in YYYY-MM-DD format
+        end_date: Optional end date filter in YYYY-MM-DD format
+    
+    Returns:
+        CTE SQL with optional date filters applied
+    """
+    ctes = load_query_file('ctes')
+    
+    # If date filters are provided, modify the CTE to include them
+    if start_date or end_date:
+        date_filters = []
+        if start_date:
+            date_filters.append(f"p.PayDate >= '{start_date}'")
+        if end_date:
+            date_filters.append(f"p.PayDate <= '{end_date}'")
+            
+        # Insert date filters into the base CTE
+        if date_filters:
+            filter_clause = " AND " + " AND ".join(date_filters)
+            # This assumes a specific structure in the CTE - adjust as needed
+            # Look for "base_payments" CTE and add date filter before the first closing parenthesis
+            ctes = ctes.replace("FROM payment p", f"FROM payment p WHERE 1=1 {filter_clause}")
+            
+    return ctes
 
 def get_query(query_name: str, ctes: str = None) -> dict:
     """Combine CTEs with a query and create export configuration."""
@@ -80,7 +128,8 @@ def get_query(query_name: str, ctes: str = None) -> dict:
     return {
         'name': query_name,
         'query': full_query,
-        'file': f'payment_split_validation_2024_{query_name}.csv'
+        'file': f'payment_split_validation_2024_{query_name}.csv',
+        'description': QUERY_DESCRIPTIONS.get(query_name, 'No description available')
     }
 
 def get_exports(ctes: str) -> list:
@@ -103,7 +152,65 @@ def get_exports(ctes: str) -> list:
         get_query('containment', ctes),
     ]
 
-def export_validation_results(connection_factory, connection_type, database, queries=None, output_dir=None):
+def process_single_export(export, factory, connection_type, database, output_dir):
+    """Process a single export query and save results to CSV."""
+    fresh_connection = None
+    try:
+        start_time = datetime.now()
+        
+        # Create a new connection for each query
+        fresh_connection = factory.create_connection(connection_type, database)
+        mysql_connection = fresh_connection.connect()
+        
+        # Execute query and fetch results
+        with mysql_connection.cursor(dictionary=True) as cursor:
+            cursor.execute(export['query'])
+            results = cursor.fetchall()
+            
+            # Convert to DataFrame
+            df = pd.DataFrame(results)
+            
+            if len(df) == 0:
+                return {
+                    'name': export['name'],
+                    'success': True,
+                    'rows': 0,
+                    'duration': (datetime.now() - start_time).total_seconds(),
+                    'message': "No results returned"
+                }
+            
+            # Write to CSV (overwrite if file exists)
+            output_path = os.path.join(output_dir, export['file'])
+            df.to_csv(output_path, index=False, mode='w')
+        
+        duration = (datetime.now() - start_time).total_seconds()
+        return {
+            'name': export['name'],
+            'success': True,
+            'rows': len(df),
+            'duration': duration,
+            'file': export['file']
+        }
+        
+    except Exception as e:
+        duration = (datetime.now() - start_time).total_seconds()
+        return {
+            'name': export['name'],
+            'success': False,
+            'rows': 0,
+            'duration': duration,
+            'error': str(e)
+        }
+    finally:
+        # Always close the connection when done
+        if fresh_connection:
+            try:
+                fresh_connection.close()
+            except:
+                pass
+
+def export_validation_results(connection_factory, connection_type, database, queries=None, 
+                             output_dir=None, use_parallel=False):
     """
     Export payment validation query results to separate CSV files.
 
@@ -113,6 +220,7 @@ def export_validation_results(connection_factory, connection_type, database, que
         database: Database name to connect to.
         queries: List of query names to run (None for all).
         output_dir: Directory to store output files (None for default).
+        use_parallel: Whether to execute queries in parallel (default: False)
     """
     # Set default output directory if none provided
     if output_dir is None:
@@ -132,49 +240,69 @@ def export_validation_results(connection_factory, connection_type, database, que
     if queries:
         exports = [e for e in exports if e['name'] in queries]
         logging.info(f"Running selected queries: {', '.join(queries)}")
-    
-    # Execute each query and export results
+
+    # Log query descriptions
+    logging.info("Query descriptions:")
     for export in exports:
-        # Create a fresh connection for each query
-        fresh_connection = None
-        try:
-            logging.info(f"Processing export: {export['name']}")
-            start_time = datetime.now()
+        logging.info(f"  {export['name']}: {export['description']}")
+    
+    results = []
+    
+    if use_parallel:
+        logging.info(f"Executing {len(exports)} queries in parallel...")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(4, len(exports))) as executor:
+            # Submit all tasks
+            future_to_export = {
+                executor.submit(
+                    process_single_export, export, connection_factory, connection_type, database, output_dir
+                ): export['name'] for export in exports
+            }
             
-            # Create a new connection for each query
-            fresh_connection = connection_factory.create_connection(connection_type, database)
-            mysql_connection = fresh_connection.connect()
-            
-            # Execute query and fetch results
-            with mysql_connection.cursor(dictionary=True) as cursor:
-                cursor.execute(export['query'])
-                results = cursor.fetchall()
+            # Create a progress bar
+            with tqdm(total=len(exports), desc="Processing queries") as pbar:
+                for future in concurrent.futures.as_completed(future_to_export):
+                    query_name = future_to_export[future]
+                    try:
+                        result = future.result()
+                        results.append(result)
+                        if result['success']:
+                            logging.info(f"Exported {result['rows']:,} rows to {result['file']} in {result['duration']:.2f} seconds")
+                        else:
+                            logging.error(f"Error exporting {query_name}: {result['error']}")
+                    except Exception as exc:
+                        logging.error(f"Query {query_name} generated an exception: {exc}")
+                    pbar.update(1)
+    else:
+        # Execute each query sequentially with a progress bar
+        with tqdm(total=len(exports), desc="Processing queries") as pbar:
+            for export in exports:
+                result = process_single_export(export, connection_factory, connection_type, database, output_dir)
+                results.append(result)
                 
-                # Convert to DataFrame
-                df = pd.DataFrame(results)
-                
-                if len(df) == 0:
-                    logging.warning(f"No results returned for {export['name']}")
-                    continue
-                
-                # Write to CSV (overwrite if file exists)
-                output_path = os.path.join(output_dir, export['file'])
-                if os.path.exists(output_path):
-                    logging.info(f"Overwriting existing file: {export['file']}")
-                df.to_csv(output_path, index=False, mode='w')
-            
-            duration = (datetime.now() - start_time).total_seconds()
-            logging.info(f"Exported {len(df):,} rows to {export['file']} in {duration:.2f} seconds")
-            
-        except Exception as e:
-            logging.error(f"Error exporting {export['name']}: {str(e)}", exc_info=True)
-        finally:
-            # Always close the connection when done
-            if fresh_connection:
-                try:
-                    fresh_connection.close()
-                except:
-                    pass
+                if result['success']:
+                    logging.info(f"Exported {result['rows']:,} rows to {result['file']} in {result['duration']:.2f} seconds")
+                else:
+                    logging.error(f"Error exporting {export['name']}: {result['error']}")
+                    
+                pbar.update(1)
+    
+    # Summary of results
+    successful = sum(1 for r in results if r['success'])
+    failed = len(results) - successful
+    total_rows = sum(r['rows'] for r in results if r['success'])
+    total_duration = sum(r['duration'] for r in results)
+    
+    logging.info(f"Export summary: {successful} queries successful, {failed} failed")
+    logging.info(f"Total rows exported: {total_rows:,}")
+    logging.info(f"Total processing time: {total_duration:.2f} seconds")
+    
+    # Sort and display query performance
+    if results:
+        logging.info("Query performance (slowest to fastest):")
+        sorted_results = sorted(results, key=lambda x: x['duration'], reverse=True)
+        for r in sorted_results:
+            status = "✓" if r['success'] else "✗"
+            logging.info(f"  {status} {r['name']}: {r['duration']:.2f}s - {r.get('rows', 0):,} rows")
 
 def parse_args():
     """Parse command line arguments."""
@@ -215,6 +343,22 @@ def parse_args():
                 'diagnostic', 'verification', 'problems', 'duplicate_joins', 
                 'join_stages', 'daily_patterns', 'payment_details', 'containment'],
         help='Specific queries to run (default: all)'
+    )
+    
+    parser.add_argument(
+        '--start-date',
+        help='Start date for filtering data (YYYY-MM-DD format)'
+    )
+    
+    parser.add_argument(
+        '--end-date',
+        help='End date for filtering data (YYYY-MM-DD format)'
+    )
+    
+    parser.add_argument(
+        '--parallel',
+        action='store_true',
+        help='Run queries in parallel for faster execution'
     )
     
     return parser.parse_args()
@@ -274,6 +418,11 @@ def main():
         logging.info(f"Output directory: {args.output_dir}")
         logging.info(f"Database: {args.database}")
         logging.info(f"Connection type: {args.connection_type}")
+        if args.start_date:
+            logging.info(f"Start date filter: {args.start_date}")
+        if args.end_date:
+            logging.info(f"End date filter: {args.end_date}")
+        logging.info(f"Parallel execution: {args.parallel}")
         
         # Create connection factory
         factory = ConnectionFactory()
@@ -293,7 +442,8 @@ def main():
             connection_type=args.connection_type,
             database=args.database,
             queries=args.queries,
-            output_dir=args.output_dir
+            output_dir=args.output_dir,
+            use_parallel=args.parallel
         )
         
         logging.info("Payment validation export completed successfully")
