@@ -6,7 +6,7 @@
 -- It helps identify days with unusual payment volumes or amounts
 
 -- First get base daily counts
-DailyStats AS (
+, DailyStats AS (
     SELECT 
         DATE(pdd.PayDate) as payment_date,
         COUNT(DISTINCT pdd.PayNum) as payment_count,
