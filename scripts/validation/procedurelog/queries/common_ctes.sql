@@ -21,6 +21,9 @@
 -- 12. BundledPayments - Calculates payment data for visits with multiple procedures
 -- 13. EdgeCases - Identifies payment anomalies and edge cases in procedure billing
 -- 14. StandardFees - Compares procedure fees to standard fee schedules
+-- 15. ProcedureAdjustments - Aggregates adjustment information for procedures
+-- 16. PatientResponsibility - Calculates patient responsibility after payments and adjustments
+-- 17. FeeRanges - Categorizes procedures by fee amounts for analysis
 -- 
 -- USAGE:
 -- ------
@@ -373,6 +376,69 @@ StandardFees AS (
         AND f.FeeSched = 55  -- Consider making this a parameter
         AND f.ClinicNum = 0
     LEFT JOIN feesched fs ON f.FeeSched = fs.FeeSchedNum
+),
+
+-- 15. PROCEDURE ADJUSTMENTS
+-- Aggregates adjustment information for procedures
+-- Used to analyze write-offs and other fee modifications
+ProcedureAdjustments AS (
+    SELECT
+        bp.ProcNum,
+        bp.ProcFee,
+        COUNT(a.AdjNum) AS adjustment_count,
+        COALESCE(SUM(a.AdjAmt), 0) AS total_adjustments,
+        bp.ProcFee + COALESCE(SUM(a.AdjAmt), 0) AS adjusted_fee  -- Adjustments are typically negative
+    FROM BaseProcedures bp
+    LEFT JOIN adjustment a ON bp.ProcNum = a.ProcNum
+    GROUP BY bp.ProcNum, bp.ProcFee
+),
+
+-- 16. PATIENT RESPONSIBILITY
+-- Calculates patient responsibility after payments and adjustments
+-- Used to analyze financial burden on patients
+PatientResponsibility AS (
+    SELECT
+        bp.ProcNum,
+        bp.ProcFee,
+        pa.total_paid,
+        adj.total_adjustments,
+        bp.ProcFee - (pa.total_paid + ABS(adj.total_adjustments)) AS patient_responsibility,
+        CASE 
+            WHEN bp.ProcFee = 0 THEN 'Zero Fee'
+            WHEN bp.ProcFee - (pa.total_paid + ABS(adj.total_adjustments)) <= 0 THEN 'Fully Covered'
+            WHEN bp.ProcFee - (pa.total_paid + ABS(adj.total_adjustments)) < bp.ProcFee * 0.2 THEN 'Mostly Covered'
+            WHEN bp.ProcFee - (pa.total_paid + ABS(adj.total_adjustments)) < bp.ProcFee * 0.5 THEN 'Partially Covered'
+            ELSE 'Primarily Patient Responsibility'
+        END AS responsibility_category
+    FROM BaseProcedures bp
+    LEFT JOIN PaymentActivity pa ON bp.ProcNum = pa.ProcNum
+    LEFT JOIN ProcedureAdjustments adj ON bp.ProcNum = adj.ProcNum
+),
+
+-- 17. FEE RANGES
+-- Categorizes procedures by fee amounts for analysis
+-- Used to examine pricing patterns and payment behaviors across price points
+FeeRanges AS (
+    SELECT
+        bp.ProcNum,
+        bp.ProcFee,
+        bp.ProcCode,
+        bp.ProcStatus,
+        bp.CodeCategory,
+        sf.fee_relationship,
+        pr.responsibility_category,
+        CASE
+            WHEN bp.ProcFee = 0 THEN 'Zero Fee'
+            WHEN bp.ProcFee < 100 THEN 'Under $100'
+            WHEN bp.ProcFee < 250 THEN '$100-$249'
+            WHEN bp.ProcFee < 500 THEN '$250-$499'
+            WHEN bp.ProcFee < 1000 THEN '$500-$999'
+            WHEN bp.ProcFee < 2000 THEN '$1000-$1999'
+            ELSE '$2000+'
+        END AS fee_range
+    FROM BaseProcedures bp
+    JOIN StandardFees sf ON bp.ProcNum = sf.ProcNum
+    JOIN PatientResponsibility pr ON bp.ProcNum = pr.ProcNum
 )
 
 -- End of CTEs
