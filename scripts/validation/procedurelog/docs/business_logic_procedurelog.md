@@ -16,15 +16,15 @@ The primary table tracking all dental procedures. Key fields include:
 - **CodeNum**: Foreign key to the procedure code definition
 - **AptNum**: Appointment number associated with the procedure (if any)
 
-### Status Codes
+### ProcStatus Codes
 The `ProcStatus` field uses the following values:
 1. **Treatment Planned**: Procedure is planned but not yet performed (20.37% of procedures)
 2. **Completed**: Procedure has been performed and completed (51.68% of procedures)
-3. **Existing Current**: Existing condition that is currently relevant (6.00% of procedures)
-4. **Existing Other**: Existing condition that is not currently relevant (0.48% of procedures)
-5. **Referred**: Procedure referred to another provider (1.71% of procedures)
-6. **Deleted**: Procedure was deleted/voided (15.83% of procedures)
-7. **Condition**: A patient condition rather than a procedure (3.88% of procedures)
+3. **In Progress**: Procedure is currently being performed (6.00% of procedures)
+4. **Deleted**: Existing condition that is not currently relevant (0.48% of procedures)
+5. **Rejected**: Procedure was rejected (1.71% of procedures)
+6. **CondPlanned**: A condition-based procedure is planned (15.83% of procedures)
+7. **NeedToDo**: Procedure requires further action (3.88% of procedures)
 8. **Invalid**: Invalid or erroneous procedure entry (0.05% of procedures)
 
 ### Related Entities
