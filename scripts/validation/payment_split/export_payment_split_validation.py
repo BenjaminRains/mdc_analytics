@@ -103,12 +103,14 @@ def get_exports(ctes: str) -> list:
         get_query('containment', ctes),
     ]
 
-def export_validation_results(connection, queries=None, output_dir=None):
+def export_validation_results(connection_factory, connection_type, database, queries=None, output_dir=None):
     """
     Export payment validation query results to separate CSV files.
 
     Args:
-        connection: Database connection object (from ConnectionFactory).
+        connection_factory: The ConnectionFactory to create new connections.
+        connection_type: Type of connection to create.
+        database: Database name to connect to.
         queries: List of query names to run (None for all).
         output_dir: Directory to store output files (None for default).
     """
@@ -131,20 +133,22 @@ def export_validation_results(connection, queries=None, output_dir=None):
         exports = [e for e in exports if e['name'] in queries]
         logging.info(f"Running selected queries: {', '.join(queries)}")
     
-    # Get the actual MySQL connection from the connection wrapper
-    mysql_connection = connection.connect()
-    
     # Execute each query and export results
     for export in exports:
+        # Create a fresh connection for each query
+        fresh_connection = None
         try:
             logging.info(f"Processing export: {export['name']}")
             start_time = datetime.now()
             
-            # Create a new cursor for each query to avoid "Commands out of sync" errors
-            with mysql_connection.cursor(dictionary=True) as query_cursor:
-                # Execute query and fetch results
-                query_cursor.execute(export['query'])
-                results = query_cursor.fetchall()
+            # Create a new connection for each query
+            fresh_connection = connection_factory.create_connection(connection_type, database)
+            mysql_connection = fresh_connection.connect()
+            
+            # Execute query and fetch results
+            with mysql_connection.cursor(dictionary=True) as cursor:
+                cursor.execute(export['query'])
+                results = cursor.fetchall()
                 
                 # Convert to DataFrame
                 df = pd.DataFrame(results)
@@ -164,6 +168,13 @@ def export_validation_results(connection, queries=None, output_dir=None):
             
         except Exception as e:
             logging.error(f"Error exporting {export['name']}: {str(e)}", exc_info=True)
+        finally:
+            # Always close the connection when done
+            if fresh_connection:
+                try:
+                    fresh_connection.close()
+                except:
+                    pass
 
 def parse_args():
     """Parse command line arguments."""
@@ -213,16 +224,23 @@ def ensure_indexes(connection, database_name):
     logging.info("Checking and creating required payment validation indexes...")
     
     REQUIRED_INDEXES = [
-        # Payment Analysis - core indexes for payment date filtering and joins
+        # Payment Analysis - core indexes
         "CREATE INDEX IF NOT EXISTS idx_ml_payment_core ON payment (PayNum, PayDate)",
         "CREATE INDEX IF NOT EXISTS idx_ml_payment_window ON payment (PayDate)",
         
-        # Payment Split Analysis - for payment-split relationships
+        # Payment Split Analysis
         "CREATE INDEX IF NOT EXISTS idx_ml_paysplit_payment ON paysplit (ProcNum, PayNum, SplitAmt)",
         "CREATE INDEX IF NOT EXISTS idx_ml_paysplit_proc_pay ON paysplit (ProcNum, PayNum, SplitAmt)",
+        "CREATE INDEX IF NOT EXISTS idx_ml_paysplit_paynum ON paysplit (PayNum)",
+        "CREATE INDEX IF NOT EXISTS idx_ml_paysplit_procnum ON paysplit (ProcNum)",
         
-        # Insurance Processing - for insurance payment identification
-        "CREATE INDEX IF NOT EXISTS idx_ml_claimproc_core ON claimproc (ProcNum, InsPayAmt, InsPayEst, Status, ClaimNum)"
+        # Insurance Processing
+        "CREATE INDEX IF NOT EXISTS idx_ml_claimproc_core ON claimproc (ProcNum, InsPayAmt, InsPayEst, Status, ClaimNum)",
+        "CREATE INDEX IF NOT EXISTS idx_ml_claimproc_procnum ON claimproc (ProcNum)",
+        "CREATE INDEX IF NOT EXISTS idx_ml_claimproc_status ON claimproc (Status)",
+        
+        # Supporting lookups
+        "CREATE INDEX IF NOT EXISTS idx_ml_claim_lookup ON claim (ClaimNum)"
     ]
     
     try:
@@ -257,18 +275,26 @@ def main():
         logging.info(f"Database: {args.database}")
         logging.info(f"Connection type: {args.connection_type}")
         
-        # Connect to the database using the correct method from factory.py
+        # Create connection factory
         factory = ConnectionFactory()
+        
+        # Create initial connection for index check
         connection = factory.create_connection(args.connection_type, args.database)
         
         # Ensure required indexes exist
         ensure_indexes(connection, args.database)
         
-        # Export validation results
-        export_validation_results(connection, args.queries, args.output_dir)
-        
-        # Close the database connection
+        # Close initial connection
         connection.close()
+        
+        # Export validation results with connection factory
+        export_validation_results(
+            connection_factory=factory,
+            connection_type=args.connection_type,
+            database=args.database,
+            queries=args.queries,
+            output_dir=args.output_dir
+        )
         
         logging.info("Payment validation export completed successfully")
         
