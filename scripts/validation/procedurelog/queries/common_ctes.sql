@@ -29,6 +29,8 @@
 -- 20. PaymentLinks - Calculates payment linkage metrics for procedures
 -- 21. LinkagePatterns - Categorizes procedures by payment linkage patterns
 -- 22. PaymentSplits - Analyzes how payments are split between insurance and direct payments
+-- 23. StatusHistory - Analyzes procedure status and transition patterns
+-- 24. TransitionAnalysis - Summarizes procedure status transitions and patterns
 -- 
 -- USAGE:
 -- ------
@@ -592,6 +594,71 @@ PaymentSplits AS (
     FROM BaseProcedures pl
     LEFT JOIN PaymentActivity pa ON pl.ProcNum = pa.ProcNum
     WHERE pl.ProcFee > 0  -- Only procedures with fees
+),
+
+-- 23. STATUS HISTORY
+-- Analyzes procedure status and transition patterns
+-- Used for tracking status changes and identifying potential workflow issues
+StatusHistory AS (
+    SELECT 
+        pl.ProcNum,
+        pl.ProcStatus,
+        pl.ProcDate,
+        pl.DateComplete,
+        pl.AptNum,
+        pl.ProcFee,
+        pc.ProcCode,
+        pc.Descript,
+        CASE pl.ProcStatus
+            WHEN 1 THEN 'Treatment Planned'
+            WHEN 2 THEN 'Completed'
+            WHEN 3 THEN 'Existing Current'
+            WHEN 4 THEN 'Existing Other'
+            WHEN 5 THEN 'Referred'
+            WHEN 6 THEN 'Deleted'
+            WHEN 7 THEN 'Condition'
+            WHEN 8 THEN 'Invalid'
+            ELSE 'Unknown'
+        END AS status_description,
+        -- Time in current status - FIXED with DATEDIFF for MariaDB compatibility
+        CASE 
+            WHEN pl.DateComplete IS NOT NULL THEN 
+                DATEDIFF(CURRENT_DATE, pl.DateComplete) 
+            ELSE 
+                DATEDIFF(CURRENT_DATE, pl.ProcDate)
+        END AS days_in_status,
+        -- Identify expected transition patterns
+        CASE
+            -- Valid normal transitions
+            WHEN pl.ProcStatus = 2 AND pl.DateComplete IS NOT NULL THEN 'Completed with date'
+            WHEN pl.ProcStatus = 2 AND pl.DateComplete IS NULL THEN 'Completed missing date'
+            WHEN pl.ProcStatus = 1 AND pl.DateComplete IS NULL THEN 'Planned (normal)'
+            WHEN pl.ProcStatus = 1 AND pl.DateComplete IS NOT NULL THEN 'Planned with completion date'
+            WHEN pl.ProcStatus = 6 AND pl.ProcFee = 0 THEN 'Deleted zero-fee'
+            WHEN pl.ProcStatus = 6 AND pl.ProcFee > 0 THEN 'Deleted with fee'
+            -- Terminal states
+            WHEN pl.ProcStatus IN (3, 4, 5, 7) THEN 'Terminal status'
+            ELSE 'Other pattern'
+        END AS transition_pattern
+    FROM BaseProcedures pl
+    JOIN procedurecode pc ON pl.CodeNum = pc.CodeNum
+),
+
+-- 24. TRANSITION ANALYSIS
+-- Summarizes procedure status transitions and patterns
+-- Used for workflow analysis and identifying potential process improvements
+TransitionAnalysis AS (
+    SELECT
+        status_description,
+        transition_pattern,
+        COUNT(*) AS procedure_count,
+        MIN(days_in_status) AS min_days,
+        MAX(days_in_status) AS max_days,
+        ROUND(AVG(days_in_status), 1) AS avg_days,
+        SUM(ProcFee) AS total_fees,
+        COUNT(DISTINCT AptNum) AS appointments_count
+    FROM StatusHistory
+    GROUP BY status_description, transition_pattern
 )
 
 -- End of CTEs
