@@ -70,6 +70,33 @@ This document records data quality observations identified during validation of 
 
 **Recommendation**: Prioritize investigation of unpaid procedures from January-June 2024, as these have aged beyond typical payment cycles and represent $314,742.50 in potential collectible revenue.
 
-## Data Timing Limitation
+## December Performance Anomaly
 
-**Observation**: Our analysis is limited to procedures and payments recorded in 2024, excluding any payment activity from January/February
+**Observation**: December shows a dramatic drop in payment performance metrics:
+- 31.55% of completed procedures are unpaid (vs. ~10% in other months)
+- Payment rate drops to 48.97% (vs. ~80-85% in previous months)
+- Success rate falls to 34.01% (vs. ~60-70% in other months)
+
+**Impact**: The December anomaly significantly affects overall annual metrics and suggests either processing delays or data quality issues.
+
+**Recommendation**: Investigate whether this is due to end-of-year billing delays, claim processing backlog, or actual data quality issues that require correction.
+
+## Seasonal Performance Variations
+
+**Observation**: Analysis shows consistent seasonal patterns in procedure volume and payment performance:
+- Q1 (Jan-Mar): Strong performance with gradual decline
+- Q2 (Apr-Jun): Peak performance period (particularly June)
+- Q3 (Jul-Sep): Stable with slight September dip
+- Q4 (Oct-Dec): Volume spike in October followed by December collapse
+
+**Impact**: These patterns affect revenue forecasting and operational planning if not accounted for.
+
+**Recommendation**: Incorporate seasonal adjustments into performance metrics and establish different benchmarks for different times of year.
+
+## Incomplete Time Series
+
+**Observation**: Our analysis is limited to procedures and payments recorded in 2024, excluding any payment activity from January/February 2025 that might apply to late-2024 procedures.
+
+**Impact**: This timing limitation may artificially depress payment metrics for procedures performed in late 2024, particularly December.
+
+**Recommendation**: Re-run analysis in Q2 2025 to capture delayed payments for Q4 2024 procedures and establish a more accurate year-end performance baseline.
