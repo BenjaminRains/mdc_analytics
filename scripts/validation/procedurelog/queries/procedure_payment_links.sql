@@ -2,6 +2,39 @@
 -- Validates the relationships between procedures and their associated payments
 
 WITH 
+-- Define excluded codes that are exempt from payment validation
+ExcludedCodes AS (
+    SELECT CodeNum 
+    FROM procedurecode 
+    WHERE ProcCode IN (
+      '~GRP~', 'D9987', 'D9986', 'Watch', 'Ztoth', 'D0350',
+      '00040', 'D2919', '00051',
+      'D9992', 'D9995', 'D9996',
+      'D0190', 'D0171', 'D0140', 'D9430', 'D0120'
+    )
+),
+
+-- Base procedure set (filtered by date range)
+BaseProcedures AS (
+    SELECT 
+        pl.ProcNum,
+        pl.PatNum,
+        pl.ProvNum,
+        pl.ProcDate,
+        pl.ProcStatus,
+        pl.ProcFee,
+        pl.CodeNum,
+        pl.AptNum,
+        pl.DateComplete,
+        pc.ProcCode,
+        pc.Descript,
+        CASE WHEN ec.CodeNum IS NOT NULL THEN 'Excluded' ELSE 'Standard' END AS CodeCategory
+    FROM procedurelog pl
+    JOIN procedurecode pc ON pl.CodeNum = pc.CodeNum
+    LEFT JOIN ExcludedCodes ec ON pl.CodeNum = ec.CodeNum
+    WHERE pl.ProcDate >= '2024-01-01' AND pl.ProcDate < '2024-12-31' -- Fixed date range for testing
+),
+
 -- Calculate payment linkage metrics
 PaymentLinks AS (
     SELECT
@@ -19,12 +52,12 @@ PaymentLinks AS (
         COALESCE(SUM(cp.InsPayAmt), 0) AS insurance_payment_amount,
         -- Calculate total expected from insurance
         COALESCE(SUM(cp.InsPayEst), 0) AS insurance_estimate_amount,
-        -- Calculate days from completion to payment
-        MIN(CASE WHEN ps.SplitAmt > 0 THEN 
-            EXTRACT(DAY FROM (ps.DatePay - pl.DateComplete))
+        -- Calculate days from completion to payment using MySQL's DATEDIFF
+        MIN(CASE WHEN ps.SplitAmt > 0 AND pl.DateComplete IS NOT NULL AND ps.DatePay IS NOT NULL THEN 
+            DATEDIFF(ps.DatePay, pl.DateComplete)
         END) AS min_days_to_payment,
-        MAX(CASE WHEN ps.SplitAmt > 0 THEN 
-            EXTRACT(DAY FROM (ps.DatePay - pl.DateComplete))
+        MAX(CASE WHEN ps.SplitAmt > 0 AND pl.DateComplete IS NOT NULL AND ps.DatePay IS NOT NULL THEN 
+            DATEDIFF(ps.DatePay, pl.DateComplete)
         END) AS max_days_to_payment,
         -- Flag if there are claimproc entries with zero InsPayAmt
         MAX(CASE WHEN cp.ClaimProcNum IS NOT NULL AND cp.InsPayAmt = 0 THEN 1 ELSE 0 END) AS has_zero_insurance_payment
