@@ -97,6 +97,22 @@ Analysis identified several edge cases requiring special attention:
 
 3. DateComplete field should only be populated when ProcStatus = 2 (Completed)
 
+### Status Transition Findings
+Analysis revealed significant deviations from the documented business rules:
+
+1. **DateComplete field misuse**: 
+   - The DateComplete field is populated for 100% of Treatment Planned procedures, contradicting rule #3 above
+   - This suggests a data entry practice different from documented rules
+
+2. **Extended transition periods**:
+   - Completed procedures remain in status for 57-420 days (avg: 242.5 days)
+   - Other statuses show extreme values (up to 739,306 days - over 2,000 years)
+   - This indicates likely date handling issues or improper default dates
+
+3. **Status permanence issue**:
+   - The extreme "days in status" values suggest procedures may not progress through expected status transitions
+   - Terminal statuses (3, 4, 5, 7) appear to be correctly used as permanent states
+
 ### Payment Processing Rules
 1. Collection expectation varies by procedure category:
    - Diagnostic procedures: Often $0 fee or write-offs expected
@@ -115,3 +131,14 @@ Analysis identified several edge cases requiring special attention:
 ### Appointment-Procedure Linkage Rules
 1. Completed procedures should be linked to an appointment (exception: emergency/walk-in visits)
 2. Procedure.ProcDate should typically match Appointment.AptDateTime date
+
+### Appointment Linkage Findings
+Analysis revealed unexpected appointment linkage patterns:
+
+1. **Universal appointment linkage**:
+   - 100% of procedures in ALL statuses (including Deleted, Condition, etc.) are linked to appointments
+   - This contradicts the expectation that only active procedures would have appointment links
+
+2. **Appointment linkage validation**:
+   - Although all procedures have appointment links, further validation is needed to verify the appropriateness of these links
+   - Further investigation should determine if procedures are correctly linked to relevant appointments
