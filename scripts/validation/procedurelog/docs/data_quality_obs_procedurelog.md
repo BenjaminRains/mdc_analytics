@@ -242,3 +242,25 @@ This document records data quality observations identified during validation of 
 2. Review documentation related to the adjustment system changes to understand expected impacts
 3. Include additional validation criteria specific to the new adjustment methodology when analyzing late-2024 data
 4. Exercise caution when drawing conclusions about business patterns versus system-driven patterns in the affected periods
+
+## Appointment Linkage Data Quality
+
+**Observation**: Nearly half (48.03%) of all procedures have an "Unknown" appointment status, representing 17,990 procedures with $4,178,795 in associated fees. These procedures show an extremely low payment percentage (2.92%) compared to procedures with "Complete" appointment status (80.96% payment).
+
+**Impact**: This appointment linkage gap creates significant financial tracking issues and makes it difficult to associate procedures with specific patient visits. The high-value nature of these procedures ($400.15 average fee vs. $207.94 for completed appointments) suggests a systematic failure to properly link higher-value procedures to their corresponding appointments.
+
+**Recommendation**: 
+1. Implement a data remediation project to properly link the 17,990 procedures with unknown status to their correct appointments
+2. Review procedure creation workflows to identify why higher-value procedures are more likely to lack appointment associations
+3. Establish data quality controls to ensure proper appointment linkage for all new procedures
+4. Create dashboard monitoring to track the Unknown appointment rate and payment performance by appointment status
+
+## Appointment Status Completion Rate Discrepancy
+
+**Observation**: Procedures linked to appointments with "Complete" status show a 99.99% procedure completion rate (17,552 of 17,554 procedures), while those with "Unknown" status show only a 10.03% completion rate. This indicates a strong but potentially problematic correlation between appointment status and procedure status management.
+
+**Impact**: This pattern suggests either:
+1. Procedures are automatically marked as completed when their associated appointment is completed, or
+2. Procedures without proper appointment linkage fail to progress through their lifecycle
+
+**Recommendation**: Review the workflow for procedure status updates to ensure completion status is based on clinical documentation rather than appointment status alone. Implement validation to identify and flag procedures that should be completed but lack proper appointment linkage.
