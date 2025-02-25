@@ -25,14 +25,6 @@ Date Range: 2024-01-01 to 2024-12-31
 -- uses PaymentFilterDiagnostics
 -- uses ProblemPayments
 
--- Create temporary tables only if they don't exist
-CREATE TEMPORARY TABLE IF NOT EXISTS temp_payment_diagnostics AS
-SELECT 
-    p.PayNum,
-    p.PayDate,
-    p.PayAmt,
-    -- ... rest of query ...
-
 -- Final output: union of summary and problem detail branches
 SELECT * FROM (
     -- Summary Branch
