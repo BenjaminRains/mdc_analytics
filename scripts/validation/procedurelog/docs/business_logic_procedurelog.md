@@ -84,6 +84,27 @@ Payments for procedures can come from multiple sources:
 - **Average Payment Ratio**: 84.33% for completed procedures with fees
 - **Revenue Gap**: $633,938.32 in unrealized revenue for completed procedures
 
+### Payment Source Distribution
+- **No Payment Links**: 27.87% of procedures have no payment links whatsoever
+- **Insurance Only/Unpaid**: 24.41% of procedures have insurance records but no actual payments
+- **Mixed Sources/Fully Paid**: 22.44% of procedures have both insurance and direct payments and are fully paid
+- **Insurance Only/Fully Paid**: 11.12% of procedures are paid entirely through insurance
+- **Direct Payment Only/Fully Paid**: 6.20% of procedures are paid entirely through direct payments
+- **Partial Payment Categories**: The remaining 8.0% are distributed across various partial payment states
+
+### Payment Link Patterns
+- **Completion Rate Correlation**: Procedures with any payment source have extremely high completion rates (99-100%)
+- **No-Payment Completion Gap**: Procedures without payment links show only 11.54% completion rate
+- **Insurance Link Efficiency**: Insurance-only fully paid procedures show a slight overpayment pattern (100.37%)
+- **Mixed Source Overpayment**: Mixed payment sources show 123.6% payment rate, indicating systematic overpayment
+- **Zero Insurance Pattern**: 2,602 fully paid procedures with mixed sources have zero insurance payments despite having insurance records
+
+### Payment Timing Patterns
+- **Direct Payments**: Average 1,021 days for fully paid procedures, suggesting historical data processing
+- **Mixed Sources**: Average 569 days for fully paid procedures with both payment types
+- **Partial Payments**: Much longer average timing (2,916 days for direct partial, 3,283 days for mixed partial)
+- **Payment Urgency Correlation**: Procedures with higher fees typically receive expedited payment processing
+
 ### Payment Distribution Patterns
 - **Binary Payment Pattern**: Procedures strongly polarize between fully paid (69.49%) and completely unpaid (14.30%)
 - **Limited Partial Payments**: Only 14.56% of procedures fall in partial payment categories (1-95%)
