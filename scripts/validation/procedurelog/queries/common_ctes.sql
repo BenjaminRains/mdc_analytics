@@ -26,6 +26,8 @@
 -- 17. FeeRanges - Categorizes procedures by fee amounts for analysis
 -- 18. UnpaidCompleted - Identifies completed procedures with no payments
 -- 19. PaymentRatios - Categorizes procedures by payment percentage rates
+-- 20. PaymentLinks - Calculates payment linkage metrics for procedures
+-- 21. LinkagePatterns - Categorizes procedures by payment linkage patterns
 -- 
 -- USAGE:
 -- ------
@@ -488,6 +490,79 @@ PaymentRatios AS (
     WHERE pl.ProcStatus = 2  -- Completed procedures only
       AND pl.ProcFee > 0     -- Only procedures with fees
       AND pl.CodeCategory = 'Standard'  -- Exclude exempted codes
+),
+
+-- 20. PAYMENT LINKS
+-- Calculates payment linkage metrics for procedures
+-- Tracks direct payments, insurance payments, and payment timing
+PaymentLinks AS (
+    SELECT
+        pl.ProcNum,
+        pl.ProcStatus,
+        pl.ProcFee,
+        pl.ProcDate,
+        pl.DateComplete,
+        -- Count payment splits linked to this procedure
+        COUNT(DISTINCT ps.SplitNum) AS paysplit_count,
+        -- Count claim procs linked to this procedure
+        COUNT(DISTINCT cp.ClaimProcNum) AS claimproc_count,
+        -- Calculate total amounts by source
+        COALESCE(SUM(ps.SplitAmt), 0) AS direct_payment_amount,
+        COALESCE(SUM(cp.InsPayAmt), 0) AS insurance_payment_amount,
+        -- Calculate total expected from insurance
+        COALESCE(SUM(cp.InsPayEst), 0) AS insurance_estimate_amount,
+        -- Calculate days from completion to payment
+        MIN(CASE WHEN ps.SplitAmt > 0 AND pl.DateComplete IS NOT NULL AND ps.DatePay IS NOT NULL THEN 
+            DATEDIFF(ps.DatePay, pl.DateComplete)
+        END) AS min_days_to_payment,
+        MAX(CASE WHEN ps.SplitAmt > 0 AND pl.DateComplete IS NOT NULL AND ps.DatePay IS NOT NULL THEN 
+            DATEDIFF(ps.DatePay, pl.DateComplete)
+        END) AS max_days_to_payment,
+        -- Flag if there are claimproc entries with zero InsPayAmt
+        MAX(CASE WHEN cp.ClaimProcNum IS NOT NULL AND cp.InsPayAmt = 0 THEN 1 ELSE 0 END) AS has_zero_insurance_payment
+    FROM BaseProcedures pl
+    LEFT JOIN paysplit ps ON pl.ProcNum = ps.ProcNum
+    LEFT JOIN claimproc cp ON pl.ProcNum = cp.ProcNum
+    WHERE pl.ProcFee > 0  -- Only look at procedures with fees
+      AND pl.CodeCategory = 'Standard'  -- Exclude special codes
+    GROUP BY pl.ProcNum, pl.ProcStatus, pl.ProcFee, pl.ProcDate, pl.DateComplete
+),
+
+-- 21. LINKAGE PATTERNS
+-- Categorizes procedures by payment linkage patterns
+-- Used for analyzing payment source distribution and payment status
+LinkagePatterns AS (
+    SELECT
+        ProcNum,
+        ProcStatus,
+        ProcFee,
+        paysplit_count,
+        claimproc_count,
+        direct_payment_amount,
+        insurance_payment_amount,
+        insurance_estimate_amount,
+        direct_payment_amount + insurance_payment_amount AS total_payment_amount,
+        min_days_to_payment,
+        max_days_to_payment,
+        has_zero_insurance_payment,
+        CASE
+            WHEN paysplit_count = 0 AND claimproc_count = 0 THEN 'No payment links'
+            WHEN paysplit_count > 0 AND claimproc_count = 0 THEN 'Direct payment only'
+            WHEN paysplit_count = 0 AND claimproc_count > 0 THEN 'Insurance only'
+            ELSE 'Mixed payment sources'
+        END AS payment_source_type,
+        CASE
+            WHEN direct_payment_amount + insurance_payment_amount >= ProcFee * 0.95 THEN 'Fully paid'
+            WHEN direct_payment_amount + insurance_payment_amount > 0 THEN 'Partially paid'
+            ELSE 'Unpaid'
+        END AS payment_status,
+        CASE
+            WHEN insurance_estimate_amount > 0 AND insurance_payment_amount = 0 THEN 'Expected insurance not received'
+            WHEN insurance_estimate_amount > 0 AND insurance_payment_amount < insurance_estimate_amount * 0.9 THEN 'Insurance underpaid'
+            WHEN insurance_estimate_amount > 0 AND insurance_payment_amount > insurance_estimate_amount * 1.1 THEN 'Insurance overpaid'
+            ELSE 'Normal insurance pattern'
+        END AS insurance_pattern
+    FROM PaymentLinks
 )
 
 -- End of CTEs
