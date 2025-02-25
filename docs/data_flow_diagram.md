@@ -1,8 +1,27 @@
-flowchart LR
+%%{
+  init: {
+    'flowchart': {
+      'diagramPadding': 50,
+      'nodeSpacing': 50,
+      'rankSpacing': 40,
+      'curve': 'basis'
+    },
+    'themeVariables': {
+      'fontSize': '16px',
+      'fontFamily': 'Arial',
+      'primaryColor': '#333333',
+      'primaryTextColor': '#ffffff',
+      'primaryBorderColor': '#000000',
+      'lineColor': '#333333',
+      'edgeLabelBackground': '#ffffff'
+    }
+  }
+}%%
+flowchart TB
 %% Patient and Procedure
 A[Patient] -->|Undergoes Procedure| B[ProcedureLog<br>ProcNum, ProcFee, ProcStatus]
 %% Fee Processing & Verification
-subgraph "Fee Processing & Verification"
+subgraph FeeProcessing["Fee Processing & Verification"]
 B -->|"Initial Clinic Fee Set"| C[Clinic Fee Source<br>Standard Tiers]
 C -->|"Verifies/Updates Fee"| B
 B -->|"Lookup Fee Schedule"| D[Fee Schedule Check]
@@ -11,7 +30,7 @@ D -->|"Has Schedule"| F[Contracted Rates]
 F -->|"Updates Clinic Fee"| B
 end
 %% Insurance Processing
-subgraph "Insurance Processing"
+subgraph InsuranceProcessing["Insurance Processing"]
 B -->|"Creates Claim"| I[Claim<br>ClaimNum, Status]
 I -->|"Batch Rules"| BA[Batch Analysis<br>Size, Timing, Value]
 BA -->|"Optimizes"| BS[Batch Submission<br>Max 4 Claims, Similar Values]
@@ -21,7 +40,7 @@ K -->|"Receives Estimation"| L[Insurance Estimation]
 L -->|"Documents Payment"| M[Insurance Payment]
 end
 %% Payment Allocation & Reconciliation
-subgraph "Payment Allocation & Reconciliation"
+subgraph PaymentAllocation["Payment Allocation & Reconciliation"]
 M -->|"Insurance Payment"| P[Payment<br>PayNum, PayAmt, PayType, PayDate]
 B -->|"Patient Payment"| P
 P -->|"Creates"| PS[PaySplit<br>SplitNum, PayNum, SplitAmt, ProcNum]
@@ -39,7 +58,7 @@ TD -->|"Before as_of_date"| AR[AR Analysis]
 TD -->|"After as_of_date"| EX[Exclude from AR]
 end
 %% AR Analysis
-subgraph "AR Analysis"
+subgraph ARAnalysis["AR Analysis"]
 AR -->|"Age Classification"| AG[Aging Buckets]
 AG -->|"Current (≤30d)<br>39.3%"| A1[Current AR]
 AG -->|"30-60d<br>11.7%"| A2[30-60d AR]
@@ -47,7 +66,7 @@ AG -->|"60-90d<br>12.7%"| A3[60-90d AR]
 AG -->|"90+d<br>36.2%"| A4[90+d AR]
 end
 %% Collection Flow
-subgraph "Collection Process"
+subgraph CollectionProcess["Collection Process"]
 AR -->|"Collection Status"| CS[Collection Status]
 CS -->|"Actions"| CA[Collection Actions]
 CA -->|"Success"| COL[Collected]
@@ -58,8 +77,15 @@ COL -->|"Complete"| X[Journey Complete]
 ESC -->|"Resolution"| X
 
 %% Styling
-style "Fee Processing & Verification" fill:#f9f,stroke:#333,stroke-width:2px
-style "Insurance Processing" fill:#bbf,stroke:#333,stroke-width:2px
-style "Payment Allocation & Reconciliation" fill:#ff9,stroke:#333,stroke-width:2px
-style "AR Analysis" fill:#fef,stroke:#333,stroke-width:2px
-style "Collection Process" fill:#dfd,stroke:#333,stroke-width:2px
+classDef feeProcessingStyle fill:#f9f,stroke:#333,stroke-width:2px
+classDef insuranceProcessingStyle fill:#bbf,stroke:#333,stroke-width:2px
+classDef paymentAllocationStyle fill:#ff9,stroke:#333,stroke-width:2px
+classDef arAnalysisStyle fill:#fef,stroke:#333,stroke-width:2px
+classDef collectionProcessStyle fill:#dfd,stroke:#333,stroke-width:2px
+
+class FeeProcessing feeProcessingStyle
+class InsuranceProcessing insuranceProcessingStyle
+class PaymentAllocation paymentAllocationStyle
+class ARAnalysis arAnalysisStyle
+class CollectionProcess collectionProcessStyle
+
