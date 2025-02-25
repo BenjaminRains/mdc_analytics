@@ -181,3 +181,18 @@ This document records data quality observations identified during validation of 
 **Impact**: Negative payments suggest either refunds or accounting adjustments that aren't being properly categorized, potentially distorting financial reporting.
 
 **Recommendation**: Create a separate category for negative payment transactions and implement validation to ensure they're properly documented with reason codes.
+
+## Payment Split System Anomaly
+
+**Observation**: Beginning July 2024, the system exhibits anomalous payment split generation behavior with exponential increases in splits per payment. This issue escalated dramatically through October-November 2024, with some payments generating over 450 splits per payment (compared to normal baseline of 2-10 splits). The anomaly primarily affects Type 0 transfers with $0 payment amounts.
+
+**Characteristics**:
+- 98.3% of suspicious payments are Type 0 transfers
+- 92.8% of suspicious payments have negative split amounts
+- Most problematic payments show $0.00 payment amount with massive negative splits
+- Three specific claims (2536, 2542, 6519) generate most excessive splits
+- Each affected procedure has exactly 10,348 splits with symmetric amounts
+
+**Impact**: While this anomaly doesn't cause direct financial errors (transactions still net to $0 as intended), it significantly impacts data quality for payment pattern analysis. This likely contributes to the observed mixed payment source overpayment pattern (123.6% payment rate) and may artificially inflate split payment metrics. The system is generating excessive splits that impact system efficiency and database performance.
+
+**Recommendation**: Exercise extreme caution when analyzing payment splits, particularly for Type 0 transfers after July 2024. Consider filtering analysis to exclude suspicious payments (those with >20 splits per payment) or focus analysis on the pre-anomaly period (Jan-Jun 2024). A fix for the underlying technical issue is required to restore normal system function.
