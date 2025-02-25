@@ -4,27 +4,17 @@
 -- uses FilterStats CTE from ctes.sql
 -- uses PaymentFilterDiagnostics CTE from ctes.sql
 
-WITH FilterDiagnosticMetrics AS (
-    -- Calculate metrics by filter reason that aren't in FilterStats
-    SELECT 
-        filter_reason,
-        AVG(split_count) as avg_splits,
-        MIN(PayAmt) as min_amount,
-        MAX(PayAmt) as max_amount
-    FROM PaymentFilterDiagnostics
-    GROUP BY filter_reason
-)
-
+-- Create a filter diagnostic metrics table without WITH clause
 SELECT 
     fs.filter_reason,
     fs.payment_count,
     fs.percentage,
     fs.total_amount,
     fs.avg_amount,
-    -- Diagnostic metrics from the supplementary CTE
-    fdm.avg_splits,
-    fdm.min_amount,
-    fdm.max_amount,
+    -- Diagnostic metrics calculated directly
+    (SELECT AVG(split_count) FROM PaymentFilterDiagnostics WHERE filter_reason = fs.filter_reason) as avg_splits,
+    (SELECT MIN(PayAmt) FROM PaymentFilterDiagnostics WHERE filter_reason = fs.filter_reason) as min_amount,
+    (SELECT MAX(PayAmt) FROM PaymentFilterDiagnostics WHERE filter_reason = fs.filter_reason) as max_amount,
     -- Validation flags
     CASE 
         WHEN fs.filter_reason = 'Zero Amount' AND fs.percentage != 13.1 
@@ -49,5 +39,4 @@ SELECT
     fs.oversplit_claim_count,
     'filter_validation' as report_type
 FROM FilterStats fs
-JOIN FilterDiagnosticMetrics fdm ON fs.filter_reason = fdm.filter_reason
 ORDER BY fs.payment_count DESC;
