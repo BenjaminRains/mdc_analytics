@@ -10,6 +10,7 @@ identify and diagnose issues.
 Usage:
     python export_payment_split_validation.py [--output-dir <path>] [--log-dir <path>]
                                                 [--database <dbname>] [--queries <names>]
+                                                [--connection-type <type>]
 
 The list of queries and the common CTE definitions are stored as separate .sql files in
 the 'queries' directory. The CTE file is prepended to each query before execution.
@@ -102,12 +103,12 @@ def get_exports(ctes: str) -> list:
         get_query('containment', ctes),
     ]
 
-def export_validation_results(cursor, queries=None, output_dir=None):
+def export_validation_results(connection, queries=None, output_dir=None):
     """
     Export payment validation query results to separate CSV files.
 
     Args:
-        cursor: Database cursor object.
+        connection: Database connection object (from ConnectionFactory).
         queries: List of query names to run (None for all).
         output_dir: Directory to store output files (None for default).
     """
@@ -130,24 +131,33 @@ def export_validation_results(cursor, queries=None, output_dir=None):
         exports = [e for e in exports if e['name'] in queries]
         logging.info(f"Running selected queries: {', '.join(queries)}")
     
+    # Get the actual MySQL connection from the connection wrapper
+    mysql_connection = connection.connect()
+    
     # Execute each query and export results
     for export in exports:
         try:
             logging.info(f"Processing export: {export['name']}")
             start_time = datetime.now()
             
-            # Execute query and fetch results
-            cursor.execute(export['query'])
-            results = cursor.fetchall()
-            
-            # Convert to DataFrame
-            df = pd.DataFrame(results)
-            
-            # Write to CSV (overwrite if file exists)
-            output_path = os.path.join(output_dir, export['file'])
-            if os.path.exists(output_path):
-                logging.info(f"Overwriting existing file: {export['file']}")
-            df.to_csv(output_path, index=False, mode='w')
+            # Create a new cursor for each query to avoid "Commands out of sync" errors
+            with mysql_connection.cursor(dictionary=True) as query_cursor:
+                # Execute query and fetch results
+                query_cursor.execute(export['query'])
+                results = query_cursor.fetchall()
+                
+                # Convert to DataFrame
+                df = pd.DataFrame(results)
+                
+                if len(df) == 0:
+                    logging.warning(f"No results returned for {export['name']}")
+                    continue
+                
+                # Write to CSV (overwrite if file exists)
+                output_path = os.path.join(output_dir, export['file'])
+                if os.path.exists(output_path):
+                    logging.info(f"Overwriting existing file: {export['file']}")
+                df.to_csv(output_path, index=False, mode='w')
             
             duration = (datetime.now() - start_time).total_seconds()
             logging.info(f"Exported {len(df):,} rows to {export['file']} in {duration:.2f} seconds")
@@ -181,9 +191,18 @@ def parse_args():
     )
     
     parser.add_argument(
+        '--connection-type',
+        default='local_mariadb',
+        choices=['local_mariadb', 'local_mysql', 'mdc'],
+        help='Type of database connection to use'
+    )
+    
+    parser.add_argument(
         '--queries',
         nargs='+',
-        choices=['duplicate_joins', 'join_stages'],
+        choices=['summary', 'base_counts', 'source_counts', 'filter_summary', 
+                'diagnostic', 'verification', 'problems', 'duplicate_joins', 
+                'join_stages', 'daily_patterns', 'payment_details', 'containment'],
         help='Specific queries to run (default: all)'
     )
     
@@ -222,41 +241,40 @@ def ensure_indexes(connection, database_name):
         manager.show_custom_indexes()
         
         logging.info("Payment validation index creation complete")
+    except Exception as e:
+        logging.error(f"Error creating indexes: {str(e)}", exc_info=True)
+
+def main():
+    try:
+        # Parse arguments
+        args = parse_args()
+        
+        # Set up logging
+        setup_logging(args.log_dir)
+        
+        # Log execution parameters
+        logging.info(f"Output directory: {args.output_dir}")
+        logging.info(f"Database: {args.database}")
+        logging.info(f"Connection type: {args.connection_type}")
+        
+        # Connect to the database using the correct method from factory.py
+        factory = ConnectionFactory()
+        connection = factory.create_connection(args.connection_type, args.database)
+        
+        # Ensure required indexes exist
+        ensure_indexes(connection, args.database)
+        
+        # Export validation results
+        export_validation_results(connection, args.queries, args.output_dir)
+        
+        # Close the database connection
+        connection.close()
+        
+        logging.info("Payment validation export completed successfully")
         
     except Exception as e:
-        logging.error(f"Error managing payment validation indexes: {str(e)}")
+        logging.error(f"Fatal error in main execution", exc_info=True)
         raise
 
 if __name__ == "__main__":
-    try:
-        # Parse command line arguments
-        args = parse_args()
-        
-        # Setup logging
-        log_file = setup_logging(args.log_dir)
-        
-        logging.info(f"Output directory: {args.output_dir}")
-        logging.info(f"Database: {args.database}")
-        if args.queries:
-            logging.info(f"Running queries: {', '.join(args.queries)}")
-        
-        # Create single database connection using factory
-        factory = ConnectionFactory()
-        connection = factory.create_connection(
-            connection_type='local_mariadb',
-            database=args.database,
-            use_root=True
-        )
-        
-        # Use single connection for both operations
-        with connection.connect() as conn:
-            # Ensure required indexes exist
-            ensure_indexes(conn, args.database)
-            
-            # Execute queries and export results using the same connection
-            cursor = conn.cursor(dictionary=True)
-            export_validation_results(cursor, args.queries, args.output_dir)
-            
-    except Exception as e:
-        logging.error("Fatal error in main execution", exc_info=True)
-        raise
+    main()
