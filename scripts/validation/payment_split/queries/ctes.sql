@@ -241,7 +241,20 @@ SplitPatternAnalysis AS (
         MIN(SplitAmt) AS min_split_amount,
         MAX(SplitAmt) AS max_split_amount,
         CASE WHEN COUNT(*) > COUNT(DISTINCT PayNum) * 2 THEN 1 ELSE 0 END AS has_multiple_splits_per_payment,
-        CASE WHEN MAX(days_to_payment) - MIN(days_to_payment) > 365 THEN 1 ELSE 0 END AS is_long_term_payment
+        CASE WHEN MAX(days_to_payment) - MIN(days_to_payment) > 365 THEN 1 ELSE 0 END AS is_long_term_payment,
+        GROUP_CONCAT(
+            DISTINCT 
+            CASE payment_sequence 
+                WHEN 1 THEN 'First' 
+                WHEN 2 THEN 'Second' 
+                WHEN 3 THEN 'Third' 
+                WHEN 4 THEN 'Fourth'
+                WHEN 5 THEN 'Fifth'
+                ELSE CONCAT(payment_sequence) 
+            END
+            ORDER BY payment_sequence
+            SEPARATOR ' > '
+        ) AS payment_sequence_pattern
     FROM ProcedurePayments
     GROUP BY ProcNum
 ),
@@ -269,11 +282,11 @@ PaymentBaseCounts AS (
               JOIN payment p2 ON ps2.PayNum = p2.PayNum 
               WHERE p2.PayDate >= '2024-01-01' AND p2.PayDate < '2025-01-01') AS FLOAT) / 
             COUNT(DISTINCT p.PayNum) as avg_splits_per_payment,
-        CAST((SELECT COUNT(DISTINCT pl2.ProcNum) 
-              FROM procedurelog pl2 
-              JOIN paysplit ps2 ON pl2.ProcNum = ps2.ProcNum
-              JOIN payment p2 ON ps2.PayNum = p2.PayNum
-              WHERE p2.PayDate >= '2024-01-01' AND p2.PayDate < '2025-01-01') AS FLOAT) / 
+        (SELECT COUNT(DISTINCT pl2.ProcNum) 
+         FROM procedurelog pl2 
+         JOIN paysplit ps2 ON pl2.ProcNum = ps2.ProcNum
+         JOIN payment p2 ON ps2.PayNum = p2.PayNum
+         WHERE p2.PayDate >= '2024-01-01' AND p2.PayDate < '2025-01-01') * 1.0 / 
             COUNT(DISTINCT p.PayNum) as avg_procedures_per_payment
     FROM payment p
     WHERE p.PayDate >= '2024-01-01'
@@ -332,7 +345,7 @@ PaymentFilterDiagnostics AS (
         CASE WHEN pd.split_count = 1 AND pd.proc_count = 1 THEN 1 ELSE 0 END as is_simple_payment,
         CASE 
             WHEN split_count > 0 AND proc_count > 0 
-                 AND (split_count::float / proc_count) > 10 
+                 AND (split_count * 1.0 / proc_count) > 10 
             THEN 1 ELSE 0 
         END as has_high_split_ratio,
         CASE 
@@ -413,7 +426,7 @@ PaymentDetailsBase AS (
     JOIN paysplit ps ON p.PayNum = ps.PayNum
     JOIN claimproc cp ON ps.ProcNum = cp.ProcNum
     JOIN claim c ON cp.ClaimNum = c.ClaimNum
-    WHERE p.PayDate >= DATEADD(month, -1, CURRENT_TIMESTAMP)
+    WHERE p.PayDate >= DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH)
 ),
 
 -- 17. PaymentDetailsMetrics: Compute detailed metrics per payment.
@@ -455,7 +468,7 @@ PaymentDailyDetails AS (
     JOIN paysplit ps ON p.PayNum = ps.PayNum
     JOIN claimproc cp ON ps.ProcNum = cp.ProcNum
     JOIN claim c ON cp.ClaimNum = c.ClaimNum
-    WHERE p.PayDate >= DATEADD(month, -1, CURRENT_TIMESTAMP)
+    WHERE p.PayDate >= DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH)
 ),
 
 -- 19. FilterStats: Compute summary statistics for each payment filter category.
