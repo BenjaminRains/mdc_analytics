@@ -146,3 +146,38 @@ This document records data quality observations identified during validation of 
 **Impact**: This timing limitation may artificially depress payment metrics for procedures performed in late 2024, particularly December.
 
 **Recommendation**: Re-run analysis in Q2 2025 to capture delayed payments for Q4 2024 procedures and establish a more accurate year-end performance baseline.
+
+## Payment Linkage Timing Anomalies
+
+**Observation**: Payment linkage timing analysis shows extreme days-to-payment values:
+- Direct payment partially paid: 2,916 days average (nearly 8 years)
+- Mixed payment partially paid: 3,283 days average (9+ years)
+- Direct payment fully paid: 1,021 days average (2.8 years)
+
+**Impact**: These extreme values suggest either historical data being processed or serious timing issues in payment application. They distort payment efficiency analytics and make it impossible to evaluate true payment cycle time.
+
+**Recommendation**: Investigate payment date accuracy, particularly for procedures showing payment dates more than 1 year from completion date, and establish data validation rules to prevent future anomalies.
+
+## Mixed Payment Source Overpayment
+
+**Observation**: Procedures with mixed payment sources show a payment rate of 123.6%, significantly exceeding the expected 100% and higher than all other payment source categories.
+
+**Impact**: This systematic overpayment suggests either duplicate payments or improper payment allocation when multiple sources are involved. This represents a potential compliance risk and accounting discrepancy.
+
+**Recommendation**: Audit mixed-source payment allocation process to identify whether overpayments result from failure to adjust fee amounts, double-counting of payments, or legitimate additional payments that should be recorded differently.
+
+## Insurance Payment Record Anomalies
+
+**Observation**: 5,766 procedures have insurance records (claimproc entries) but zero insurance payments, representing 24.41% of all procedures. Additionally, 2,602 fully paid procedures with mixed sources have zero insurance payments despite having insurance records.
+
+**Impact**: This pattern suggests potential issues with insurance claim processing, payment recording, or system data integration between insurance and payment modules.
+
+**Recommendation**: Investigate whether these represent denied claims, pending claims, or data entry issues. Create an audit process to reconcile insurance claims with payment records.
+
+## Negative Payment Values
+
+**Observation**: Some procedures in the "Mixed payment sources/Unpaid" category show negative total payment values (-35.0).
+
+**Impact**: Negative payments suggest either refunds or accounting adjustments that aren't being properly categorized, potentially distorting financial reporting.
+
+**Recommendation**: Create a separate category for negative payment transactions and implement validation to ensure they're properly documented with reason codes.
