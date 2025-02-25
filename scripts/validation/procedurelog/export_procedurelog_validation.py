@@ -46,7 +46,8 @@ QUERY_DESCRIPTIONS = {
     'appointment_connections': 'How procedures connect to appointments',
     'procedure_pairs': 'Commonly paired procedures analysis',
     'edge_cases': 'Procedure and payment anomalies',
-    'provider_performance': 'Provider-level procedure metrics'
+    'provider_performance': 'Provider-level procedure metrics',
+    'procedures_raw': 'Raw procedure data with treatment plan and perio exam context'
 }
 
 def setup_logging(log_dir='scripts/validation/procedurelog/logs'):
