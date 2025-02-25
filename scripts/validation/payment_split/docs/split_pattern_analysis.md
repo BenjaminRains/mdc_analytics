@@ -99,6 +99,14 @@ Peak (Nov 1)| -$14,530 to +$14,530| 10,348 splits
    - No apparent impact on transfer completion
    - System still achieved intended results
 
+## Stakeholder Update
+After reviewing our findings, stakeholders have indicated that starting in late 2024 (November), they implemented a new "hidden splits" policy. Under this policy:
+- Pay splits are now generated for every dollar applied in the database
+- The organization is strictly enforcing more rigorous pay split documentation
+- This intentional process change coincides with the timeframe of our observed anomalies
+
+This policy change provides context for the unusual patterns we identified and suggests the behavior may be the result of deliberate system changes rather than a malfunction.
+
 ## Recommendations
 1. System Optimization:
    - Review transfer payment logic
