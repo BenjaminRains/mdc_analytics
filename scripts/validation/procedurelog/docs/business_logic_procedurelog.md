@@ -363,3 +363,21 @@ Analysis of monthly procedure data reveals consistent patterns in how procedures
    - Unpaid procedures cluster around specific price points ($500-600, $1200-1500, $2800-3000)
    - These clusters likely represent specific procedure types with payment collection challenges
    - The presence of these thresholds suggests the need for targeted financial workflows for procedures at these price points
+
+### Appointment-Procedure Relationship Patterns
+
+1. **Appointment Status Distribution**:
+   - Nearly half (48.03%) of all procedures have "Unknown" appointment status
+   - 46.86% are linked to completed appointments
+   - Only 5.11% are distributed across other appointment statuses (UnschedList: 3.35%, Broken: 1.75%, Scheduled: 0.01%)
+
+2. **Status-Specific Financial Patterns**:
+   - Procedures with "Complete" appointment status show strong financial performance (80.96% payment rate)
+   - Procedures with "Unknown" appointment status show extremely poor payment performance (2.92% payment rate)
+   - Higher-value procedures ($400.15 avg) are disproportionately represented in the Unknown category
+   - The strong correlation between appointment completion status and payment suggests appointment tracking directly impacts revenue cycle
+
+3. **Appointment Association Impact**:
+   - Procedures linked to completed appointments show near-perfect procedure completion rates (99.99%)
+   - Procedures with unknown appointment status show very low completion rates (10.03%)
+   - This suggests appointment status is a strong predictor of procedure completion and payment outcomes
