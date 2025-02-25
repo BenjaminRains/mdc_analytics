@@ -20,11 +20,15 @@ TREATMENT_JOURNEY_INDEXES = [
     
     # Insurance Processing
     "CREATE INDEX IF NOT EXISTS idx_ml_claimproc_core ON claimproc (ProcNum, InsPayAmt, InsPayEst, Status, ClaimNum)",
+    "CREATE INDEX IF NOT EXISTS idx_ml_claimproc_procnum ON claimproc (ProcNum)",
+    "CREATE INDEX IF NOT EXISTS idx_ml_claimproc_status ON claimproc (Status)",
     
     # Payment Analysis
     "CREATE INDEX IF NOT EXISTS idx_ml_paysplit_payment ON paysplit (ProcNum, PayNum, SplitAmt)",
     "CREATE INDEX IF NOT EXISTS idx_ml_payment_core ON payment (PayNum, PayDate)",
     "CREATE INDEX IF NOT EXISTS idx_ml_payment_window ON payment (PayDate)",
+    "CREATE INDEX IF NOT EXISTS idx_ml_paysplit_paynum ON paysplit (PayNum)",
+    "CREATE INDEX IF NOT EXISTS idx_ml_paysplit_procnum ON paysplit (ProcNum)",
     
     # Adjustment Tracking
     "CREATE INDEX IF NOT EXISTS idx_ml_adj_core ON adjustment (ProcNum, DateEntry, AdjAmt)",
@@ -82,7 +86,11 @@ INDEX_DOCUMENTATION = {
     "idx_ml_payment_date": "Payment date tracking",
     "idx_ml_appt_patient": "Appointment patient tracking",
     "idx_ml_adj_proc": "Adjustment procedure tracking",
-    "idx_ml_proccode_cat": "Procedure code category tracking"
+    "idx_ml_proccode_cat": "Procedure code category tracking",
+    "idx_ml_claimproc_procnum": "Direct procedure-to-claim lookup for payment validation",
+    "idx_ml_claimproc_status": "Filter claim procedures by status for payment processing",
+    "idx_ml_paysplit_paynum": "Fast payment split lookup by payment number",
+    "idx_ml_paysplit_procnum": "Fast payment split lookup by procedure number"
 }
 
 # System indexes that were accidentally dropped and need to be restored
