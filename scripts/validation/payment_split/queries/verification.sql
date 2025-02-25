@@ -70,9 +70,10 @@ SELECT * FROM (
         'verification_counts' as report_type,
         CONCAT('Filter: ', filter_reason) as metric,
         COUNT(*) as payment_count,
-        MIN(PayDate) as min_date,
-        MAX(PayDate) as max_date
-    FROM PaymentFilterDiagnostics
+        MIN(pd.PayDate) as min_date,
+        MAX(pd.PayDate) as max_date
+    FROM PaymentFilterDiagnostics pfd
+    JOIN PaymentJoinDiagnostics pd ON pfd.PayNum = pd.PayNum
     GROUP BY filter_reason
 
     UNION ALL
@@ -82,7 +83,7 @@ SELECT * FROM (
         'verification_counts' as report_type,
         'Discrepancy: Join vs Filter Missing Procedures' as metric,
         (SELECT COUNT(*) FROM PaymentJoinDiagnostics WHERE join_status = 'No Procedures') -
-        (SELECT COUNT(*) FROM PaymentFilterDiagnostics WHERE filter_reason = 'Missing Procedures') as payment_count,
+        (SELECT COUNT(*) FROM PaymentFilterDiagnostics WHERE filter_reason = 'No Procedures') as payment_count,
         NULL as min_date,
         NULL as max_date
 
