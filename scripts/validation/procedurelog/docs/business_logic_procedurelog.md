@@ -166,11 +166,23 @@ Certain procedure codes are excluded from payment validation, including administ
 ## Edge Cases
 Analysis identified several edge cases requiring special attention:
 
-- **Completed but unpaid** (5.96% of procedures): Representing unbilled/uncollected revenue
-- **Significant overpayment** (3.11% of procedures): Payments exceed 105% of fee
-- **Completed but underpaid** (2.11% of procedures): Received less than 50% of fee
-- **Non-completed with payment** (0.03% of procedures): Non-completed procedures that received payments
-- **Zero-fee payment** (0.02% of procedures): Zero-fee procedures that received payments
+- **Completed but unpaid** (5.96% of procedures): 2,234 procedures are marked as completed but have zero payment, representing $598,497.50 in uncollected revenue
+- **Significant overpayment** (3.11% of procedures): 1,166 procedures received payments exceeding 105% of their fee, with an average payment of 154.72% of the fee amount
+- **Completed but underpaid** (2.11% of procedures): 790 procedures received less than 50% of their fee, with an average collection rate of only 28.47%, representing $169,318.01 in potential lost revenue
+- **Minor overpayment** (0.46% of procedures): 173 procedures received between 100-105% of their fee, possibly representing acceptable administrative adjustments
+- **Non-completed with payment** (0.03% of procedures): 10 non-completed procedures received payments, with an extremely high average fee ($5,631.64) suggesting deposits for expensive procedures
+- **Zero-fee payment** (0.02% of procedures): 7 procedures with $0 fee received payments totaling $606, indicating potential fee coding errors
+
+### Edge Case Distribution Patterns
+- Critical payment issues affect 11.69% of all procedures
+- Revenue collection issues (unpaid and underpaid) represent a total of $767,815.51 in potential lost revenue
+- Overpayment concerns (significant and minor) affect 1,339 procedures and represent approximately $210,278 in excess payments
+- The presence of high-value non-completed procedures with payments suggests a deposit system for expensive treatments
+
+### Business Impact
+- The combination of underpayment and overpayment issues suggests inconsistent payment processing rather than a uniform policy
+- The strong completion-payment correlation (99.8-100% of procedures with any payment are completed) confirms the critical relationship between payment and procedure lifecycle management
+- The clustering of unpaid procedures around specific price points indicates targeted collection strategies may be needed at these thresholds
 
 ## Business Rules
 
