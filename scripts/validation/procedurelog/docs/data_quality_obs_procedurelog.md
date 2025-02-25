@@ -64,11 +64,41 @@ This document records data quality observations identified during validation of 
 
 ## Monthly Pattern of Unpaid Procedures
 
-**Observation**: While December has the highest count of unpaid procedures (448), there is a consistent pattern of unpaid procedures throughout the year, including early months (January: 172, February: 139, March: 161).
+**Observation**: While December has the highest count of unpaid procedures (339), there is a consistent pattern of unpaid procedures throughout the year, including early months (January: 155, February: 121, March: 147).
 
 **Impact**: The presence of unpaid procedures across all months, not just recent ones, indicates systemic issues beyond normal billing cycles.
 
-**Recommendation**: Prioritize investigation of unpaid procedures from January-June 2024, as these have aged beyond typical payment cycles and represent $314,742.50 in potential collectible revenue.
+**Recommendation**: Prioritize investigation of unpaid procedures from January-June 2024, as these have aged beyond typical payment cycles and represent $300,353.50 in potential collectible revenue.
+
+## Extreme Unpaid Fee Value Anomalies
+
+**Observation**: Some months contain extremely high unpaid fee values that skew the distribution:
+- April has an unpaid procedure fee of $17,500
+- June has an unpaid procedure fee of $14,140
+- October has two unpaid procedures of $9,000 each
+
+**Impact**: These outliers represent over $49,640 in high-value uncollected revenue and may indicate special cases or data entry errors.
+
+**Recommendation**: Investigate these specific high-value unpaid procedures as they may represent priority collection opportunities or data quality issues.
+
+## Monthly Unpaid Fee Distribution
+
+**Observation**: The distribution of unpaid fees varies significantly by month:
+- March and April have the highest average unpaid fees ($406.12 and $560.31)
+- September has the lowest average unpaid fee ($162.08)
+- High-value procedure counts (≥$1,000) vary from 5-37 per month
+
+**Impact**: These patterns suggest either data quality issues in certain months or potential seasonality in high-value procedure payment processing.
+
+**Recommendation**: Compare monthly unpaid patterns against staffing changes, system updates, or operational changes that might explain these variations.
+
+## High-Value Unpaid Concentration in March
+
+**Observation**: March contains 37 high-value unpaid procedures (≥$1,000), more than twice the monthly average and representing 22.7% of all high-value unpaid procedures for the year.
+
+**Impact**: This anomalous concentration suggests either a systemic issue specific to March or a possible batch processing failure.
+
+**Recommendation**: Conduct detailed audit of March's high-value procedures to identify potential patterns in provider, procedure type, or insurance carrier that might explain this concentration.
 
 ## December Performance Anomaly
 
