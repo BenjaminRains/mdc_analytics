@@ -2,9 +2,8 @@
 -- This query helps identify unusual payment behaviors and split patterns
 -- Override default CTE date range to analyze full year 2024 data
 
-WITH 
 -- Override the PaymentDetailsBase CTE to use a specific date range covering all of 2024
-PaymentDetailsBase AS (
+, PaymentDetailsBaseOverride AS (
     SELECT 
         p.PayNum,
         p.PayDate,
@@ -23,7 +22,7 @@ PaymentDetailsBase AS (
 ),
 
 -- Since we overrode PaymentDetailsBase, we also need to redefine PaymentDetailsMetrics
-PaymentDetailsMetrics AS (
+PaymentDetailsMetricsOverride AS (
     SELECT 
         PayNum,
         PayDate,
@@ -37,7 +36,7 @@ PaymentDetailsMetrics AS (
         MAX(SplitAmt) as max_split,
         SUM(SplitAmt) as total_split_amount,
         ABS(PayAmt - SUM(SplitAmt)) as split_difference
-    FROM PaymentDetailsBase
+    FROM PaymentDetailsBaseOverride
     GROUP BY PayNum, PayDate, PayType, PayAmt, PayNote
 )
 
@@ -53,7 +52,7 @@ SELECT
         WHEN ABS(min_split) = ABS(max_split) THEN 'Symmetric'
         ELSE 'Variable'
     END as split_pattern
-FROM PaymentDetailsMetrics pm
+FROM PaymentDetailsMetricsOverride pm
 WHERE 
     splits_in_payment > 10  -- Configurable threshold
     OR split_difference > 0.01  -- Detect mismatches
