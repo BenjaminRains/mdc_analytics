@@ -18,74 +18,103 @@
   }
 }%%
 flowchart TB
-%% Patient and Procedure
-A[Patient] -->|Undergoes Procedure| B[ProcedureLog<br>ProcNum, ProcFee, ProcStatus]
-%% Fee Processing & Verification
-subgraph FeeProcessing["Fee Processing & Verification"]
-B -->|"Initial Clinic Fee Set"| C[Clinic Fee Source<br>Standard Tiers]
-C -->|"Verifies/Updates Fee"| B
-B -->|"Lookup Fee Schedule"| D[Fee Schedule Check]
-D -->|"No Schedule"| E[Fee Setting Decision]
-D -->|"Has Schedule"| F[Contracted Rates]
-F -->|"Updates Clinic Fee"| B
-end
-%% Insurance Processing
-subgraph InsuranceProcessing["Insurance Processing"]
-B -->|"Creates Claim"| I[Claim<br>ClaimNum, Status]
-I -->|"Batch Rules"| BA[Batch Analysis<br>Size, Timing, Value]
-BA -->|"Optimizes"| BS[Batch Submission<br>Max 4 Claims, Similar Values]
-BS -->|"Generates ClaimProc"| J[ClaimProc<br>ProcNum, Status]
-J -->|"For Insurance"| K[Insurance Carrier/Plan]
-K -->|"Receives Estimation"| L[Insurance Estimation]
-L -->|"Documents Payment"| M[Insurance Payment]
-end
-%% Payment Allocation & Reconciliation
-subgraph PaymentAllocation["Payment Allocation & Reconciliation"]
-M -->|"Insurance Payment"| P[Payment<br>PayNum, PayAmt, PayType, PayDate]
-B -->|"Patient Payment"| P
-P -->|"Creates"| PS[PaySplit<br>SplitNum, PayNum, SplitAmt, ProcNum]
-PS -->|"Classifies"| ST[Split Types]
-ST -->|"Regular (88.9%)"| T0[Type 0<br>Direct Application]
-ST -->|"Prepayment (10.9%)"| T288[Type 288<br>Unearned Revenue]
-ST -->|"TP Prepayment (0.2%)"| T439[Type 439<br>Treatment Plan Deposit]
-PS -->|"Includes"| TR[Transfer Payments<br>Net $0, Offsetting Splits]
-PS -->|"Split Pattern"| SP[Split Pattern Analysis]
-SP -->|"Normal (99.3%)"| NS[Normal Splits<br>1-3 per payment]
-SP -->|"Complex (0.7%)"| CS[Complex Splits<br>Max 2 claims/proc]
-PS -->|"Validates"| VR[Validation Rules<br>Sum=PayAmt, Non-negative]
-VR -->|"Date Validation"| TD[Transaction Date Check]
-TD -->|"Before as_of_date"| AR[AR Analysis]
-TD -->|"After as_of_date"| EX[Exclude from AR]
-end
-%% AR Analysis
-subgraph ARAnalysis["AR Analysis"]
-AR -->|"Age Classification"| AG[Aging Buckets]
-AG -->|"Current (≤30d)<br>39.3%"| A1[Current AR]
-AG -->|"30-60d<br>11.7%"| A2[30-60d AR]
-AG -->|"60-90d<br>12.7%"| A3[60-90d AR]
-AG -->|"90+d<br>36.2%"| A4[90+d AR]
-end
-%% Collection Flow
-subgraph CollectionProcess["Collection Process"]
-AR -->|"Collection Status"| CS[Collection Status]
-CS -->|"Actions"| CA[Collection Actions]
-CA -->|"Success"| COL[Collected]
-CA -->|"Failure"| ESC[Escalation Options]
-end
-%% Success Criteria
-COL -->|"Complete"| X[Journey Complete]
-ESC -->|"Resolution"| X
+    %% LEGEND - Add this at the bottom of your diagram
+    subgraph Legend["Legend"]
+        direction LR
+        Process["Process"]:::processStyle
+        DataStore[(Data Store)]
+        Entity[External Entity]
+        SystemA[Fee Processing]:::feeProcessingStyle
+        SystemB[Insurance Processing]:::insuranceProcessingStyle
+        SystemC[Payment Allocation]:::paymentAllocationStyle
+        SystemD[AR Analysis]:::arAnalysisStyle
+        SystemE[Collection Process]:::collectionProcessStyle
+    end
 
-%% Styling
-classDef feeProcessingStyle fill:#f9f,stroke:#333,stroke-width:2px
-classDef insuranceProcessingStyle fill:#bbf,stroke:#333,stroke-width:2px
-classDef paymentAllocationStyle fill:#ff9,stroke:#333,stroke-width:2px
-classDef arAnalysisStyle fill:#fef,stroke:#333,stroke-width:2px
-classDef collectionProcessStyle fill:#dfd,stroke:#333,stroke-width:2px
+    %% Patient and Procedure - Using proper shapes
+    A[Patient]:::entityStyle -->|Patient Information| B["Record Procedure"]:::processStyle
+    B -->|Procedure Data| ProcLog[(ProcedureLog<br>ProcNum, ProcFee, ProcStatus)]:::datastoreStyle
+    
+    %% Fee Processing & Verification
+    subgraph FeeProcessing["Fee Processing & Verification"]
+        ProcLog -->|Fee Request| C["Set Initial Clinic Fee"]:::processStyle
+        C -->|Updated Fee| ProcLog
+        ProcLog -->|Schedule Lookup| D["Check Fee Schedule"]:::processStyle
+        D -->|No Schedule Found| E["Make Fee Decision"]:::processStyle
+        D -->|Schedule Exists| F[(Contracted Rates)]:::datastoreStyle
+        F -->|Schedule Rate| ProcLog
+    end
+    
+    %% Insurance Processing
+    subgraph InsuranceProcessing["Insurance Processing"]
+        ProcLog -->|Procedure Details| I["Create Claim"]:::processStyle
+        I -->|New Claim| ClaimStore[(Claim Records)]:::datastoreStyle
+        ClaimStore -->|Claim Data| BA["Analyze Batch"]:::processStyle
+        BA -->|Batch Criteria| BS["Submit Batch"]:::processStyle
+        BS -->|Claim Submission| J["Generate ClaimProc"]:::processStyle
+        J -->|ClaimProc Data| CP[(ClaimProc Records)]:::datastoreStyle
+        CP -->|Carrier Request| K[Insurance Carrier/Plan]:::entityStyle
+        K -->|Coverage Details| L["Estimate Insurance"]:::processStyle
+        L -->|Payment Estimate| M["Document Payment"]:::processStyle
+    end
+    
+    %% Payment Allocation & Reconciliation
+    subgraph PaymentAllocation["Payment Allocation & Reconciliation"]
+        M -->|Insurance Payment| P[(Payment Records)]:::datastoreStyle
+        ProcLog -->|Patient Payment| P
+        P -->|Payment Details| PS["Create PaySplit"]:::processStyle
+        PS -->|Split Data| PSStore[(PaySplit Records)]:::datastoreStyle
+        PSStore -->|Classification| ST["Classify Split Type"]:::processStyle
+        ST -->|Regular Split| T0["Direct Application"]:::processStyle
+        ST -->|Prepayment| T288["Unearned Revenue"]:::processStyle
+        ST -->|TP Prepayment| T439["Treatment Plan Deposit"]:::processStyle
+        PSStore -->|Transfer Info| TR["Manage Transfers"]:::processStyle
+        PSStore -->|Split Patterns| SP["Analyze Patterns"]:::processStyle
+        SP -->|Normal Pattern| NS["Process Normal Splits"]:::processStyle
+        SP -->|Complex Pattern| CS["Handle Complex Splits"]:::processStyle
+        PSStore -->|Split Totals| VR["Validate Rules"]:::processStyle
+        VR -->|Date Check| TD["Verify Transaction Date"]:::processStyle
+        TD -->|Before as_of_date| AR["Process AR"]:::processStyle
+        TD -->|After as_of_date| EX["Exclude from AR"]:::processStyle
+    end
+    
+    %% AR Analysis
+    subgraph ARAnalysis["AR Analysis"]
+        AR -->|Aging Data| AG["Categorize Aging"]:::processStyle
+        AG -->|Current Bucket| A1[(Current AR)]:::datastoreStyle
+        AG -->|30-60d Bucket| A2[(30-60d AR)]:::datastoreStyle
+        AG -->|60-90d Bucket| A3[(60-90d AR)]:::datastoreStyle
+        AG -->|90+d Bucket| A4[(90+d AR)]:::datastoreStyle
+    end
+    
+    %% Collection Flow
+    subgraph CollectionProcess["Collection Process"]
+        AR -->|Receivables Data| CS["Check Collection Status"]:::processStyle
+        CS -->|Required Actions| CA["Take Collection Actions"]:::processStyle
+        CA -->|Success Path| COL["Record Collection"]:::processStyle
+        CA -->|Failure Path| ESC["Escalate Options"]:::processStyle
+    end
+    
+    %% Success Criteria
+    COL -->|Completion Data| X["Close Journey"]:::processStyle
+    ESC -->|Resolution Data| X
 
-class FeeProcessing feeProcessingStyle
-class InsuranceProcessing insuranceProcessingStyle
-class PaymentAllocation paymentAllocationStyle
-class ARAnalysis arAnalysisStyle
-class CollectionProcess collectionProcessStyle
+    %% Define styles for different node types
+    classDef entityStyle stroke:#333,stroke-width:2px,fill:#fff,color:#000
+    classDef datastoreStyle stroke:#333,stroke-width:2px,fill:#fff,color:#000,shape:cylinder
+    classDef processStyle stroke:#333,stroke-width:2px,fill:#fff,color:#000,rx:10,ry:10
+    
+    %% Styling for systems/boundaries
+    classDef feeProcessingStyle fill:#f9f,stroke:#333,stroke-width:2px
+    classDef insuranceProcessingStyle fill:#bbf,stroke:#333,stroke-width:2px
+    classDef paymentAllocationStyle fill:#ff9,stroke:#333,stroke-width:2px
+    classDef arAnalysisStyle fill:#fef,stroke:#333,stroke-width:2px
+    classDef collectionProcessStyle fill:#dfd,stroke:#333,stroke-width:2px
+
+    %% Apply styles to elements
+    class FeeProcessing feeProcessingStyle
+    class InsuranceProcessing insuranceProcessingStyle
+    class PaymentAllocation paymentAllocationStyle
+    class ARAnalysis arAnalysisStyle
+    class CollectionProcess collectionProcessStyle
 
