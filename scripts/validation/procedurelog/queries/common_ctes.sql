@@ -15,6 +15,10 @@
 -- 6. ProcedureAppointmentSummary - Combines procedures with appointments and payments
 -- 7. AppointmentStatusCategories - Standardizes appointment status code translations
 -- 8. ProcedureMetrics - Calculates key metrics about procedures (counts, status, fees, payments)
+-- 9. ProcedurePairs - Identifies pairs of procedures performed on the same patient on the same day
+-- 10. CommonPairs - Counts the most frequent procedure pairs and their fees
+-- 11. VisitCounts - Identifies patient visits with multiple procedures
+-- 12. BundledPayments - Calculates payment data for visits with multiple procedures
 -- 
 -- USAGE:
 -- ------
@@ -221,6 +225,99 @@ ProcedureMetrics AS (
         FROM BaseProcedures bp
         LEFT JOIN PaymentActivity pa ON bp.ProcNum = pa.ProcNum
     ) AS combined_data
+),
+
+-- 9. PROCEDURE PAIRS
+-- Identifies pairs of procedures performed on the same patient on the same day
+-- Used for bundling analysis and procedure relationship studies
+ProcedurePairs AS (
+    SELECT 
+        p1.PatNum,
+        p1.ProcDate,
+        p1.ProcNum AS proc1_num,
+        p2.ProcNum AS proc2_num,
+        p1.CodeNum AS code1_num,
+        p2.CodeNum AS code2_num,
+        pc1.ProcCode AS proc1_code,
+        pc2.ProcCode AS proc2_code,
+        pc1.Descript AS proc1_desc,
+        pc2.Descript AS proc2_desc,
+        p1.ProcFee AS proc1_fee,
+        p2.ProcFee AS proc2_fee,
+        p1.ProcStatus AS proc1_status,
+        p2.ProcStatus AS proc2_status
+    FROM BaseProcedures p1
+    JOIN BaseProcedures p2 ON 
+        p1.PatNum = p2.PatNum AND 
+        p1.ProcDate = p2.ProcDate AND
+        p1.ProcNum < p2.ProcNum  -- Avoid duplicates
+    JOIN procedurecode pc1 ON p1.CodeNum = pc1.CodeNum
+    JOIN procedurecode pc2 ON p2.CodeNum = pc2.CodeNum
+    WHERE 
+        p1.CodeCategory = 'Standard' AND  -- Exclude special codes
+        p2.CodeCategory = 'Standard'
+),
+
+-- 10. COMMON PAIRS
+-- Counts the most frequent procedure pairs and their associated fees
+-- Used to identify common procedure bundling patterns
+CommonPairs AS (
+    SELECT 
+        proc1_code,
+        proc2_code,
+        proc1_desc,
+        proc2_desc,
+        COUNT(*) AS pair_count,
+        SUM(proc1_fee + proc2_fee) AS total_pair_fee,
+        ROUND(AVG(proc1_fee + proc2_fee), 2) AS avg_pair_fee
+    FROM ProcedurePairs
+    GROUP BY proc1_code, proc2_code, proc1_desc, proc2_desc
+),
+
+-- 11. VISIT COUNTS
+-- Identifies patient visits with multiple procedures
+-- Used to analyze procedure bundling by visit
+VisitCounts AS (
+    SELECT
+        PatNum,
+        ProcDate,
+        COUNT(*) AS procedures_in_visit
+    FROM BaseProcedures
+    WHERE 
+        ProcStatus = 2 AND  -- Completed procedures
+        CodeCategory = 'Standard'  -- Standard codes
+    GROUP BY PatNum, ProcDate
+),
+
+-- 12. BUNDLED PAYMENTS
+-- Calculates payment data for visits with multiple procedures
+-- Used to analyze payment patterns based on bundle size
+BundledPayments AS (
+    SELECT
+        v.PatNum,
+        v.ProcDate,
+        v.procedures_in_visit,
+        COUNT(DISTINCT pl.ProcNum) AS procedure_count,
+        SUM(pl.ProcFee) AS total_fee,
+        SUM(pa.total_paid) AS total_paid,
+        CASE WHEN SUM(pl.ProcFee) > 0 
+            THEN SUM(pa.total_paid) / SUM(pl.ProcFee) 
+            ELSE NULL 
+        END AS payment_ratio,
+        CASE 
+            WHEN v.procedures_in_visit = 1 THEN 'Single Procedure'
+            WHEN v.procedures_in_visit BETWEEN 2 AND 3 THEN '2-3 Procedures'
+            WHEN v.procedures_in_visit BETWEEN 4 AND 5 THEN '4-5 Procedures'
+            ELSE '6+ Procedures'
+        END AS bundle_size
+    FROM VisitCounts v
+    JOIN BaseProcedures pl ON 
+        v.PatNum = pl.PatNum AND 
+        v.ProcDate = pl.ProcDate AND
+        pl.ProcStatus = 2 AND
+        pl.CodeCategory = 'Standard'
+    LEFT JOIN PaymentActivity pa ON pl.ProcNum = pa.ProcNum
+    GROUP BY v.PatNum, v.ProcDate, v.procedures_in_visit, bundle_size
 )
 
 -- End of CTEs
