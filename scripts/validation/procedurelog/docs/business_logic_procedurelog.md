@@ -143,6 +143,12 @@ Payments for procedures can come from multiple sources:
 - **Treatment Planned (Status 1)**: 0.14% have received payments (typically pre-payments/deposits)
 - **Other Statuses**: No payment activity observed for statuses 3-8
 
+### Adjustment Recording Changes
+- **Adjustment System Modification**: According to stakeholder information, extensive changes were made to adjustment recording methodologies during 2024
+- **Timing Impact**: These changes potentially affect how payments and adjustments are calculated and reported in the latter part of 2024
+- **Interpretation Caution**: Payment and adjustment patterns observed in the later months of 2024 may reflect these system changes rather than business process changes
+- **Comparative Analysis Limitation**: Direct comparisons between early 2024 and late 2024 adjustment/payment patterns should account for these methodological changes
+
 ## Success Criteria
 
 A procedure is considered to have a successful payment journey when:
@@ -314,6 +320,14 @@ Analysis of monthly procedure data reveals consistent patterns in how procedures
    - Year-end impacts both procedure scheduling (lower December volume)
    - End-of-year insurance benefit depletion likely contributes to lower completion rates in Q4
    - Revenue recognition timing creates artificial payment performance degradation in December
+
+### Time Boundary Considerations
+   - Analysis is limited to procedures and payments recorded in 2024
+   - Payment activity occurring in 2025 for late-2024 procedures is not captured
+   - This creates a "right-censoring" effect where recent procedures appear to have lower payment rates
+   - Q4 2024 metrics (especially December) require cautious interpretation due to incomplete payment cycles
+   - Year-over-year comparisons should account for this time boundary effect when evaluating performance trends
+   - Procedures from earlier months (Jan-Sep 2024) provide more reliable performance indicators due to more complete payment cycles
 
 ### Pre-Payment Patterns
 
