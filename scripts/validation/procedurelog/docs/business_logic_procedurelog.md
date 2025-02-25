@@ -82,7 +82,22 @@ Payments for procedures can come from multiple sources:
 - **Overall Payment Rate**: 37.90% of all procedures have received payments
 - **Collection Rate for Completed**: 80.29% of fees for completed procedures are collected
 - **Average Payment Ratio**: 84.33% for completed procedures with fees
-- **Revenue Gap**: $669,113.62 in unrealized revenue for completed procedures
+- **Revenue Gap**: $633,938.32 in unrealized revenue for completed procedures
+
+### Payment Distribution Patterns
+- **Binary Payment Pattern**: Procedures strongly polarize between fully paid (69.49%) and completely unpaid (14.30%)
+- **Limited Partial Payments**: Only 14.56% of procedures fall in partial payment categories (1-95%)
+- **Transitional Band Scarcity**: Very few procedures (1.64%) fall in the 95-98% category
+- **Full Payment Dominance**: The 98-100%+ category accounts for 82.6% of all collected revenue
+
+### Payment Ratio Benchmarks
+- **98-100%+**: 69.49% of procedures (target zone for routine payments)
+- **95-98%**: 1.64% of procedures (minimal transition zone)
+- **90-95%**: 1.36% of procedures
+- **75-90%**: 4.37% of procedures
+- **50-75%**: 3.85% of procedures
+- **1-50%**: 4.98% of procedures
+- **No Payment**: 14.30% of procedures
 
 ### Patient Responsibility Patterns
 - **Progressive Coverage Decline**: As fee amounts increase, full coverage percentage decreases:
