@@ -13,7 +13,7 @@ SELECT
     MAX(SplitAmt) as max_split,
     COUNT(DISTINCT CASE WHEN ProcStatus IN (1, 2) THEN ClaimProcNum END) as active_procedures,
     COUNT(DISTINCT CASE WHEN ClaimStatus = 'C' THEN ClaimNum END) as completed_claims,
-    AVG(DATEDIFF(day, DateService, PayDate)) as avg_days_from_service
+    AVG(DATEDIFF(PayDate, DateService)) as avg_days_from_service
 FROM PaymentDailyDetails
 GROUP BY 
     PayDate,
