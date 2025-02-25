@@ -468,7 +468,7 @@ PaymentDailyDetails AS (
     JOIN paysplit ps ON p.PayNum = ps.PayNum
     JOIN claimproc cp ON ps.ProcNum = cp.ProcNum
     JOIN claim c ON cp.ClaimNum = c.ClaimNum
-    WHERE p.PayDate >= DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH)
+    WHERE p.PayDate >= '2024-01-01' AND p.PayDate < '2025-01-01'
 ),
 
 -- 19. FilterStats: Compute summary statistics for each payment filter category.
