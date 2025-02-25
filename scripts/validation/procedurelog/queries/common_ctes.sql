@@ -1,9 +1,29 @@
--- Common Table Expressions (CTEs) for Procedure Log Validation
--- These CTEs provide the base filtering and data preparation
--- for all validation queries.
+-- ============================================================================
+-- PROCEDURE LOG VALIDATION - COMMON CTEs
+-- ============================================================================
+-- This file contains reusable Common Table Expressions (CTEs) for all 
+-- Procedure Log validation queries. These CTEs provide consistent filtering,
+-- data preparation, and business rule application across all validation scripts.
+--
+-- CTE INDEX:
+-- ----------
+-- 1. ExcludedCodes - Defines procedure codes exempt from payment validation
+-- 2. BaseProcedures - Filtered procedure set within date range with key attributes
+-- 3. PaymentActivity - Aggregates insurance and direct payments by procedure
+-- 4. SuccessCriteria - Evaluates business success criteria for each procedure
+-- 5. AppointmentDetails - Provides appointment information within date range
+-- 
+-- USAGE:
+-- ------
+-- Import this file using your SQL client's include mechanism, or copy the CTEs
+-- directly into validation queries. Replace {{START_DATE}} and {{END_DATE}}
+-- with your target date range.
+-- ============================================================================
 
 WITH 
--- Define excluded codes that are exempt from payment validation
+-- 1. EXCLUDED CODES
+-- Defines procedure codes that are exempt from standard payment validation rules
+-- These are typically administrative, diagnostic, or courtesy service codes
 ExcludedCodes AS (
     SELECT CodeNum 
     FROM procedurecode 
@@ -15,7 +35,9 @@ ExcludedCodes AS (
     )
 ),
 
--- Base procedure set (filtered by date range)
+-- 2. BASE PROCEDURES
+-- Core procedure dataset filtered by date range with key attributes
+-- Joins to procedure codes and flags excluded codes for special handling
 BaseProcedures AS (
     SELECT 
         pl.ProcNum,
@@ -36,7 +58,9 @@ BaseProcedures AS (
     WHERE pl.ProcDate >= '{{START_DATE}}' AND pl.ProcDate < '{{END_DATE}}'
 ),
 
--- Payment information for procedures
+-- 3. PAYMENT ACTIVITY
+-- Aggregates payment information from insurance and direct patient payments
+-- Calculates total payments and payment ratio (percentage of fee paid)
 PaymentActivity AS (
     SELECT 
         pl.ProcNum,
@@ -55,7 +79,11 @@ PaymentActivity AS (
     GROUP BY pl.ProcNum, pl.ProcFee
 ),
 
--- Success criteria evaluation
+-- 4. SUCCESS CRITERIA
+-- Evaluates business success criteria based on procedure status, fee, and payment
+-- A procedure is considered successful if:
+-- 1. It's completed with zero fee (for standard procedures), OR
+-- 2. It's completed with fee and has received at least 95% payment
 SuccessCriteria AS (
     SELECT
         bp.ProcNum,
@@ -76,7 +104,9 @@ SuccessCriteria AS (
     LEFT JOIN PaymentActivity pa ON bp.ProcNum = pa.ProcNum
 ),
 
--- Appointment information
+-- 5. APPOINTMENT DETAILS
+-- Provides appointment information within the date range
+-- Used to analyze relationships between procedures and appointments
 AppointmentDetails AS (
     SELECT
         a.AptNum,
@@ -87,3 +117,8 @@ AppointmentDetails AS (
 )
 
 -- End of CTEs
+-- Note: Your main query should follow this comment
+-- Example usage:
+-- SELECT * FROM BaseProcedures bp
+-- JOIN PaymentActivity pa ON bp.ProcNum = pa.ProcNum
+-- WHERE bp.ProcStatus = 2
