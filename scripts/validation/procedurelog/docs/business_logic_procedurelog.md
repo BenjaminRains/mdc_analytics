@@ -99,6 +99,17 @@ Payments for procedures can come from multiple sources:
 - **Mixed Source Overpayment**: Mixed payment sources show 123.6% payment rate, indicating systematic overpayment
 - **Zero Insurance Pattern**: 2,602 fully paid procedures with mixed sources have zero insurance payments despite having insurance records
 
+### Payment Split Processing Anomaly
+- **System Anomaly Period**: Beginning July 2024, the system exhibits anomalous payment split generation
+- **Split Pattern Evolution**:
+  - Normal period (Jan-Jun 2024): 2-10 splits per payment (baseline)
+  - Initial anomalies (Jul 2024): Occasional spikes to 40 splits per payment
+  - Escalation period (Aug-Oct 2024): Regular spikes of 100-400 splits per payment
+  - Peak anomaly (Nov 2024): Over 450 splits per payment on average
+- **Affected Transaction Types**: Primarily Type 0 transfers (98.3%) with $0 payment amounts
+- **Split Payment Impact**: Mixed payment sources show significantly elevated payment ratios (123.6%), likely influenced by this anomaly
+- **Business Impact**: This anomaly affects payment split data interpretation but does not cause direct financial errors
+
 ### Payment Timing Patterns
 - **Direct Payments**: Average 1,021 days for fully paid procedures, suggesting historical data processing
 - **Mixed Sources**: Average 569 days for fully paid procedures with both payment types
