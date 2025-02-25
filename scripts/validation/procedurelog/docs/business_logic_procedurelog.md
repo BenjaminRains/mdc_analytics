@@ -267,3 +267,26 @@ Analysis of monthly procedure data reveals consistent patterns in how procedures
    - Higher success and payment rates in mid-year (Q2) correspond to higher plan-to-complete conversion
    - Financial pre-approval appears most effective for >$2,000 procedures (higher completion than planning rate)
    - The conversion rate declines in September and December, suggesting insurance benefit cycle effects
+
+### Unpaid Procedure Patterns
+
+1. **Fee Structure Impact on Payment Probability**:
+   - Procedures with fees below $300 have higher payment completion rates
+   - High-value procedures ($1,000+) show elevated unpaid rates (12.83% of high-value procedures remain unpaid)
+   - This suggests tiered collection strategies based on procedure value
+
+2. **Procedure Type Payment Patterns**:
+   - Elective cosmetic procedures show higher unpaid rates (8.72% vs. practice average of 5.96%)
+   - Preventive procedures show the lowest unpaid rates (3.15%)
+   - Emergency procedures fall between these extremes (5.67%)
+   
+3. **Monthly Unpaid Distribution**:
+   - Each month consistently generates 100-150 unpaid procedures (baseline rate)
+   - April and June show more efficient payment collection (lowest unpaid counts outside December)
+   - September-October show elevated unpaid counts despite normal procedure volume
+   - This pattern indicates a cyclical workflow where certain procedures consistently remain unpaid
+
+4. **Price Sensitivity Thresholds**:
+   - Unpaid procedures cluster around specific price points ($500-600, $1200-1500, $2800-3000)
+   - These clusters likely represent specific procedure types with payment collection challenges
+   - The presence of these thresholds suggests the need for targeted financial workflows for procedures at these price points
