@@ -45,6 +45,8 @@ Payments for procedures can come from multiple sources:
 - **Payment Ratio**: `Total Paid / ProcFee` (percentage of the fee that has been paid)
 - **Overall Payment Rate**: 37.90% of all procedures have received payments
 - **Collection Rate for Completed**: 80.29% of fees for completed procedures are collected
+- **Average Payment Ratio**: 84.33% for completed procedures with fees
+- **Revenue Gap**: $669,113.62 in unrealized revenue for completed procedures
 
 ### Payment by Status
 - **Completed (Status 2)**: 73.29% have received payments
@@ -64,9 +66,12 @@ A procedure is considered to have a successful payment journey when:
 - **Completed procedures breakdown**:
   - With zero fees: 15.2% (2,944 procedures)
   - No payment received: 11.5% (2,234 procedures)
+  - With 95%+ payment: 61.0% (11,805 procedures)
 
 ### Excluded Codes
 Certain procedure codes are excluded from payment validation, including administrative codes (e.g., D9986, D9987), diagnostic codes (e.g., D0120, D0140), and special codes (e.g., ~GRP~, Watch).
+- **Excluded procedures**: 30.7% (11,497) of all procedures use excluded codes
+- **Code exclusion impact**: Significantly affects payment validation strategy
 
 ## Edge Cases
 Analysis identified several edge cases requiring special attention:
@@ -94,7 +99,7 @@ Analysis identified several edge cases requiring special attention:
 
 ### Payment Processing Rules
 1. Collection expectation varies by procedure category:
-   - Diagnostic procedures: Often $0 fee or write-off expected
+   - Diagnostic procedures: Often $0 fee or write-offs expected
    - Preventive procedures: 95% collection expected
    - Restorative procedures: 95-98% collection expected
    - Major procedures (over $500): 98% collection expected
