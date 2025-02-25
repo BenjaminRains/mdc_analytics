@@ -34,6 +34,42 @@ The `ProcStatus` field uses the following values:
 - **paysplit**: Direct patient payments for procedures
 - **adjustment**: Adjustments applied to procedure fees
 
+## Fee Structure and Management
+
+### Fee Distribution Patterns
+Analysis of procedure fees reveals distinct distribution patterns:
+- **Zero Fee Procedures**: 24.80% of all procedures have no fee
+  - Most (74.85%) are excluded administrative/diagnostic codes as expected
+  - The remainder represent courtesy services or write-offs
+- **Standard Service Range**: 34.09% of procedures are under $100, representing routine/preventive services
+- **Mid-tier Services**: 32.57% fall in the $100-$499 range
+- **High-value Procedures**: Only 8.52% of procedures exceed $500, with just 0.27% above $2,000
+
+### Fee Schedule Adherence
+- **High Adherence Rate**: Nearly all procedures under $2,000 match the standard fee schedule (98-99%)
+- **Custom Pricing**: Higher-value procedures ($2000+) only match the fee schedule 60.78% of the time
+- This indicates the practice follows standardized pricing for routine procedures but customizes fees for major services
+
+### Fee Relationship Categories
+Fee relationship analysis shows strong discipline in fee schedule management:
+- **Matches Standard**: 74.37% of procedures (27,857) exactly match standard fee schedule rates
+- **Fee Missing**: 14.19% of procedures (5,317) have no corresponding fee schedule entry
+- **Zero Fee Override**: 5.53% of procedures (2,071) have a standard fee but are set to zero fee
+- **Zero Standard Fee**: 5.25% of procedures (1,967) have zero fees in both actual and standard
+- **Custom Pricing**: Less than 1% of procedures have custom pricing:
+  - Below Standard: 0.49% (183 procedures)
+  - Above Standard: 0.17% (64 procedures) with much higher average fees ($3,545.53)
+
+### Fee-Status Relationship
+- **Financial Barriers**: Mid to high-value procedures ($500-$1999) show more planned than completed procedures
+- **Zero Fee Completion**: Zero-fee procedures have nearly 3x as many completed as planned (2,944 vs 1,059)
+- **High-Value Completion**: $2000+ procedures show more completions than planned (41 vs 29), suggesting effective financial pre-authorization
+
+### Fee Impact on Procedure Lifecycle
+- **Completion Rate vs. Fee**: Completion rates inversely correlate with procedure cost
+- **Treatment Planning**: Higher-cost procedures remain in planned status longer
+- **Insurance Coverage Impact**: Procedures with higher coverage rates show faster transition to completed status
+
 ## Payment Processing
 
 Payments for procedures can come from multiple sources:
@@ -47,6 +83,13 @@ Payments for procedures can come from multiple sources:
 - **Collection Rate for Completed**: 80.29% of fees for completed procedures are collected
 - **Average Payment Ratio**: 84.33% for completed procedures with fees
 - **Revenue Gap**: $669,113.62 in unrealized revenue for completed procedures
+
+### Patient Responsibility Patterns
+- **Progressive Coverage Decline**: As fee amounts increase, full coverage percentage decreases:
+  - Under $100: 53.21% fully covered
+  - $100-$249: 48.52% fully covered
+  - $500+: Only ~22-25% fully covered
+- This aligns with insurance designs that provide better coverage for preventive/diagnostic services
 
 ### Payment by Status
 - **Completed (Status 2)**: 73.29% have received payments
@@ -142,3 +185,21 @@ Analysis revealed unexpected appointment linkage patterns:
 2. **Appointment linkage validation**:
    - Although all procedures have appointment links, further validation is needed to verify the appropriateness of these links
    - Further investigation should determine if procedures are correctly linked to relevant appointments
+
+### Fee Setting Rules
+1. **Fee Schedule Adherence**: Most procedures (98-99%) should match standard fee schedule
+2. **Custom Fee Criteria**:
+   - Major procedures (over $2,000) may use custom pricing
+   - Adjustments should be documented through the adjustment table, not by altering the base fee
+   - Zero fee procedures should generally be limited to excluded codes
+
+3. **Zero Fee Guidelines**:
+   - Administrative codes should have zero fees
+   - Diagnostic codes may have nominal or zero fees based on insurance contracts
+   - Courtesy services should be recorded with standard fees and corresponding adjustments
+
+4. **Fee Schedule Management Patterns**:
+   - The practice maintains a highly standardized fee structure with 74.37% exact matches
+   - Fee schedule gaps (14.19%) primarily affect low-value or administrative procedures
+   - Intentional zero fee overrides (5.53%) are used selectively for specific procedures
+   - Custom pricing is restricted to less than 1% of procedures, primarily for high-value services
