@@ -143,9 +143,9 @@ This document records data quality observations identified during validation of 
 
 **Observation**: Our analysis is limited to procedures and payments recorded in 2024, excluding any payment activity from January/February 2025 that might apply to late-2024 procedures.
 
-**Impact**: This timing limitation may artificially depress payment metrics for procedures performed in late 2024, particularly December.
+**Impact**: This timing limitation may artificially depress payment metrics for procedures performed in late 2024, particularly December. This creates a "right-censoring" effect where recent procedures appear to have lower payment rates simply because their payment cycle is incomplete.
 
-**Recommendation**: Re-run analysis in Q2 2025 to capture delayed payments for Q4 2024 procedures and establish a more accurate year-end performance baseline.
+**Recommendation**: Re-run analysis in Q2 2025 to capture delayed payments for Q4 2024 procedures and establish a more accurate year-end performance baseline. When interpreting 2024 metrics, consider stratifying by procedure age or focus on procedures with sufficient time for complete payment processing (e.g., Jan-Sep 2024).
 
 ## Payment Linkage Timing Anomalies
 
@@ -226,3 +226,19 @@ This document records data quality observations identified during validation of 
 **Impact**: While financially minor, these cases indicate either fee coding errors, courtesy services being incorrectly paid, or intentional zero-fee overrides that were subsequently ignored during payment processing.
 
 **Recommendation**: Review the specific procedure codes involved to determine if they should have standard fees assigned, and implement validation to flag payment attempts against zero-fee procedures.
+
+## Adjustment Recording System Change
+
+**Observation**: According to stakeholder information, extensive changes were made to how adjustments were recorded later in the year 2024. These system modifications potentially coincide with observed anomalies in payment patterns and edge cases.
+
+**Impact**: This system change may:
+- Contribute to some of the observed payment anomalies, particularly overpayment patterns
+- Affect how completed procedures are financially reconciled
+- Influence the distribution of edge cases in the second half of 2024
+- Add complexity to year-over-year comparisons
+
+**Recommendation**: 
+1. Perform a segmented analysis comparing pre-change and post-change periods to isolate the effects of the adjustment recording changes
+2. Review documentation related to the adjustment system changes to understand expected impacts
+3. Include additional validation criteria specific to the new adjustment methodology when analyzing late-2024 data
+4. Exercise caution when drawing conclusions about business patterns versus system-driven patterns in the affected periods
