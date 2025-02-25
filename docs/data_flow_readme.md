@@ -18,37 +18,48 @@
   - Timing
   - Value
 - **Batch Submission** optimizes claims by grouping:
-  - 2-3 claims together
+  - Maximum 4 claims per batch
   - Similar value claims
+  - Spacing high-value claims across days
 - A ClaimProc record is generated for insurance processing
 - The insurance carrier/plan receives the claim
 - Insurance estimation is received
 - Final insurance payment is documented
 
 ## Payment Allocation & Reconciliation
-- Both insurance and patient payments flow into the **Payment Application** process
-- Payments are analyzed by **Split Pattern Analysis**:
-  - Normal splits (99.3%): 1-3 splits per payment
-  - Complex splits (0.7%): Maximum 2 claims/procedures
-- All splits are validated through:
-  - Balance calculation
-  - Transaction date check against as_of_date
-  - AR distribution between patient and insurance
-- Transactions dated before as_of_date go to aging analysis
-- Transactions after as_of_date are excluded from AR
+- Both insurance and patient payments flow into the **Payment** table
+  - Each payment has PayNum, PayAmt, PayType, and PayDate
+- Payments are split into portions recorded in the **PaySplit** table
+  - Each split has SplitNum, PayNum, SplitAmt, and ProcNum
+- Splits are classified into three types:
+  - **Regular Payments (Type 0)** - 88.9% of splits (direct application)
+  - **Prepayments (Type 288)** - 10.9% of splits (unearned revenue)
+  - **Treatment Plan Prepayments (Type 439)** - 0.2% of splits (plan deposits)
+- **Transfer Payments** are special transactions that:
+  - Net to $0 total impact
+  - Have offsetting positive/negative splits
+  - Move money between accounts/procedures
+- All splits are analyzed by **Split Pattern Analysis**:
+  - Normal pattern (99.3%): 1-3 splits per payment
+  - Complex pattern (0.7%): Max 2 claims per procedure
+- Payment validation rules ensure:
+  - Sum of splits equals payment amount
+  - Non-negative split amounts
+  - Standard limit of 15 splits per payment
+- Transaction date validation checks against as_of_date:
+  - Payments before as_of_date are included in AR Analysis
+  - Payments after as_of_date are excluded from AR
 
-## Collection Status Flow
-- Aging analysis classifies payments into aging buckets
-- Collection status is determined as:
-  - New → Scheduled
-  - Active → Under Follow-up
-  - Pending → Outstanding
-  - Failed → Follow-up Exhausted
-- Collection actions are taken based on status:
-  - Start (for Scheduled)
-  - Monitor (for Under Follow-up)
-  - Chase (for Outstanding)
-  - Escalate (for Follow-up Exhausted)
+## AR Analysis
+- Aging analysis classifies AR into buckets:
+  - Current: ≤30 days (39.3% of AR)
+  - 30-60 days (11.7% of AR)
+  - 60-90 days (12.7% of AR)
+  - 90+ days (36.2% of AR)
+
+## Collection Process
+- Collection status determines appropriate actions
+- Collection actions are taken based on account status
 - Actions result in either:
   - Success → Collected
   - Failure → Escalation Options
@@ -56,14 +67,12 @@
 ## Success Criteria
 Collection process concludes with:
 - Journey Complete (for successful collections)
-- Write-off
-- Legal Collection
-- Collection Agency referral
+- Escalation options for unresolved accounts
 
 ## Visual Grouping
 The process is visually organized into five main sections:
 - Fee Processing & Verification (pink)
 - Insurance Processing (blue)
 - Payment Allocation & Reconciliation (yellow)
-- Collection Status Flow (light purple)
-- Success Criteria (light yellow)
+- AR Analysis (light purple)
+- Collection Process (light green)
