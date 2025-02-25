@@ -11,10 +11,8 @@ SELECT
     pbc.min_date,
     pbc.max_date
 FROM PaymentBaseCounts pbc
-CROSS JOIN payment p
+JOIN payment p ON p.PayDate >= '2024-01-01' AND p.PayDate < '2025-01-01'
 LEFT JOIN paysplit ps ON p.PayNum = ps.PayNum
-WHERE p.PayDate >= '2024-01-01'
-    AND p.PayDate < '2025-01-01'
 GROUP BY 
     pbc.metric,
     pbc.total_payments,
