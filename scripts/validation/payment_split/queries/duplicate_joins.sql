@@ -15,8 +15,7 @@ Key metrics:
 
 -- Note: CTEs from ctes.sql are automatically prepended by the export script
 
--- Additional query-specific CTEs (without the leading WITH keyword)
-PaymentSplitAnalysis AS (
+, PaymentSplitAnalysis AS (
     -- Base payment split analysis
     SELECT 
         ps.PayNum,
