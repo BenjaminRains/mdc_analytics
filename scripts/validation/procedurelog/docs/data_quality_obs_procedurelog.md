@@ -56,11 +56,27 @@ This document records data quality observations identified during validation of 
 
 ## Overpayment Issues
 
-**Observation**: 1,339 procedures (3.57%) received payments exceeding their fee amount, with 1,166 having significant overpayments (>105% of fee).
+**Observation**: 1,339 procedures (3.57%) received payments exceeding their fee amount, with 1,166 having significant overpayments (>105% of fee). The maximum payment ratio observed is 787.5% (7.875 times the procedure fee).
 
 **Impact**: This represents $210,277.91 in excess payments that may indicate accounting errors, incorrect fee schedules, or potential compliance issues.
 
-**Recommendation**: Review overpaid procedures to identify systematic causes and establish controls to prevent future occurrences.
+**Recommendation**: Review overpaid procedures to identify systematic causes and establish controls to prevent future occurrences, with special focus on extreme outliers exceeding 200% of expected fee.
+
+## Binary Payment Pattern
+
+**Observation**: Payment metrics show a strong binary pattern - procedures are either fully paid (69.49% in the 98-100%+ category) or completely unpaid (14.30%), with relatively few in partial payment categories.
+
+**Impact**: This unusual distribution pattern may indicate either a highly effective collection process or systematic data quality issues in how payments are associated with procedures.
+
+**Recommendation**: Validate the payment allocation process to confirm that payments are being correctly distributed across procedures rather than being artificially concentrated on specific procedures.
+
+## Payment Processing Consistency
+
+**Observation**: The average payment ratio for the 98-100%+ category is 105.92%, indicating consistent overpayment rather than occasional outliers.
+
+**Impact**: This systematic overpayment suggests a potential mismatch between fee schedules and actual payment expectations.
+
+**Recommendation**: Compare fee schedule amounts against expected insurance reimbursements to identify and adjust procedures with consistently misaligned fees.
 
 ## Monthly Pattern of Unpaid Procedures
 
