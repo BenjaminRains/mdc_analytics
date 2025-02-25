@@ -32,20 +32,21 @@ import concurrent.futures
 from tqdm import tqdm
 import time
 
-# Query descriptions to provide context on what each query analyzes
+# Define query descriptions and filenames
 QUERY_DESCRIPTIONS = {
-    'summary': 'High-level summary of procedures and their payment status',
-    'status_counts': 'Count of procedures by status code',
-    'excluded_codes': 'Analysis of excluded procedure codes and their occurrence',
-    'fee_distribution': 'Distribution of procedure fees across different ranges',
-    'payment_ratio': 'Analysis of payment ratios for completed procedures',
-    'zero_fee_analysis': 'Detailed analysis of procedures with zero fees',
-    'edge_cases': 'Identification of anomalous payment patterns and edge cases',
-    'monthly_unpaid': 'Monthly analysis of unpaid completed procedures',
-    'provider_analysis': 'Procedure success rates by provider',
-    'insurance_analysis': 'Payment patterns by insurance carrier',
-    'diagnostic': 'Detailed diagnostic information for troubleshooting',
-    'procedure_details': 'Detailed information about individual procedures',
+    'summary': 'Overall procedure data summary',
+    'status_distribution': 'Procedure status code distribution',
+    'status_transitions': 'Procedure status transition patterns',
+    'temporal_patterns': 'Month-by-month procedure analytics',
+    'code_distribution': 'Distribution of procedures by procedure code',
+    'fee_distribution': 'Distribution of procedures by fee amounts',
+    'payment_distribution': 'Distribution of payment percentages',
+    'payment_patterns': 'Payment patterns and linkage analysis',
+    'payment_splits': 'Analysis of insurance vs. direct payments',
+    'appointment_connections': 'How procedures connect to appointments',
+    'procedure_pairs': 'Commonly paired procedures analysis',
+    'edge_cases': 'Procedure and payment anomalies',
+    'provider_performance': 'Provider-level procedure metrics'
 }
 
 def setup_logging(log_dir='scripts/validation/procedurelog/logs'):
