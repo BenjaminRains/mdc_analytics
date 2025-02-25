@@ -20,6 +20,7 @@
 -- 11. VisitCounts - Identifies patient visits with multiple procedures
 -- 12. BundledPayments - Calculates payment data for visits with multiple procedures
 -- 13. EdgeCases - Identifies payment anomalies and edge cases in procedure billing
+-- 14. StandardFees - Compares procedure fees to standard fee schedules
 -- 
 -- USAGE:
 -- ------
@@ -346,6 +347,32 @@ EdgeCases AS (
       END AS edge_case_type
     FROM BaseProcedures pl
     LEFT JOIN PaymentActivity pa ON pl.ProcNum = pa.ProcNum
+),
+
+-- 14. STANDARD FEES
+-- Compares procedure fees to standard fee schedules
+-- Used to analyze fee variations and adherence to standard pricing
+StandardFees AS (
+    SELECT 
+        bp.ProcNum,
+        bp.CodeNum,
+        bp.ProcFee AS recorded_fee,
+        f.Amount AS standard_fee,
+        f.FeeSched,
+        fs.Description AS fee_schedule_desc,
+        CASE 
+            WHEN f.Amount = 0 THEN 'Zero Standard Fee'
+            WHEN bp.ProcFee = 0 AND f.Amount > 0 THEN 'Zero Fee Override'
+            WHEN bp.ProcFee > f.Amount THEN 'Above Standard'
+            WHEN bp.ProcFee < f.Amount THEN 'Below Standard'
+            WHEN bp.ProcFee = f.Amount THEN 'Matches Standard'
+            ELSE 'Fee Missing'
+        END AS fee_relationship
+    FROM BaseProcedures bp
+    LEFT JOIN fee f ON bp.CodeNum = f.CodeNum 
+        AND f.FeeSched = 55  -- Consider making this a parameter
+        AND f.ClinicNum = 0
+    LEFT JOIN feesched fs ON f.FeeSched = fs.FeeSchedNum
 )
 
 -- End of CTEs
