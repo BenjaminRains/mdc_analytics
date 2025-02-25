@@ -196,3 +196,33 @@ This document records data quality observations identified during validation of 
 **Impact**: While this anomaly doesn't cause direct financial errors (transactions still net to $0 as intended), it significantly impacts data quality for payment pattern analysis. This likely contributes to the observed mixed payment source overpayment pattern (123.6% payment rate) and may artificially inflate split payment metrics. The system is generating excessive splits that impact system efficiency and database performance.
 
 **Recommendation**: Exercise extreme caution when analyzing payment splits, particularly for Type 0 transfers after July 2024. Consider filtering analysis to exclude suspicious payments (those with >20 splits per payment) or focus analysis on the pre-anomaly period (Jan-Jun 2024). A fix for the underlying technical issue is required to restore normal system function.
+
+## Edge Case Distribution Analysis
+
+**Observation**: Edge case analysis has identified that 11.69% of procedures (4,380) exhibit some form of payment anomaly that deviates from expected business rules. The largest categories are completed unpaid procedures (5.96%), significantly overpaid procedures (3.11%), and completed underpaid procedures (2.11%).
+
+**Impact**: These edge cases have substantial financial implications:
+- $598,497.50 in unbilled/uncollected revenue from completed unpaid procedures
+- Approximately $210,278 in excess payments from overpaid procedures 
+- $169,318.01 in potential lost revenue from underpaid procedures
+
+**Recommendation**: Implement a systematic review process focusing on each edge case category:
+1. Prioritize review of completed unpaid procedures by fee value, with special attention to the 110 different procedure codes affected
+2. Audit overpaid procedures to identify systematic causes by procedure type, as 68 different procedure codes show significant overpayment patterns
+3. Review underpaid procedures (69 different procedure codes affected) to determine if partial payments are intentional or represent collection failures
+
+## High-Value Procedure Edge Cases
+
+**Observation**: Non-completed procedures with payments have an extremely high average fee ($5,631.64) compared to the average fee across all categories ($194.91-$356.80). These 10 procedures represent $56,316.44 in fees with $54,168.24 already paid (96.19% payment rate) despite being incomplete.
+
+**Impact**: While small in number, these high-value procedures with advance payments likely represent deposits for expensive treatments that require special tracking to ensure eventual completion.
+
+**Recommendation**: Implement a monitoring system specifically for pre-paid high-value procedures to track their progression to completed status and ensure service delivery meets pre-payment expectations.
+
+## Zero-Fee Payment Anomaly
+
+**Observation**: 7 procedures with zero fees have received payments totaling $606, all of which are marked as completed. These span 5 different procedure codes.
+
+**Impact**: While financially minor, these cases indicate either fee coding errors, courtesy services being incorrectly paid, or intentional zero-fee overrides that were subsequently ignored during payment processing.
+
+**Recommendation**: Review the specific procedure codes involved to determine if they should have standard fees assigned, and implement validation to flag payment attempts against zero-fee procedures.
