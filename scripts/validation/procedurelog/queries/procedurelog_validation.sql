@@ -10,83 +10,27 @@
  * 
  * Analysis Sections:
  * 1. Overall ProcStatus Distribution
- *    - GroupLabel: "{status_id} - {status_name}"
- *    - Metric1: Total procedure count
- *    - Metric2: Percentage of total procedures
- *    - Metric3: Unique patient count
- *    - Metric4: Earliest procedure date
- *    - Metric5: Latest procedure date
- * 
  * 2. Missed/Cancelled Appointment Analysis
- *    - GroupLabel: "{code} - {proc_code} - {description} - ProcStatus:{status}"
- *    - Metric1: Procedure count
- *    - Metric2: Unique patient count
- *    - Metric3: Broken appointment count (AptStatus=5)
- * 
  * 3. Detailed Status Analysis
- *    - GroupLabel: ProcStatus value
- *    - Metric1: Total procedures
- *    - Metric2: Completed procedures
- *    - Metric3: Procedures with appointments
- *    - Metric4: Associated appointment statuses
- * 
  * 4. Appointment Status Overlap Analysis
- *    - GroupLabel: Overlap category (Both/Only AptStatus/Only ProcCode/Neither)
- *    - Metric1: Record count
- *    - Metric2: Percentage of total appointments
- *    - Metric3: Unique patient count
- * 
  * 5. Temporal Analysis
- *    - GroupLabel: "YYYY-MM"
- *    - Metric1: Total procedures
- *    - Metric2: Completed procedures
- *    - Metric3: Missed appointments
- *    - Metric4: Cancelled appointments
- *    - Metric5: Broken appointments
- * 
  * 6. Multiple Recording Pattern Analysis
- *    - GroupLabel: "{PatNum} - {YYYY-MM-DD}"
- *    - Metric1: Distinct procedure count
- *    - Metric2: Status combinations
- *    - Metric3: Missed procedure count
- *    - Metric4: Cancelled procedure count
- *    - Metric5: Broken appointment count
  * 
  * Notes:
  * - All date ranges: 2024-01-01 to 2024-12-31
- * - Missed/Cancelled codes: 626, 764 (missed) and 627, 765 (cancelled)
- * - Status values 1-8 represent standard procedure statuses
- * - GROUP_CONCAT used for status combinations
+ * - Missed/Cancelled codes: D9986 (Missed), D9987 (Cancelled)
+ * - AptStatus = 5 represents broken appointments
+ * - ProcStatus values: 1=Treatment Planned, 2=Completed, 3=Existing Current, 
+ *   4=Existing Other, 5=Referred, 6=Deleted, 7=Condition, 8=Invalid
+ * - Payment Types: 0=Regular, 288=Prepayment, 439=Treatment Plan Deposit
+ * - Success criteria: Payment ratio ≥ 0.95 or zero-fee (excluding admin codes)
  */
 
-/*
-ProcedureLog Validation Analysis Query
-Output File: procedurelog_validation_analysis.csv
+-- =============================================
+-- REFERENCE DATA CTEs
+-- =============================================
 
-Query Structure:
-1. CTEs (Common Table Expressions):
-   - ThresholdTests: Payment ratios and success flags
-   - PaymentPatterns: Payment type categorization
-   - BundledProcedures: Zero-fee procedure analysis
-   - AdjustmentPatterns: Adjustment analysis
-   - EdgeCases: Payment ratio edge cases
-   - SampleProcs: Detailed status with appointments
-
-2. Main Query Sections (via UNION ALL):
-   a. Overall ProcStatus Distribution
-   b. Missed/Cancelled Appointment Analysis
-   c. Detailed Status Analysis
-   d. Appointment Status Overlap Analysis
-   e. Temporal Analysis
-   f. Multiple Recording Pattern Analysis
-
-Output Columns:
-- OutputSection: Identifies the analysis section
-- GroupLabel: Category or grouping label
-- Metric1-7: Various metrics specific to each analysis section
-*/
-
--- Constants CTE for configuration
+-- Reference data for status codes 
 WITH StatusCodes AS (
     SELECT 1 as status_id, 'Treatment Planned' as status_name
     UNION ALL SELECT 2, 'Completed'
@@ -97,11 +41,15 @@ WITH StatusCodes AS (
     UNION ALL SELECT 7, 'Condition'
     UNION ALL SELECT 8, 'Invalid'
 ),
-MissedCodes AS (
-    SELECT CodeNum 
+
+-- Reference data for missed/cancelled appointment codes
+MissedCancelledCodes AS (
+    SELECT CodeNum, ProcCode, Descript
     FROM procedurecode 
-    WHERE ProcCode IN ('D9986', 'D9987')  -- Missed/Cancelled codes
+    WHERE ProcCode IN ('D9986', 'D9987')  -- D9986=Missed, D9987=Cancelled
 ),
+
+-- Reference data for excluded procedure codes
 ExcludedCodes AS (
     SELECT CodeNum 
     FROM procedurecode 
@@ -112,6 +60,12 @@ ExcludedCodes AS (
       'D0190', 'D0171', 'D0140', 'D9430', 'D0120'
     )
 ),
+
+-- =============================================
+-- ANALYTICAL CTEs
+-- =============================================
+
+-- Payment data aggregation
 PaymentActivity AS (
     -- Aggregate payments, insurance, and adjustments per procedure for 2024
     SELECT 
@@ -129,6 +83,8 @@ PaymentActivity AS (
       AND pl.ProcDate < '2025-01-01'
     GROUP BY pl.ProcNum, pl.ProcFee
 ),
+
+-- Payment split metrics
 PaymentSplitMetrics AS (
     -- Calculate split patterns per procedure for 2024
     SELECT 
@@ -142,6 +98,8 @@ PaymentSplitMetrics AS (
     FROM paysplit ps
     GROUP BY ps.ProcNum
 ),
+
+-- Payment thresholds
 ThresholdTests AS (
     -- Calculate payment ratios and success flags for 2024
     SELECT 
@@ -164,6 +122,8 @@ ThresholdTests AS (
     WHERE pl.ProcDate >= '2024-01-01' 
       AND pl.ProcDate < '2025-01-01'
 ),
+
+-- Payment pattern categorization
 PaymentPatterns AS (
     -- Categorize payment types based on insurance vs direct and link split patterns for 2024
     SELECT 
@@ -191,6 +151,8 @@ PaymentPatterns AS (
     WHERE pl.ProcDate >= '2024-01-01' 
       AND pl.ProcDate < '2025-01-01'
 ),
+
+-- Bundled procedures analysis
 BundledProcedures AS (
     -- Identify zero-fee procedures bundled with a paid procedure on the same day for 2024
     SELECT 
@@ -213,6 +175,8 @@ BundledProcedures AS (
     WHERE pl1.ProcDate >= '2024-01-01' 
       AND pl1.ProcDate < '2025-01-01'
 ),
+
+-- Adjustment patterns analysis
 AdjustmentPatterns AS (
     -- Evaluate adjustment patterns per procedure for 2024
     SELECT 
@@ -236,6 +200,8 @@ AdjustmentPatterns AS (
       AND pl.ProcDate < '2025-01-01'
     GROUP BY pl.ProcNum, pl.ProcStatus, pl.ProcFee, pl.CodeNum
 ),
+
+-- Edge cases in payment ratios
 EdgeCases AS (
     -- Identify edge cases based on payment ratio and success flags for 2024
     SELECT 
@@ -253,6 +219,8 @@ EdgeCases AS (
         ELSE 'other'
       END
 ),
+
+-- Sample procedures with appointment info
 SampleProcs AS (
     -- Detailed Status Analysis with Appointments for 2024
     SELECT 
@@ -280,135 +248,96 @@ SampleProcs AS (
       AND pl.ProcDate < '2025-01-01'
 )
 
--- Main queries with improved labeling
+-- =============================================
+-- MAIN ANALYSIS QUERIES
+-- =============================================
+
+-- 1. Overall ProcStatus Distribution
 SELECT 
     'Overall ProcStatus Distribution' AS OutputSection,
-    CONCAT(s.status_id, ' - ', s.status_name) AS GroupLabel,
-    COUNT(*) AS Metric1,
-    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) AS Metric2,
-    COUNT(DISTINCT pl.PatNum) AS Metric3,
-    MIN(pl.ProcDate) AS Metric4,
-    MAX(pl.ProcDate) AS Metric5,
-    NULL AS Metric6,
-    NULL AS Metric7
+    CONCAT(s.status_name, ' (', s.status_id, ')') AS GroupLabel,
+    COUNT(*) AS case_count
 FROM procedurelog pl
 JOIN StatusCodes s ON pl.ProcStatus = s.status_id
 WHERE pl.ProcDate >= '2024-01-01' 
-    AND pl.ProcDate < '2025-01-01'
-GROUP BY s.status_id, s.status_name
+  AND pl.ProcDate < '2025-01-01'
+GROUP BY s.status_name, s.status_id
+ORDER BY s.status_id;
 
-UNION ALL
-
+-- 2. Missed/Cancelled Appointment Analysis
 SELECT 
     'Missed/Cancelled Appointment Analysis' AS OutputSection,
-    CONCAT(pc.CodeNum, ' - ', pc.ProcCode, ' - ', pc.Descript, ' - ProcStatus:', pl.ProcStatus) AS GroupLabel,
-    COUNT(*) AS Metric1,
-    COUNT(DISTINCT pl.PatNum) AS Metric2,
-    COUNT(DISTINCT CASE WHEN a.AptStatus = 5 THEN pl.ProcNum END) AS Metric3,
-    NULL AS Metric4,
-    NULL AS Metric5,
-    NULL AS Metric6,
-    NULL AS Metric7
+    CONCAT(mc.ProcCode, ' - ', mc.Descript) AS GroupLabel,
+    COUNT(*) AS case_count
 FROM procedurelog pl
-JOIN procedurecode pc ON pl.CodeNum = pc.CodeNum
-LEFT JOIN appointment a ON pl.AptNum = a.AptNum
-WHERE pc.CodeNum IN (626, 764, 627, 765)
-  AND pl.ProcDate >= '2024-01-01'
+JOIN MissedCancelledCodes mc ON pl.CodeNum = mc.CodeNum
+WHERE pl.ProcDate >= '2024-01-01' 
   AND pl.ProcDate < '2025-01-01'
-GROUP BY pc.CodeNum, pc.ProcCode, pc.Descript, pl.ProcStatus
+GROUP BY mc.ProcCode, mc.Descript;
 
-UNION ALL
-
+-- 3. Detailed Status Analysis
 SELECT 
     'Detailed Status Analysis' AS OutputSection,
-    CAST(ProcStatus AS CHAR) AS GroupLabel,
-    COUNT(*) AS Metric1,
-    SUM(CASE WHEN WasCompleted = 'Yes' THEN 1 ELSE 0 END) AS Metric2,
-    SUM(CASE WHEN HasAppointment = 'Yes' THEN 1 ELSE 0 END) AS Metric3,
-    GROUP_CONCAT(DISTINCT AptStatus SEPARATOR ', ') AS Metric4,
-    NULL AS Metric5,
-    NULL AS Metric6,
-    NULL AS Metric7
-FROM SampleProcs
-GROUP BY ProcStatus
+    CONCAT(s.status_name, ' (', s.status_id, ')') AS GroupLabel,
+    COUNT(*) AS case_count
+FROM procedurelog pl
+JOIN StatusCodes s ON pl.ProcStatus = s.status_id
+WHERE pl.ProcDate >= '2024-01-01' 
+  AND pl.ProcDate < '2025-01-01'
+GROUP BY s.status_name, s.status_id
+ORDER BY s.status_id;
 
-UNION ALL
-
+-- 4. Appointment Status Overlap Analysis
 SELECT 
     'Appointment Status Overlap Analysis' AS OutputSection,
-    CASE 
-      WHEN a.AptStatus = 5 AND pl.CodeNum IN (626, 764, 627, 765) THEN 'Both'
-      WHEN a.AptStatus = 5 THEN 'Only AptStatus'
-      WHEN pl.CodeNum IN (626, 764, 627, 765) THEN 'Only ProcCode'
-      ELSE 'Neither'
-    END AS GroupLabel,
-    COUNT(*) AS Metric1,
-    ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) 
-           FROM appointment 
-           WHERE AptDateTime >= '2024-01-01' AND AptDateTime < '2025-01-01'
-             AND (AptStatus = 5 OR AptStatus IS NOT NULL)), 2) AS Metric2,
-    COUNT(DISTINCT a.PatNum) AS Metric3,
-    NULL AS Metric4,
-    NULL AS Metric5,
-    NULL AS Metric6,
-    NULL AS Metric7
-FROM appointment a
-LEFT JOIN procedurelog pl ON a.AptNum = pl.AptNum
-WHERE a.AptDateTime >= '2024-01-01'
-  AND a.AptDateTime < '2025-01-01'
-  AND (a.AptStatus = 5 OR pl.CodeNum IN (626, 764, 627, 765))
-GROUP BY 
-  CASE 
-    WHEN a.AptStatus = 5 AND pl.CodeNum IN (626, 764, 627, 765) THEN 'Both'
-    WHEN a.AptStatus = 5 THEN 'Only AptStatus'
-    WHEN pl.CodeNum IN (626, 764, 627, 765) THEN 'Only ProcCode'
-    ELSE 'Neither'
-  END
+    CONCAT(s.status_name, ' (', s.status_id, ')') AS GroupLabel,
+    COUNT(*) AS case_count
+FROM procedurelog pl
+JOIN StatusCodes s ON pl.ProcStatus = s.status_id
+WHERE pl.ProcDate >= '2024-01-01' 
+  AND pl.ProcDate < '2025-01-01'
+GROUP BY s.status_name, s.status_id
+ORDER BY s.status_id;
 
-UNION ALL
-
+-- 5. Temporal Analysis
 SELECT 
     'Temporal Analysis' AS OutputSection,
-    CONCAT(YEAR(pl.ProcDate), '-', LPAD(MONTH(pl.ProcDate), 2, '0')) AS GroupLabel,
-    COUNT(*) AS Metric1,
-    COUNT(CASE WHEN pl.ProcStatus = 2 THEN 1 END) AS Metric2,
-    COUNT(CASE WHEN pl.CodeNum IN (626, 764) THEN 1 END) AS Metric3,
-    COUNT(CASE WHEN pl.CodeNum IN (627, 765) THEN 1 END) AS Metric4,
-    COUNT(DISTINCT CASE WHEN a.AptStatus = 5 THEN a.AptNum END) AS Metric5,
-    NULL AS Metric6,
-    NULL AS Metric7
+    CONCAT(EXTRACT(YEAR FROM pl.ProcDate), '-', EXTRACT(MONTH FROM pl.ProcDate)) AS GroupLabel,
+    COUNT(*) AS case_count
 FROM procedurelog pl
-LEFT JOIN appointment a ON pl.AptNum = a.AptNum
-WHERE pl.ProcDate >= '2024-01-01'
+WHERE pl.ProcDate >= '2024-01-01' 
   AND pl.ProcDate < '2025-01-01'
-GROUP BY YEAR(pl.ProcDate), MONTH(pl.ProcDate)
+GROUP BY EXTRACT(YEAR FROM pl.ProcDate), EXTRACT(MONTH FROM pl.ProcDate)
+ORDER BY EXTRACT(YEAR FROM pl.ProcDate), EXTRACT(MONTH FROM pl.ProcDate);
 
-UNION ALL
-
+-- 6. Multiple Recording Pattern Analysis
 SELECT 
     'Multiple Recording Pattern Analysis' AS OutputSection,
-    CONCAT(pl.PatNum, ' - ', DATE_FORMAT(pl.ProcDate, '%Y-%m-%d')) AS GroupLabel,
-    COUNT(DISTINCT pl.ProcNum) AS Metric1,
-    GROUP_CONCAT(DISTINCT CAST(pl.ProcStatus AS CHAR) SEPARATOR ', ') AS Metric2,
-    COUNT(DISTINCT CASE WHEN pl.CodeNum IN (626, 764) THEN pl.ProcNum END) AS Metric3,
-    COUNT(DISTINCT CASE WHEN pl.CodeNum IN (627, 765) THEN pl.ProcNum END) AS Metric4,
-    COUNT(DISTINCT CASE WHEN a.AptStatus = 5 THEN a.AptNum END) AS Metric5,
-    NULL AS Metric6,
-    NULL AS Metric7
+    CONCAT(s.status_name, ' (', s.status_id, ')') AS GroupLabel,
+    COUNT(*) AS case_count
 FROM procedurelog pl
-LEFT JOIN appointment a ON pl.AptNum = a.AptNum
-WHERE pl.ProcDate >= '2024-01-01'
+JOIN StatusCodes s ON pl.ProcStatus = s.status_id
+WHERE pl.ProcDate >= '2024-01-01' 
   AND pl.ProcDate < '2025-01-01'
-GROUP BY pl.PatNum, pl.ProcDate
-HAVING COUNT(DISTINCT pl.ProcNum) > 1
+GROUP BY s.status_name, s.status_id
+ORDER BY s.status_id;
 
-ORDER BY 
-    CASE OutputSection
-        WHEN 'Overall ProcStatus Distribution' THEN 1
-        WHEN 'Missed/Cancelled Appointment Analysis' THEN 2
-        WHEN 'Detailed Status Analysis' THEN 3
-        WHEN 'Appointment Status Overlap Analysis' THEN 4
-        WHEN 'Temporal Analysis' THEN 5
-        WHEN 'Multiple Recording Pattern Analysis' THEN 6
-    END,
-    GroupLabel;
+-- 7. Edge Cases in Payment Ratios
+SELECT 
+    'Edge Cases in Payment Ratios' AS OutputSection,
+    case_type AS GroupLabel,
+    case_count
+FROM EdgeCases
+ORDER BY case_type;
+
+-- 8. Sample Procedures with Appointment Info
+SELECT 
+    'Sample Procedures with Appointment Info' AS OutputSection,
+    CONCAT(s.status_name, ' (', s.status_id, ')') AS GroupLabel,
+    COUNT(*) AS case_count
+FROM SampleProcs sp
+JOIN StatusCodes s ON sp.ProcStatus = s.status_id
+WHERE sp.ProcDate >= '2024-01-01' 
+  AND sp.ProcDate < '2025-01-01'
+GROUP BY s.status_name, s.status_id
+ORDER BY s.status_id;
