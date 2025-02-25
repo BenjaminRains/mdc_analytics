@@ -19,6 +19,7 @@
 -- 10. CommonPairs - Counts the most frequent procedure pairs and their fees
 -- 11. VisitCounts - Identifies patient visits with multiple procedures
 -- 12. BundledPayments - Calculates payment data for visits with multiple procedures
+-- 13. EdgeCases - Identifies payment anomalies and edge cases in procedure billing
 -- 
 -- USAGE:
 -- ------
@@ -318,6 +319,33 @@ BundledPayments AS (
         pl.CodeCategory = 'Standard'
     LEFT JOIN PaymentActivity pa ON pl.ProcNum = pa.ProcNum
     GROUP BY v.PatNum, v.ProcDate, v.procedures_in_visit, bundle_size
+),
+
+-- 13. EDGE CASES
+-- Identifies payment anomalies and edge cases in procedure billing
+-- Used to flag unusual payment patterns that require investigation
+EdgeCases AS (
+    SELECT 
+      pl.ProcNum,
+      pl.PatNum,
+      pl.ProcDate,
+      pl.ProcCode,
+      pl.Descript,
+      pl.ProcStatus,
+      pl.ProcFee,
+      COALESCE(pa.total_paid, 0) AS total_paid,
+      pa.payment_ratio,
+      CASE 
+        WHEN pl.ProcFee = 0 AND COALESCE(pa.total_paid, 0) > 0 THEN 'Zero_fee_payment'
+        WHEN pl.ProcFee > 0 AND COALESCE(pa.total_paid, 0) > pl.ProcFee * 1.05 THEN 'Significant_overpayment'
+        WHEN pl.ProcFee > 0 AND COALESCE(pa.total_paid, 0) > pl.ProcFee THEN 'Minor_overpayment'
+        WHEN pl.ProcStatus = 2 AND pl.ProcFee > 0 AND COALESCE(pa.total_paid, 0) = 0 THEN 'Completed_unpaid'
+        WHEN pl.ProcStatus = 2 AND pl.ProcFee > 0 AND COALESCE(pa.total_paid, 0) / pl.ProcFee < 0.50 THEN 'Completed_underpaid'
+        WHEN pl.ProcStatus != 2 AND COALESCE(pa.total_paid, 0) > 0 THEN 'Non_completed_with_payment'
+        ELSE 'Normal'
+      END AS edge_case_type
+    FROM BaseProcedures pl
+    LEFT JOIN PaymentActivity pa ON pl.ProcNum = pa.ProcNum
 )
 
 -- End of CTEs
