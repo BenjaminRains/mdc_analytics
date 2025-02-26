@@ -319,9 +319,9 @@ def parse_args():
     parser.add_argument(
         '--connection-type',
         type=str,
-        default='dev',
-        choices=['dev', 'prod', 'local', 'test'],
-        help='Type of database connection to use'
+        default='local',
+        choices=['local'],
+        help='Type of database connection to use (only local connections are currently supported)'
     )
     parser.add_argument(
         '--queries',
