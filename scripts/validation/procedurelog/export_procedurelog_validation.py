@@ -89,13 +89,13 @@ def parse_required_ctes(query_sql: str) -> List[str]:
             # Remove the comment prefix and split by comma
             cte_line = line.replace('-- CTEs used:', '').strip()
             required_ctes = [cte.strip() for cte in cte_line.split(',') if cte.strip()]
-            break  # Only consider the first occurrence
+            break  # Use only the first occurrence
     return required_ctes
+
 
 def load_cte_file(cte_name: str) -> str:
     """
     Load an individual CTE file from the ctes subdirectory.
-    For example, if cte_name is "ExcludedCodes", load "queries/ctes/ExcludedCodes.sql"
     """
     cte_path = Path(__file__).parent / 'queries' / 'ctes' / f'{cte_name}.sql'
     try:
@@ -107,13 +107,12 @@ def load_cte_file(cte_name: str) -> str:
 
 def get_dynamic_ctes(required_ctes: List[str], start_date: Optional[str] = None, end_date: Optional[str] = None) -> str:
     """
-    Assemble and return the SQL for the required CTEs.
-    Applies date substitutions to each CTE file content.
+    Assemble the SQL for the required CTEs.
     """
     cte_statements = []
     for cte_name in required_ctes:
         cte_content = load_cte_file(cte_name)
-        # Replace date placeholders if present
+        # Replace date placeholders if they exist
         cte_content = cte_content.replace('{{START_DATE}}', start_date or '2024-01-01')
         cte_content = cte_content.replace('{{END_DATE}}', end_date or '2025-01-01')
         cte_statements.append(cte_content)
@@ -128,13 +127,14 @@ def get_exports(start_date: Optional[str] = None, end_date: Optional[str] = None
     for query_name, description in QUERY_DESCRIPTIONS.items():
         try:
             query_sql = load_query_file(query_name)
-            # Parse required CTEs from the query file header
+            # Parse the required CTEs from the query header comment
             required_ctes = parse_required_ctes(query_sql)
             if required_ctes:
                 cte_sql = get_dynamic_ctes(required_ctes, start_date, end_date)
+                # Concatenate the dynamically assembled CTEs with the query SQL
                 full_query = f"{cte_sql}\n\n{query_sql}"
             else:
-                full_query = query_sql  # No CTEs declared for this query
+                full_query = query_sql  # Query does not declare any CTE dependencies
             
             exports.append({
                 'name': query_name,
@@ -147,6 +147,7 @@ def get_exports(start_date: Optional[str] = None, end_date: Optional[str] = None
             continue
     
     return exports
+
 
 
 def process_single_export(export, factory, connection_type, database, output_dir):
