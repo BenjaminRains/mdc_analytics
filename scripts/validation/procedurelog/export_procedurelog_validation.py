@@ -144,6 +144,18 @@ def load_cte_file(cte_name: str) -> str:
         logging.error(f"Error loading CTE file {cte_name}: {e}")
         raise
 
+def load_query_file(query_name: str) -> str:
+    """
+    Load a query file from the queries directory.
+    Query files are located in 'scripts/validation/procedurelog/queries'.
+    """
+    query_path = Path(__file__).parent / "queries" / f"{query_name}.sql"
+    try:
+        return query_path.read_text(encoding="utf-8")
+    except Exception as e:
+        logging.error(f"Error loading query file '{query_name}' from {query_path}: {e}")
+        raise
+
 def get_dynamic_ctes(
     required_ctes: List[str],
     global_start_date: Optional[str] = None,
@@ -173,20 +185,23 @@ def get_dynamic_ctes(
 def get_exports(start_date: Optional[str] = None, end_date: Optional[str] = None) -> List[Dict]:
     """
     Assemble export configurations by dynamically loading only the needed CTEs for each query.
+    Query files are located at 'scripts/validation/procedurelog/queries'.
     """
     exports = []
     
     for query_name, description in QUERY_DESCRIPTIONS.items():
         try:
+            # Load the query file from the specified directory.
             query_sql = load_query_file(query_name)
-            # Parse the required CTEs from the query header comment
+            
+            # Parse the required CTEs from the query header comment.
             required_ctes = parse_required_ctes(query_sql)
             if required_ctes:
                 cte_sql = get_dynamic_ctes(required_ctes, start_date, end_date)
-                # Concatenate the dynamically assembled CTEs with the query SQL
+                # Concatenate the dynamically assembled CTEs with the query SQL.
                 full_query = f"{cte_sql}\n\n{query_sql}"
             else:
-                full_query = query_sql  # Query does not declare any CTE dependencies
+                full_query = query_sql  # Query does not declare any CTE dependencies.
             
             exports.append({
                 'name': query_name,
@@ -195,10 +210,12 @@ def get_exports(start_date: Optional[str] = None, end_date: Optional[str] = None
                 'file': f"{query_name}.csv"
             })
         except Exception as e:
-            logging.error(f"Error setting up query {query_name}: {str(e)}")
+            # Include query name and path info in error logging for easier debugging.
+            logging.error(f"Error setting up query '{query_name}' (file: {Path(__file__).parent / 'queries' / f'{query_name}.sql'}): {e}")
             continue
     
     return exports
+
 
 
 
