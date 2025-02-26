@@ -15,7 +15,7 @@
 /logs/
 /notebooks/
 /src/connections/*
-!/src/connections/factory.py # include factory.py
+!/src/connections/factory.py
 /src/opendental/
 
 
