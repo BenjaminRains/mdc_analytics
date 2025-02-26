@@ -1,6 +1,6 @@
 -- Temporal Patterns Query
 -- Analyzes procedures and payments across time
--- CTEs used: ExcludedCodes, BaseProcedures, PaymentActivity, SuccessCriteria, MonthlyData
+-- CTEs used: excluded_codes.sql, base_procedures.sql, payment_activity.sql, success_criteria.sql, monthly_data.sql
 -- Date filter: 2024-01-01 to 2025-01-01
 SELECT
     proc_year,

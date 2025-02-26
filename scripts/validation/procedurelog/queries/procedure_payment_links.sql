@@ -1,6 +1,6 @@
 -- Procedure Payment Links Query
 -- Validates the relationships between procedures and their associated payments
--- CTEs used: ExcludedCodes, BaseProcedures, PaymentActivity, PaymentLinks, LinkagePatterns
+-- CTEs used: excluded_codes.sql, base_procedures.sql, payment_activity.sql, payment_links.sql, linkage_patterns.sql
 -- Date filter: 2024-01-01 to 2025-01-01
 SELECT
     payment_source_type,

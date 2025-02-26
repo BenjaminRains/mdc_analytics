@@ -1,3 +1,4 @@
+-- CTEs used: provider_base.sql, provider_volume.sql, procedure_categories.sql, hygiene_metrics.sql, payment_metrics.sql, appt_durations.sql, appt_production.sql, productivity_metrics.sql
 /*
 Query: Provider Performance Analysis with Appointment Time Calculation
 -------------------------------------------------------------------------------
@@ -6,9 +7,6 @@ Description:
 This query aggregates provider performance metrics from the Open Dental system,
 combining data from multiple tables (provider, appointment, procedurelog, and
 procedurecode) to produce a comprehensive provider report.
-
--- CTEs used: provider_base, provider_volume, procedure_categories, hygiene_metrics, payment_metrics, appt_durations, appt_production, productivity_metrics
-
 Metrics Calculated:
 1. Provider Basic Information
    - Provider number, abbreviation, name, specialty, status

@@ -1,6 +1,6 @@
 -- Split Patterns Query
 -- Analyzes how payments are split between insurance and direct payments
--- CTEs used: ExcludedCodes, BaseProcedures, PaymentActivity, PaymentSplits
+-- CTEs used: excluded_codes.sql, base_procedures.sql, payment_activity.sql, payment_splits.sql
 -- Date filter: 2024-01-01 to 2024-12-31
 SELECT
     payment_type,

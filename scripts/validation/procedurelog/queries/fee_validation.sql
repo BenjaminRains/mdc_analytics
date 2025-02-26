@@ -1,7 +1,7 @@
 -- Fee Validation Query
 -- Analyzes procedure fees across different ranges, categories, and relationships
 -- to fee schedules and adjustments
--- CTEs used: ExcludedCodes, BaseProcedures, StandardFees, ProcedureAdjustments, PaymentActivity, PatientResponsibility, FeeRanges
+-- CTEs used: excluded_codes.sql, base_procedures.sql, standard_fees.sql, procedure_adjustments.sql, payment_activity.sql, patient_responsibility.sql, fee_ranges.sql
 -- Date filter: 2024-01-01 to 2025-01-01
 SELECT
     fee_range,

@@ -1,6 +1,6 @@
 -- Status Distribution Query
 -- Analyzes the distribution of procedures by status code
--- CTEs used: ExcludedCodes, BaseProcedures, PaymentActivity, SuccessCriteria, AppointmentDetails
+-- CTEs used: excluded_codes.sql, base_procedures.sql, payment_activity.sql, success_criteria.sql, appointment_details.sql
 -- Date filter: 2024-01-01 to 2025-01-01
 SELECT
     pl.ProcStatus,

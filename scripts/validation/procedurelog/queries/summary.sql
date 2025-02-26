@@ -1,6 +1,6 @@
 -- Procedure Log Summary Query
 -- Provides overall metrics for procedure validation
--- CTEs used: ExcludedCodes, BaseProcedures, PaymentActivity, SuccessCriteria
+-- CTEs used: excluded_codes.sql, base_procedures.sql, payment_activity.sql, success_criteria.sql
 -- Date filter: 2024-01-01 to 2025-01-01
 SELECT
     COUNT(*) AS total_procedures,

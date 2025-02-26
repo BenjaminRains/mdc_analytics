@@ -1,6 +1,6 @@
 -- Fee Relationship Analysis
 -- Examines how procedure fees compare to standard fee schedules
--- CTEs used: ExcludedCodes, BaseProcedures, StandardFees
+-- CTEs used: excluded_codes.sql, base_procedures.sql, standard_fees.sql
 -- Date filter: 2024-01-01 to 2025-01-01
 SELECT
     fee_relationship,

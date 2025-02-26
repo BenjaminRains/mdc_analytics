@@ -1,6 +1,6 @@
 -- Base Counts Query
 -- Provides fundamental counts and statistics for procedures
--- CTEs used: ExcludedCodes, BaseProcedures, PaymentActivity
+-- CTEs used: excluded_codes.sql, base_procedures.sql, payment_activity.sql
 SELECT
     -- Basic counts
     COUNT(*) AS total_procedures,
