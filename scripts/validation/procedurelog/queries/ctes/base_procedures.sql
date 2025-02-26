@@ -1,6 +1,7 @@
 -- BASE PROCEDURES
 -- Core procedure dataset filtered by date range with key attributes
 -- Joins to procedure codes and flags excluded codes for special handling
+-- Date filter: 2024-01-01 to 2025-01-01
 -- dependent CTEs: ExcludedCodes
 BaseProcedures AS (
     SELECT 
