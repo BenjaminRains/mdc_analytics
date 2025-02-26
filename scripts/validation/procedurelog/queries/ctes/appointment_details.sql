@@ -3,11 +3,13 @@
 -- Used for joining procedures to appointments and tracking appointment status
 -- dependent CTEs: None
 -- Date filter: 2024-01-01 to 2025-01-01
+-- NOTE: AptDateTime is formatted as '0001-01-01 00:00:00' when null
 AppointmentDetails AS (
     SELECT
         a.AptNum,
-        a.AptDateTime,
+        NULLIF(DATE(a.AptDateTime), '0001-01-01') AS AptDate,
         a.AptStatus
     FROM appointment a
-    WHERE a.AptDateTime >= '{{START_DATE}}' AND a.AptDateTime < '{{END_DATE}}'
+    WHERE a.AptDateTime >= '{{START_DATE}}' 
+      AND a.AptDateTime < '{{END_DATE}}'
 )
