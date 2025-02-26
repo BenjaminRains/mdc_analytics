@@ -22,13 +22,13 @@ with date filters replaced by CLI parameters (if provided).
 
 import pandas as pd
 import os
-from datetime import datetime
+from datetime import datetime, date
 import logging
 import argparse
 import concurrent.futures
 from tqdm import tqdm
 from pathlib import Path
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, Optional, List, Tuple, NamedTuple
 import re
 import time
 from src.connections.factory import ConnectionFactory
@@ -105,24 +105,50 @@ DATE_FILTER_REGEX = re.compile(
     re.IGNORECASE
 )
 
-def parse_date_filter(content: str) -> Tuple[Optional[str], Optional[str]]:
+class DateRange(NamedTuple):
+    start_date: date
+    end_date: date
+
+    @classmethod
+    def from_strings(cls, start: Optional[str], end: Optional[str]) -> 'DateRange':
+        """Create a DateRange from string dates, with validation."""
+        try:
+            start_date = datetime.strptime(start, '%Y-%m-%d').date() if start else date(2024, 1, 1)
+            end_date = datetime.strptime(end, '%Y-%m-%d').date() if end else date(2025, 1, 1)
+            
+            if end_date <= start_date:
+                raise ValueError(f"End date {end_date} must be after start date {start_date}")
+                
+            return cls(start_date, end_date)
+        except ValueError as e:
+            logging.error(f"Date parsing error: {e}")
+            raise
+
+def parse_date_filter(content: str) -> Optional[DateRange]:
     """
-    Parse the date filter from the provided SQL content.
-    
-    Expected format:
-        -- Date filter: 2024-01-01 to 2025-01-01
-    Returns:
-        A tuple (start_date, end_date) if found, otherwise (None, None).
+    Parse the date filter from SQL content.
+    Expected format: -- Date filter: 2024-01-01 to 2025-01-01
     """
     match = DATE_FILTER_REGEX.search(content)
     if match:
-        return match.group(1), match.group(2)
-    return None, None
+        try:
+            return DateRange.from_strings(match.group(1), match.group(2))
+        except ValueError:
+            return None
+    return None
 
-def parse_query_date_filter(query_sql: str) -> Tuple[Optional[str], Optional[str]]:
+def apply_date_filter(sql: str, date_range: DateRange) -> str:
+    """Apply date range to SQL, with validation of the template variables."""
+    if '{{START_DATE}}' not in sql or '{{END_DATE}}' not in sql:
+        logging.warning("SQL missing date filter placeholders")
+        return sql
+        
+    return sql.replace('{{START_DATE}}', str(date_range.start_date)).replace('{{END_DATE}}', str(date_range.end_date))
+
+def parse_query_date_filter(query_sql: str) -> Optional[DateRange]:
     return parse_date_filter(query_sql)
 
-def parse_cte_date_filter(cte_sql: str) -> Tuple[Optional[str], Optional[str]]:
+def parse_cte_date_filter(cte_sql: str) -> Optional[DateRange]:
     return parse_date_filter(cte_sql)
 
 # Load a query file from the queries directory.
@@ -147,46 +173,66 @@ def load_cte_file(cte_name: str) -> str:
 # Dynamically assemble the required CTEs with date substitutions.
 def get_dynamic_ctes(
     required_ctes: List[str],
-    global_start_date: Optional[str] = None,
-    global_end_date: Optional[str] = None
+    global_date_range: Optional[DateRange] = None
 ) -> str:
+    """Assemble CTEs with proper date filtering."""
     if not required_ctes:
         return ""
         
     cte_statements = []
     for cte_name in required_ctes:
         cte_content = load_cte_file(cte_name)
-        file_start_date, file_end_date = parse_date_filter(cte_content)
-        start_date = global_start_date or file_start_date or '2024-01-01'
-        end_date = global_end_date or file_end_date or '2025-01-01'
-        cte_content = cte_content.replace('{{START_DATE}}', start_date).replace('{{END_DATE}}', end_date)
+        file_date_range = parse_date_filter(cte_content)
+        
+        # Use global date range if provided, otherwise use file's default
+        date_range = global_date_range or file_date_range or DateRange(date(2024, 1, 1), date(2025, 1, 1))
+        
+        # Apply the date filter
+        cte_content = apply_date_filter(cte_content, date_range)
         cte_statements.append(cte_content.strip())
     
-    # Combine CTEs with WITH and commas
-    combined_ctes = "WITH " + ",\n".join(cte_statements)
-    return combined_ctes
+    return "WITH " + ",\n".join(cte_statements)
 
 # Assemble export configurations for each query, replacing date placeholders dynamically.
-def get_exports(global_start_date: Optional[str] = None, global_end_date: Optional[str] = None, selected_queries: Optional[List[str]] = None) -> List[Dict]:
+def get_exports(
+    global_start_date: Optional[str] = None,
+    global_end_date: Optional[str] = None,
+    selected_queries: Optional[List[str]] = None
+) -> List[Dict]:
+    """Assemble export configurations with validated date filtering."""
     exports = []
-    # Only process queries that were specifically requested, or all if none specified
+    
+    # Create global date range once
+    try:
+        global_date_range = DateRange.from_strings(global_start_date, global_end_date) if (global_start_date or global_end_date) else None
+    except ValueError as e:
+        logging.error(f"Invalid global date range: {e}")
+        raise
+    
     query_items = [(name, desc) for name, desc in QUERY_DESCRIPTIONS.items() 
                   if not selected_queries or name in selected_queries]
     
     for query_name, description in query_items:
         try:
             query_sql = load_query_file(query_name)
-            # Parse default date filter from the query file
-            query_default_start, query_default_end = parse_query_date_filter(query_sql)
-            effective_start = global_start_date or query_default_start or '2024-01-01'
-            effective_end = global_end_date or query_default_end or '2025-01-01'
-            query_sql = query_sql.replace('{{START_DATE}}', effective_start).replace('{{END_DATE}}', effective_end)
+            
+            # Get query's default date range
+            query_date_range = parse_date_filter(query_sql)
+            
+            # Use global range if provided, otherwise use query's default
+            date_range = global_date_range or query_date_range or DateRange(date(2024, 1, 1), date(2025, 1, 1))
+            
+            # Apply date filter to query
+            query_sql = apply_date_filter(query_sql, date_range)
+            
+            # Handle CTEs with the same date range
             required_ctes = parse_required_ctes(query_sql)
             if required_ctes:
-                cte_sql = get_dynamic_ctes(required_ctes, global_start_date, global_end_date)
+                cte_sql = get_dynamic_ctes(required_ctes, date_range)
                 full_query = f"{cte_sql}\n\n{query_sql}"
             else:
                 full_query = query_sql
+                
             exports.append({
                 'name': query_name,
                 'description': description,
@@ -197,6 +243,7 @@ def get_exports(global_start_date: Optional[str] = None, global_end_date: Option
             query_path = QUERIES_DIR / f"{query_name}.sql"
             logging.error(f"Error setting up query '{query_name}' (file: {query_path}): {e}")
             continue
+            
     return exports
 
 # Process a single export query and save its results to a CSV file.
