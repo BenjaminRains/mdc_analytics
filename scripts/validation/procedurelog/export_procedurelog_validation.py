@@ -33,6 +33,11 @@ from tqdm import tqdm
 import time
 import re
 
+BASE_DIR = Path(__file__).parent.resolve()
+QUERIES_DIR = BASE_DIR / "queries"
+CTES_DIR = QUERIES_DIR / "ctes"
+LOG_DIR = BASE_DIR / "logs"
+DATA_DIR = BASE_DIR / "data"
 
 # Define query descriptions and filenames
 QUERY_DESCRIPTIONS = {
@@ -217,8 +222,6 @@ def get_exports(start_date: Optional[str] = None, end_date: Optional[str] = None
     return exports
 
 
-
-
 def process_single_export(export, factory, connection_type, database, output_dir):
     """Process a single export query and save results to CSV."""
     fresh_connection = None
@@ -302,7 +305,7 @@ def export_validation_results(connection_factory, connection_type, database, que
     
     # Load common CTEs once
     logging.info("Loading CTEs")
-    ctes = get_ctes(start_date, end_date)
+    ctes = load_cte_file(start_date, end_date)
     
     # Get export configurations, passing in the loaded CTEs
     exports = get_exports(ctes)
