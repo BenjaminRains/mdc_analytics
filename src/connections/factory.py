@@ -6,16 +6,10 @@ from .base import ConnectionConfig, DatabaseConnection
 from .clinic_servers import MDCServerConnection
 from .local import LocalMySQLConnection, LocalMariaDBConnection
 from .pool import PooledDatabaseConnection
+from src.db_config import LOCAL_VALID_DATABASES, MDC_VALID_DATABASES
 
 # Load environment variables from the .env file
 load_dotenv(dotenv_path=Path(".env"))
-
-# Import valid database names from db_config.py
-from db_config import LOCAL_VALID_DATABASES, MDC_VALID_DATABASES
-
-# These variables are already lists (populated by get_valid_databases in db_config.py)
-VALID_DATABASES_LOCAL = LOCAL_VALID_DATABASES
-VALID_DATABASES_MDC = MDC_VALID_DATABASES
 
 def get_port(env_var: str, default: int) -> int:
     """Helper function to retrieve a port from the environment, defaulting if necessary."""
@@ -54,11 +48,11 @@ class ConnectionFactory:
         
         # Validate database name based on connection type.
         if connection_type == 'mdc':
-            if database and database not in VALID_DATABASES_MDC:
-                raise ValueError(f"Invalid MDC database name. Must be one of: {', '.join(VALID_DATABASES_MDC)}")
+            if database and database not in MDC_VALID_DATABASES:
+                raise ValueError(f"Invalid MDC database name. Must be one of: {', '.join(MDC_VALID_DATABASES)}")
         elif connection_type in ('local_mysql', 'local_mariadb'):
-            if database and database not in VALID_DATABASES_LOCAL:
-                raise ValueError(f"Invalid local database name. Must be one of: {', '.join(VALID_DATABASES_LOCAL)}")
+            if database and database not in LOCAL_VALID_DATABASES:
+                raise ValueError(f"Invalid local database name. Must be one of: {', '.join(LOCAL_VALID_DATABASES)}")
         
         connection_class = cls._connection_types[connection_type]
         config = cls._get_config(connection_type, database, use_root)
