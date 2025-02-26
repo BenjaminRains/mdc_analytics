@@ -2,6 +2,38 @@
 -- Analyzes procedures that are commonly performed together (bundled)
 
 WITH 
+-- Import required CTEs from common_ctes.sql
+ExcludedCodes AS (
+    SELECT CodeNum 
+    FROM procedurecode 
+    WHERE ProcCode IN (
+      '~GRP~', 'D9987', 'D9986', 'Watch', 'Ztoth', 'D0350',
+      '00040', 'D2919', '00051',
+      'D9992', 'D9995', 'D9996',
+      'D0190', 'D0171', 'D0140', 'D9430', 'D0120'
+    )
+),
+
+BaseProcedures AS (
+    SELECT 
+        pl.ProcNum,
+        pl.PatNum,
+        pl.ProvNum,
+        pl.ProcDate,
+        pl.ProcStatus,
+        pl.ProcFee,
+        pl.CodeNum,
+        pl.AptNum,
+        pl.DateComplete,
+        pc.ProcCode,
+        pc.Descript,
+        CASE WHEN ec.CodeNum IS NOT NULL THEN 'Excluded' ELSE 'Standard' END AS CodeCategory
+    FROM procedurelog pl
+    JOIN procedurecode pc ON pl.CodeNum = pc.CodeNum
+    LEFT JOIN ExcludedCodes ec ON pl.CodeNum = ec.CodeNum
+    WHERE pl.ProcDate >= '2024-01-01' AND pl.ProcDate < '2025-01-01'
+),
+
 -- Get all procedure pairs within the same day for the same patient
 ProcedurePairs AS (
     SELECT 
@@ -61,6 +93,24 @@ VisitCounts AS (
     GROUP BY PatNum, ProcDate
 ),
 
+PaymentActivity AS (
+    SELECT 
+        pl.ProcNum,
+        pl.ProcFee,
+        COALESCE(SUM(cp.InsPayAmt), 0) AS insurance_paid,
+        COALESCE(SUM(ps.SplitAmt), 0) AS direct_paid,
+        COALESCE(SUM(cp.InsPayAmt), 0) + COALESCE(SUM(ps.SplitAmt), 0) AS total_paid,
+        CASE 
+            WHEN pl.ProcFee > 0 THEN 
+                (COALESCE(SUM(cp.InsPayAmt), 0) + COALESCE(SUM(ps.SplitAmt), 0)) / pl.ProcFee 
+            ELSE NULL 
+        END AS payment_ratio
+    FROM BaseProcedures pl
+    LEFT JOIN claimproc cp ON pl.ProcNum = cp.ProcNum AND cp.InsPayAmt > 0
+    LEFT JOIN paysplit ps ON pl.ProcNum = ps.ProcNum AND ps.SplitAmt > 0
+    GROUP BY pl.ProcNum, pl.ProcFee
+),
+
 -- Calculate payment data for visits with multiple procedures
 BundledPayments AS (
     SELECT
@@ -88,40 +138,79 @@ BundledPayments AS (
         pl.CodeCategory = 'Standard'
     LEFT JOIN PaymentActivity pa ON pl.ProcNum = pa.ProcNum
     GROUP BY v.PatNum, v.ProcDate, v.procedures_in_visit, bundle_size
+),
+
+PaymentAnalysis AS (
+    SELECT 
+        bundle_size,
+        COUNT(*) AS visit_count,
+        SUM(procedure_count) AS total_procedures,
+        ROUND(AVG(procedure_count), 2) AS avg_procedures_per_visit,
+        ROUND(AVG(total_fee), 2) AS avg_visit_fee,
+        SUM(total_fee) AS total_fees,
+        SUM(total_paid) AS total_paid,
+        ROUND(SUM(total_paid) / NULLIF(SUM(total_fee), 0) * 100, 2) AS payment_percentage,
+        COUNT(CASE WHEN payment_ratio >= 0.95 THEN 1 END) AS fully_paid_visits,
+        ROUND(COUNT(CASE WHEN payment_ratio >= 0.95 THEN 1 END) * 100.0 / COUNT(*), 2) AS fully_paid_pct
+    FROM BundledPayments
+    GROUP BY bundle_size
 )
 
--- Output two result sets:
--- 1. Most common procedure pairs
-SELECT 'Common Procedure Pairs' AS analysis_type, 
-    proc1_code, 
+-- Combine the two result sets into one output using UNION ALL
+SELECT 
+    1 as sort_order,
+    'Common Procedure Pairs' AS analysis_type,
+    proc1_code,
     proc1_desc,
-    proc2_code, 
+    proc2_code,
     proc2_desc,
     pair_count,
     avg_pair_fee,
-    total_pair_fee
+    total_pair_fee,
+    NULL AS bundle_size,
+    NULL AS visit_count,
+    NULL AS total_procedures,
+    NULL AS avg_procedures_per_visit,
+    NULL AS avg_visit_fee,
+    NULL AS total_fees,
+    NULL AS total_paid,
+    NULL AS payment_percentage,
+    NULL AS fully_paid_visits,
+    NULL AS fully_paid_pct
 FROM CommonPairs
-ORDER BY pair_count DESC
-LIMIT 100;
 
--- 2. Payment patterns by bundle size
-SELECT 'Bundle Size Payment Analysis' AS analysis_type,
+UNION ALL
+
+SELECT 
+    2 as sort_order,
+    'Bundle Size Payment Analysis' AS analysis_type,
+    NULL AS proc1_code,
+    NULL AS proc1_desc,
+    NULL AS proc2_code,
+    NULL AS proc2_desc,
+    NULL AS pair_count,
+    NULL AS avg_pair_fee,
+    NULL AS total_pair_fee,
     bundle_size,
-    COUNT(*) AS visit_count,
-    SUM(procedure_count) AS total_procedures,
-    ROUND(AVG(procedure_count), 2) AS avg_procedures_per_visit,
-    ROUND(AVG(total_fee), 2) AS avg_visit_fee,
-    SUM(total_fee) AS total_fees,
-    SUM(total_paid) AS total_paid,
-    ROUND(SUM(total_paid) / NULLIF(SUM(total_fee), 0) * 100, 2) AS payment_percentage,
-    COUNT(CASE WHEN payment_ratio >= 0.95 THEN 1 END) AS fully_paid_visits,
-    ROUND(COUNT(CASE WHEN payment_ratio >= 0.95 THEN 1 END) * 100.0 / COUNT(*), 2) AS fully_paid_pct
-FROM BundledPayments
-GROUP BY bundle_size
+    visit_count,
+    total_procedures,
+    avg_procedures_per_visit,
+    avg_visit_fee,
+    total_fees,
+    total_paid,
+    payment_percentage,
+    fully_paid_visits,
+    fully_paid_pct
+FROM PaymentAnalysis
 ORDER BY 
-    CASE bundle_size
-        WHEN 'Single Procedure' THEN 1
-        WHEN '2-3 Procedures' THEN 2
-        WHEN '4-5 Procedures' THEN 3
-        WHEN '6+ Procedures' THEN 4
-    END;
+    sort_order,
+    CASE 
+        WHEN sort_order = 1 THEN pair_count
+        WHEN sort_order = 2 THEN
+            CASE bundle_size
+                WHEN 'Single Procedure' THEN 1
+                WHEN '2-3 Procedures' THEN 2
+                WHEN '4-5 Procedures' THEN 3
+                WHEN '6+ Procedures' THEN 4
+            END
+    END DESC;
