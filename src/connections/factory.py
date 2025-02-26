@@ -6,7 +6,6 @@ from .base import ConnectionConfig, DatabaseConnection
 from .clinic_servers import MDCServerConnection
 from .local import LocalMySQLConnection, LocalMariaDBConnection
 from .pool import PooledDatabaseConnection
-from src.db_config import LOCAL_VALID_DATABASES, MDC_VALID_DATABASES
 
 # Load environment variables from the .env file
 load_dotenv(dotenv_path=Path(".env"))
@@ -46,13 +45,22 @@ class ConnectionFactory:
         if connection_type not in cls._connection_types:
             raise ValueError(f"Unknown connection type: {connection_type}")
         
-        # Validate database name based on connection type.
-        if connection_type == 'mdc':
-            if database and database not in MDC_VALID_DATABASES:
-                raise ValueError(f"Invalid MDC database name. Must be one of: {', '.join(MDC_VALID_DATABASES)}")
-        elif connection_type in ('local_mysql', 'local_mariadb'):
-            if database and database not in LOCAL_VALID_DATABASES:
-                raise ValueError(f"Invalid local database name. Must be one of: {', '.join(LOCAL_VALID_DATABASES)}")
+        # Validate database name based on connection type
+        if connection_type == 'local_mariadb':
+            configured_db = os.getenv('MARIADB_DATABASE')
+            if not configured_db:
+                raise ValueError("MARIADB_DATABASE must be set in .env file")
+            if database and database != configured_db:
+                raise ValueError(f"Invalid database name. Must match MARIADB_DATABASE in .env: {configured_db}")
+            database = configured_db
+        elif connection_type == 'mdc':
+            # For MDC connections, validate against MDC_DATABASE env var
+            configured_db = os.getenv('MDC_DATABASE')
+            if not configured_db:
+                raise ValueError("MDC_DATABASE must be set in .env file")
+            if database and database != configured_db:
+                raise ValueError(f"Invalid MDC database name. Must match MDC_DATABASE in .env: {configured_db}")
+            database = configured_db
         
         connection_class = cls._connection_types[connection_type]
         config = cls._get_config(connection_type, database, use_root)
