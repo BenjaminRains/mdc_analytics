@@ -1,46 +1,64 @@
 /*
 Query: Provider Performance Analysis with Appointment Time Calculation
-Author: [Your Name]
-Date: [Current Date]
+-------------------------------------------------------------------------------
 
 Description:
-  This query aggregates provider performance metrics from the Open Dental system. It combines data from multiple tables,
-  including provider, appointment, procedurelog, and procedurecode, to produce a comprehensive report for each provider.
+This query aggregates provider performance metrics from the Open Dental system,
+combining data from multiple tables (provider, appointment, procedurelog, and
+procedurecode) to produce a comprehensive provider report.
 
-  The query calculates the following metrics:
-    • Provider basic information: provider number, abbreviation, name, specialty, status, and hourly production goal.
-    • Procedure volume metrics: total procedures, total procedure fees, unique patients, days with activity, unique procedure codes,
-      and counts of procedures by status (treatment planned, complete, in progress, deleted, rejected, etc.).
-    • Procedure category distribution: count and percentage for each procedure category.
-    • Hygiene metrics: count and percentages of hygiene vs. non-hygiene procedures and associated fees.
-    • Payment metrics: total billed, total insurance paid, total patient paid, total paid, and collection rate.
-    • Productivity metrics: appointment count, scheduled hours, total production (sum of procedure fees for each appointment),
-      and hourly production (calculated as Total Production divided by Scheduled Hours).
+Metrics Calculated:
+1. Provider Basic Information
+   - Provider number, abbreviation, name, specialty, status
+   - Hourly production goal
 
-Appointment Time Calculation (per Open Dental Logic):
-  - The appointment's time pattern is stored in the appointment table's Pattern field (a VARCHAR field).
-  - The Pattern field contains a string where:
-      • Each "/" character represents 10 minutes of non‐provider (assistant) time.
-      • Each "X" character represents 10 minutes of provider time.
-  - When multiple procedures are attached to an appointment:
-      • The provider time is the sum of all "X" characters.
-      • The non‐provider time is taken as the maximum count of leading "/" characters (left non‐provider time)
-        and the maximum count of trailing "/" characters (right non‐provider time) among all procedures.
-  - The total appointment duration in minutes is:
-        (left non‐provider + provider time + right non‐provider) × 10.
-    This value is then converted to hours by dividing by 60.
-  
-  The query uses several Common Table Expressions (CTEs) to separately calculate each set of metrics, and then joins
-  them together by provider.
+2. Procedure Volume Metrics
+   - Total procedures
+   - Total procedure fees
+   - Unique patients
+   - Days with activity
+   - Unique procedure codes
+   - Procedure counts by status (treatment planned, complete, in progress, etc.)
+
+3. Procedure Category Distribution
+   - Count and percentage by category
+
+4. Hygiene Metrics
+   - Count and percentages of hygiene vs. non-hygiene procedures
+   - Associated fees
+
+5. Payment Metrics
+   - Total billed
+   - Total insurance paid
+   - Total patient paid
+   - Total paid
+   - Collection rate
+
+6. Productivity Metrics
+   - Appointment count
+   - Scheduled hours
+   - Total production
+   - Hourly production
+
+Appointment Time Calculation:
+---------------------------
+Pattern field interpretation (VARCHAR):
+- "/" = 10 minutes of non-provider time
+- "X" = 10 minutes of provider time
+
+Multiple procedures calculation:
+- Provider time = count of "X" characters × 10
+- Non-provider time = max(count of leading "/", count of trailing "/") × 10
+- Total duration (hours) = (left non-provider + provider time + right non-provider) ÷ 60
 
 Tables Used:
-  - provider: Contains provider information.
-  - appointment: Contains appointment details, including the Pattern field.
-  - procedurelog: Contains details of procedures performed, including fees and status.
-  - procedurecode: Provides procedure category information.
+-----------
+- provider: Provider information
+- appointment: Appointment details and patterns
+- procedurelog: Procedure details, fees, and status
+- procedurecode: Procedure category information
 
-Note:
-  Adjust the date range ('2023-01-01' to '2023-12-31') and any other parameters as needed.
+Note: Date range defaults to '2023-01-01' to '2023-12-31'. Adjust as needed.
 */
 
 WITH provider_base AS (
@@ -158,13 +176,7 @@ payment_metrics AS (
     AND pl.ProcStatus = 2
   GROUP BY pl.ProvNum
 ),
--- Calculate each appointment's duration using the appointment.Pattern field.
--- The Pattern is interpreted as:
---   left_nonprovider: count of leading '/' characters.
---   provider_time: count of 'X' characters.
---   right_nonprovider: count of trailing '/' characters.
--- Each unit represents 10 minutes; total minutes = (left + provider + right) * 10.
--- Convert minutes to hours by dividing by 60.
+
 appt_durations AS (
   SELECT
     AptNum,
