@@ -16,7 +16,8 @@ import sys
 import argparse
 from typing import List, Optional
 from scripts.sql.treatment_journey_ml.ml_index_configs import TREATMENT_JOURNEY_INDEXES, SYSTEM_INDEXES
-from src.connections.factory import ConnectionFactory, VALID_DATABASES
+from src.db_config import VALID_DATABASES
+from src.connections.factory import ConnectionFactory
 import re
 
 # Define constants for base queries
