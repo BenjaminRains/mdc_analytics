@@ -313,8 +313,8 @@ def parse_args():
     parser.add_argument(
         '--database',
         type=str,
-        default='opendental',
-        help='Database name to connect to'
+        required=True,
+        help='Database name to connect to (REQUIRED). DO NOT use the live opendental database.'
     )
     parser.add_argument(
         '--connection-type',
@@ -383,7 +383,7 @@ def main():
             logging.info(f"End date filter: {args.end_date}")
         logging.info(f"Parallel execution: {args.parallel}")
         factory = ConnectionFactory()
-        connection = factory.create_connection(args.connection_type, args.database)
+        connection = ConnectionFactory.create_connection('local_mariadb', args.database)
         ensure_indexes(connection, args.database)
         connection.close()
         export_validation_results(
