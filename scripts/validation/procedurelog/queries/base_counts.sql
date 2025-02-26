@@ -16,7 +16,7 @@ SELECT
     SUM(CASE WHEN ProcStatus = 4 THEN 1 ELSE 0 END) AS existing_other,
     SUM(CASE WHEN ProcStatus = 5 THEN 1 ELSE 0 END) AS referred,
     SUM(CASE WHEN ProcStatus = 6 THEN 1 ELSE 0 END) AS deleted,
-    SUM(CASE WHEN ProcStatus = 7 THEN 1 ELSE 0 END) AS `condition`,
+    SUM(CASE WHEN ProcStatus = 7 THEN 1 ELSE 0 END) AS need_to_do,
     SUM(CASE WHEN ProcStatus = 8 THEN 1 ELSE 0 END) AS invalid,
     
     -- Fee statistics
