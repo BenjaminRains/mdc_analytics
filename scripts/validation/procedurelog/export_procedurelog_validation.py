@@ -138,28 +138,28 @@ def parse_cte_date_filter(cte_sql: str) -> Tuple[Optional[str], Optional[str]]:
     """
     return parse_date_filter(cte_sql)
 
-def load_cte_file(cte_name: str) -> str:
-    """
-    Load an individual CTE file from the ctes subdirectory.
-    """
-    cte_path = Path(__file__).parent / 'queries' / 'ctes' / f'{cte_name}.sql'
-    try:
-        return cte_path.read_text(encoding='utf-8')
-    except Exception as e:
-        logging.error(f"Error loading CTE file {cte_name}: {e}")
-        raise
-
 def load_query_file(query_name: str) -> str:
     """
     Load a query file from the queries directory.
-    Query files are located in 'scripts/validation/procedurelog/queries'.
     """
-    query_path = Path(__file__).parent / "queries" / f"{query_name}.sql"
+    query_path = QUERIES_DIR / f"{query_name}.sql"
     try:
         return query_path.read_text(encoding="utf-8")
     except Exception as e:
         logging.error(f"Error loading query file '{query_name}' from {query_path}: {e}")
         raise
+
+def load_cte_file(cte_name: str) -> str:
+    """
+    Load an individual CTE file from the ctes subdirectory.
+    """
+    cte_path = CTES_DIR / f"{cte_name}.sql"
+    try:
+        return cte_path.read_text(encoding='utf-8')
+    except Exception as e:
+        logging.error(f"Error loading CTE file {cte_name} from {cte_path}: {e}")
+        raise
+
 
 def get_dynamic_ctes(
     required_ctes: List[str],
