@@ -212,7 +212,7 @@ def process_single_export(export, factory, connection_type, database, output_dir
                 pass
 
 def export_validation_results(connection_factory, connection_type, database, queries=None, 
-                             output_dir=None, use_parallel=False):
+                             output_dir=None, use_parallel=False, start_date=None, end_date=None):
     """
     Export payment validation query results to separate CSV files.
 
@@ -223,6 +223,8 @@ def export_validation_results(connection_factory, connection_type, database, que
         queries: List of query names to run (None for all).
         output_dir: Directory to store output files (None for default).
         use_parallel: Whether to execute queries in parallel (default: False)
+        start_date: Start date for filtering data (YYYY-MM-DD format)
+        end_date: End date for filtering data (YYYY-MM-DD format)
     """
     # Set default output directory if none provided
     if output_dir is None:
@@ -233,7 +235,7 @@ def export_validation_results(connection_factory, connection_type, database, que
     
     # Load common CTEs once
     logging.info("Loading CTEs")
-    ctes = get_ctes()
+    ctes = get_ctes(start_date, end_date)
     
     # Get export configurations, passing in the loaded CTEs
     exports = get_exports(ctes)
@@ -311,40 +313,42 @@ def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         description='Export payment validation data to CSV files',
-        formatter_class=argparse.RawTextHelpFormatter
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     
     parser.add_argument(
         '--output-dir',
+        type=str,
         default=r"C:\Users\rains\mdc_analytics\scripts\validation\payment_split\data",
-        help='Directory to store output files'
+        help='Directory where CSV files will be saved'
     )
     
     parser.add_argument(
         '--log-dir',
+        type=str,
         default='scripts/validation/payment_split/logs',
-        help='Directory to store log files'
+        help='Directory where log files will be saved'
     )
     
     parser.add_argument(
         '--database',
-        default='opendental_analytics_opendentalbackup_01_03_2025',
-        help='Database name to connect to'
+        type=str,
+        required=True,
+        help='Database name to connect to (REQUIRED). DO NOT use the live opendental database.'
     )
     
     parser.add_argument(
         '--connection-type',
+        type=str,
         default='local_mariadb',
-        choices=['local_mariadb', 'local_mysql', 'mdc'],
-        help='Type of database connection to use'
+        choices=['local_mariadb'],
+        help='Type of database connection to use (only local MariaDB connections are currently supported)'
     )
     
     parser.add_argument(
         '--queries',
         nargs='+',
-        choices=['summary', 'base_counts', 'source_counts', 'filter_summary', 
-                'diagnostic', 'verification', 'problems', 'duplicate_joins', 
-                'join_stages', 'daily_patterns', 'payment_details', 'containment'],
+        choices=list(QUERY_DESCRIPTIONS.keys()),
         help='Specific queries to run (default: all)'
     )
     
@@ -431,7 +435,7 @@ def main():
         factory = ConnectionFactory()
         
         # Create initial connection for index check
-        connection = factory.create_connection(args.connection_type, args.database)
+        connection = ConnectionFactory.create_connection('local_mariadb', args.database)
         
         # Ensure required indexes exist
         ensure_indexes(connection, args.database)
@@ -446,7 +450,9 @@ def main():
             database=args.database,
             queries=args.queries,
             output_dir=args.output_dir,
-            use_parallel=args.parallel
+            use_parallel=args.parallel,
+            start_date=args.start_date,
+            end_date=args.end_date
         )
         
         logging.info("Payment validation export completed successfully")
