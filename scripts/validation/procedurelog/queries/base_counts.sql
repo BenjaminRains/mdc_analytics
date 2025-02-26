@@ -1,6 +1,7 @@
 -- Base Counts Query
 -- Provides fundamental counts and statistics for procedures
 -- CTEs used: excluded_codes.sql, base_procedures.sql, payment_activity.sql
+-- Date filter: 2024-01-01 to 2025-01-01
 SELECT
     -- Basic counts
     COUNT(*) AS total_procedures,

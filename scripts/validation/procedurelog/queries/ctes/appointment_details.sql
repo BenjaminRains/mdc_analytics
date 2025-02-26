@@ -2,7 +2,7 @@
 -- Provides appointment information within date range
 -- Used for joining procedures to appointments and tracking appointment status
 -- dependent CTEs: None
--- Date filter: 2024-01-01 to 2025-01-01
+
 -- NOTE: AptDateTime is formatted as '0001-01-01 00:00:00' when null
 AppointmentDetails AS (
     SELECT
