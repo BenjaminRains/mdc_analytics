@@ -27,24 +27,28 @@ from src.connections.factory import ConnectionFactory
 import argparse
 from scripts.base.index_manager import IndexManager
 from pathlib import Path
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Tuple
 import concurrent.futures
 from tqdm import tqdm
 import time
+import re
+
 
 # Define query descriptions and filenames
 QUERY_DESCRIPTIONS = {
     'summary': 'Overall procedure data summary',
+    'base_counts': 'Fundamental counts and statistics for procedures',
+    'bundled_procedures': 'Analyzes procedures that are commonly performed together (bundled)',
     'status_distribution': 'Procedure status code distribution',
     'status_transitions': 'Procedure status transition patterns',
     'temporal_patterns': 'Month-by-month procedure analytics',
     'code_distribution': 'Distribution of procedures by procedure code',
-    'fee_distribution': 'Distribution of procedures by fee amounts',
-    'payment_distribution': 'Distribution of payment percentages',
-    'payment_patterns': 'Payment patterns and linkage analysis',
-    'payment_splits': 'Analysis of insurance vs. direct payments',
-    'appointment_connections': 'How procedures connect to appointments',
-    'procedure_pairs': 'Commonly paired procedures analysis',
+    'fee_relationship_analysis': 'Analyzes the relationship between procedure fees and payments',
+    'fee_validation': 'Analyzes procedure fees across different ranges, categories, and relationships',
+    'payment_metrics': 'Analyzes payment ratios and patterns for completed procedures',
+    'procedure_payment_links': 'Validates the relationships between procedures and their associated payments',
+    'split_patterns': 'Analyzes how payments are split between insurance and direct payments',
+    'appointment_overlap': 'How procedures connect to appointments',
     'edge_cases': 'Procedure and payment anomalies',
     'provider_performance': 'Provider-level procedure metrics',
     'procedures_raw': 'Raw procedure data with treatment plan and perio exam context'
@@ -92,6 +96,42 @@ def parse_required_ctes(query_sql: str) -> List[str]:
             break  # Use only the first occurrence
     return required_ctes
 
+# Compile a regex pattern to match a date filter comment.
+# It expects a line like:
+#   -- Date filter: 2024-01-01 to 2025-01-01
+DATE_FILTER_REGEX = re.compile(
+    r'--\s*Date\s*filter:\s*([\d]{4}-[\d]{2}-[\d]{2})\s*to\s*([\d]{4}-[\d]{2}-[\d]{2})',
+    re.IGNORECASE
+)
+
+def parse_date_filter(content: str) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Parse the date filter from the provided SQL content.
+    
+    Expected format:
+        -- Date filter: 2024-01-01 to 2025-01-01
+    
+    Returns:
+        A tuple (start_date, end_date) if found, otherwise (None, None).
+    """
+    match = DATE_FILTER_REGEX.search(content)
+    if match:
+        return match.group(1), match.group(2)
+    return None, None
+
+def parse_query_date_filter(query_sql: str) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Parse the date filter from the query file content.
+    Wrapper for parse_date_filter.
+    """
+    return parse_date_filter(query_sql)
+
+def parse_cte_date_filter(cte_sql: str) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Parse the date filter from the CTE file content.
+    Wrapper for parse_date_filter.
+    """
+    return parse_date_filter(cte_sql)
 
 def load_cte_file(cte_name: str) -> str:
     """
@@ -99,24 +139,36 @@ def load_cte_file(cte_name: str) -> str:
     """
     cte_path = Path(__file__).parent / 'queries' / 'ctes' / f'{cte_name}.sql'
     try:
-        with cte_path.open('r') as f:
-            return f.read()
+        return cte_path.read_text(encoding='utf-8')
     except Exception as e:
-        logging.error(f"Error loading CTE file {cte_name}: {str(e)}")
+        logging.error(f"Error loading CTE file {cte_name}: {e}")
         raise
 
-def get_dynamic_ctes(required_ctes: List[str], start_date: Optional[str] = None, end_date: Optional[str] = None) -> str:
+def get_dynamic_ctes(
+    required_ctes: List[str],
+    global_start_date: Optional[str] = None,
+    global_end_date: Optional[str] = None
+) -> str:
     """
-    Assemble the SQL for the required CTEs.
+    Assemble the SQL for the required CTEs with proper date substitutions.
+    For each CTE, check if a date filter comment exists and use that as a default if
+    command-line dates are not provided.
     """
     cte_statements = []
     for cte_name in required_ctes:
         cte_content = load_cte_file(cte_name)
-        # Replace date placeholders if they exist
-        cte_content = cte_content.replace('{{START_DATE}}', start_date or '2024-01-01')
-        cte_content = cte_content.replace('{{END_DATE}}', end_date or '2025-01-01')
+        file_start_date, file_end_date = parse_date_filter(cte_content)
+        
+        # Command-line dates override file defaults; fall back to hardcoded defaults if needed.
+        start_date = global_start_date or file_start_date or '2024-01-01'
+        end_date = global_end_date or file_end_date or '2025-01-01'
+        
+        # Replace placeholders in one chained call.
+        cte_content = cte_content.replace('{{START_DATE}}', start_date).replace('{{END_DATE}}', end_date)
         cte_statements.append(cte_content)
+        
     return "\n\n".join(cte_statements)
+
 
 def get_exports(start_date: Optional[str] = None, end_date: Optional[str] = None) -> List[Dict]:
     """
