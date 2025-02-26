@@ -1,6 +1,7 @@
 -- PROCEDURE PAIRS
 -- Identifies pairs of procedures performed on the same patient on the same day
 -- Used for analyzing common procedure combinations and bundling patterns
+-- dependent CTEs: BaseProcedures
 ProcedurePairs AS (
     SELECT 
         p1.PatNum,

@@ -1,31 +1,35 @@
 -- Monthly data aggregation
-/*
-Purpose:
-    Aggregates procedure-related metrics on a monthly basis to track performance trends
-    and financial outcomes over time.
-
-Metrics Calculated:
-    1. Volume Metrics
-       - Total procedures per month
-       - Breakdown by status (completed, planned, deleted)
-    
-    2. Financial Metrics
-       - Total procedure fees
-       - Completed procedure fees
-       - Total payments received
-       - Payments for completed procedures
-       - Unpaid completed procedures (count and fees)
-    
-    3. Quality Metrics
-       - Success rate of completed procedures
-       
-Usage Examples:
-    - Track month-over-month procedure volume trends
-    - Monitor payment collection rates
-    - Analyze procedure success rates
-    - Identify seasonal patterns in procedure volume
-    - Track revenue trends and unpaid procedure backlog
-*/
+-- =======================
+-- Purpose:
+--     Aggregates procedure-related metrics on a monthly basis to track performance trends
+--     and financial outcomes over time.
+--
+-- Metrics Calculated:
+--     1. Volume Metrics
+--        - Total procedures per month
+--        - Breakdown by status (completed, planned, deleted)
+--     
+--     2. Financial Metrics
+--        - Total procedure fees
+--        - Completed procedure fees
+--        - Total payments received
+--        - Payments for completed procedures
+--        - Unpaid completed procedures (count and fees)
+--     
+--     3. Quality Metrics
+--        - Success rate of completed procedures
+--        
+-- Usage Examples:
+--     - Track month-over-month procedure volume trends
+--     - Monitor payment collection rates
+--     - Analyze procedure success rates
+--     - Identify seasonal patterns in procedure volume
+--     - Track revenue trends and unpaid procedure backlog
+--
+-- CTE Dependencies:
+--     - BaseProcedures CTE
+--     - PaymentActivity CTE
+--     - SuccessCriteria CTE
 MonthlyData AS (
     SELECT 
         EXTRACT(YEAR FROM pl.ProcDate) AS proc_year,

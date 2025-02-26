@@ -1,6 +1,7 @@
 -- LINKAGE PATTERNS
 -- Categorizes procedures by payment linkage patterns
 -- Used for analyzing payment source distribution and payment status
+-- dependent CTEs: PaymentLinks
 LinkagePatterns AS (
     SELECT
         ProcNum,

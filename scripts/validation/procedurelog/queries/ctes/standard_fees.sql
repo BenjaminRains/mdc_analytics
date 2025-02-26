@@ -1,6 +1,7 @@
 -- STANDARD FEES
 -- Compares procedure fees to standard fee schedules
 -- Used for fee consistency analysis and pricing optimization
+-- dependent CTEs: BaseProcedures
 StandardFees AS (
     SELECT
         ProcCode,

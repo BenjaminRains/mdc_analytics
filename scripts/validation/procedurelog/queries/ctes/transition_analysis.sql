@@ -1,6 +1,7 @@
 -- TRANSITION ANALYSIS
 -- Summarizes procedure status transitions and patterns
 -- Used for workflow analysis and identifying potential process improvements
+-- dependent CTEs: StatusHistory
 TransitionAnalysis AS (
     SELECT
         status_description,

@@ -1,6 +1,7 @@
 -- BASE PROCEDURES
 -- Core procedure dataset filtered by date range with key attributes
 -- Joins to procedure codes and flags excluded codes for special handling
+-- dependent CTEs: ExcludedCodes
 BaseProcedures AS (
     SELECT 
         pl.ProcNum,

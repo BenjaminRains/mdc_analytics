@@ -1,6 +1,7 @@
 -- FEE RANGES
 -- Categorizes procedures by fee amounts for analysis
 -- Used for financial segmentation and pricing tier analysis
+-- dependent CTEs: BaseProcedures
 FeeRanges AS (
     SELECT
         ProcNum,

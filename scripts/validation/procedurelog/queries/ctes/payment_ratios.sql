@@ -1,6 +1,7 @@
 -- PAYMENT RATIOS
 -- Categorizes procedures by payment percentage rates
 -- Used for analyzing payment effectiveness and partial payment patterns
+-- dependent CTEs: BaseProcedures, PaymentActivity
 PaymentRatios AS (
     SELECT
         pl.ProcNum,

@@ -1,6 +1,7 @@
 -- PAYMENT ACTIVITY
 -- Aggregates payment information from insurance and direct patient payments
 -- Calculates total payments and payment ratio (percentage of fee paid)
+-- dependent CTEs: BaseProcedures
 PaymentActivity AS (
     SELECT 
         pl.ProcNum,

@@ -1,6 +1,7 @@
 -- PROCEDURE APPOINTMENT SUMMARY
 -- Combines procedures with their associated appointments and payments
 -- Provides consolidated view of procedure execution and appointment information
+-- dependent CTEs: BaseProcedures, PaymentActivity, AppointmentDetails, SuccessCriteria
 ProcedureAppointmentSummary AS (
     SELECT
         bp.ProcNum,

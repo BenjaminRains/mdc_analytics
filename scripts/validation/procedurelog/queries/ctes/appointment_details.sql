@@ -1,6 +1,7 @@
 -- APPOINTMENT DETAILS
 -- Provides appointment information within date range
 -- Used for joining procedures to appointments and tracking appointment status
+-- dependent CTEs: None
 AppointmentDetails AS (
     SELECT
         a.AptNum,

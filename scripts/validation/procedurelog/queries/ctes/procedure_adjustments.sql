@@ -1,6 +1,7 @@
 -- PROCEDURE ADJUSTMENTS
 -- Aggregates adjustment information for procedures
 -- Used for analyzing write-offs, discounts, and adjustment patterns
+-- dependent CTEs: BaseProcedures
 ProcedureAdjustments AS (
     SELECT
         bp.ProcNum,

@@ -1,6 +1,7 @@
 -- PAYMENT SPLITS
 -- Analyzes how payments are split between insurance and direct payments
 -- Used for understanding payment source distribution and insurance vs. patient contribution
+-- dependent CTEs: BaseProcedures, PaymentActivity
 PaymentSplits AS (
     SELECT
         pl.ProcNum,

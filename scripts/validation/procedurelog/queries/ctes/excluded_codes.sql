@@ -1,6 +1,7 @@
 -- EXCLUDED CODES
 -- Defines procedure codes that are exempt from standard payment validation rules
 -- These are typically administrative, diagnostic, or courtesy service codes
+-- dependent CTEs: None
 ExcludedCodes AS (
     SELECT CodeNum 
     FROM procedurecode 

@@ -1,6 +1,7 @@
 -- STATUS HISTORY
 -- Analyzes procedure status and transition patterns
 -- Used for tracking status changes and identifying potential workflow issues
+-- dependent CTEs: BaseProcedures
 StatusHistory AS (
     SELECT 
         pl.ProcNum,
