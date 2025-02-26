@@ -167,9 +167,13 @@ def get_dynamic_ctes(
     return combined_ctes
 
 # Assemble export configurations for each query, replacing date placeholders dynamically.
-def get_exports(global_start_date: Optional[str] = None, global_end_date: Optional[str] = None) -> List[Dict]:
+def get_exports(global_start_date: Optional[str] = None, global_end_date: Optional[str] = None, selected_queries: Optional[List[str]] = None) -> List[Dict]:
     exports = []
-    for query_name, description in QUERY_DESCRIPTIONS.items():
+    # Only process queries that were specifically requested, or all if none specified
+    query_items = [(name, desc) for name, desc in QUERY_DESCRIPTIONS.items() 
+                  if not selected_queries or name in selected_queries]
+    
+    for query_name, description in query_items:
         try:
             query_sql = load_query_file(query_name)
             # Parse default date filter from the query file
@@ -243,16 +247,24 @@ def process_single_export(export, factory, connection_type, database, output_dir
                 pass
 
 # Export validation results by executing queries in parallel or sequentially.
-def export_validation_results(connection_factory, connection_type, database, queries=None, 
-                              output_dir=None, use_parallel=False, start_date=None, end_date=None):
+def export_validation_results(
+    connection_factory, 
+    connection_type, 
+    database, 
+    queries=None, 
+    output_dir=None, 
+    use_parallel=False, 
+    start_date=None, 
+    end_date=None
+):
     if output_dir is None:
         output_dir = DATA_DIR
     logging.info(f"Starting export to {output_dir}")
     ensure_directory_exists(output_dir)
     logging.info("Loading export configurations (queries and CTEs)")
-    exports = get_exports(start_date, end_date)
+    exports = get_exports(start_date, end_date, selected_queries=queries)
+    
     if queries:
-        exports = [e for e in exports if e['name'] in queries]
         logging.info(f"Running selected queries: {', '.join(queries)}")
     logging.info("Query descriptions:")
     for export in exports:
@@ -329,9 +341,9 @@ def parse_args():
     parser.add_argument(
         '--connection-type',
         type=str,
-        default='local',
-        choices=['local'],
-        help='Type of database connection to use (only local connections are currently supported)'
+        default='local_mariadb',
+        choices=['local_mariadb'],
+        help='Type of database connection to use (only local MariaDB connections are currently supported)'
     )
     parser.add_argument(
         '--queries',
