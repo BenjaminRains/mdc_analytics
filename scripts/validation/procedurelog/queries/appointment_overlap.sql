@@ -1,6 +1,7 @@
 -- Appointment Overlap Query
 -- Analyzes the relationship between procedures and appointments
 -- CTEs used: ExcludedCodes, BaseProcedures, PaymentActivity, AppointmentDetails, AppointmentStatusCategories
+-- Date filter: 2024-01-01 to 2025-01-01
 SELECT
     appointment_status,
     COUNT(*) AS procedure_count,
@@ -25,6 +26,7 @@ FROM (
     LEFT JOIN PaymentActivity pa ON bp.ProcNum = pa.ProcNum
     LEFT JOIN AppointmentDetails ad ON bp.AptNum = ad.AptNum
     LEFT JOIN AppointmentStatusCategories ast ON ad.AptStatus = ast.AptStatus
+    WHERE bp.ProcDate BETWEEN '{{START_DATE}}' AND '{{END_DATE}}'
 ) AS combined_data
 GROUP BY appointment_status
 ORDER BY procedure_count DESC;
