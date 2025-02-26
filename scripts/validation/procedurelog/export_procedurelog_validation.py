@@ -86,13 +86,16 @@ def ensure_directory_exists(directory: str):
 def parse_required_ctes(query_sql: str) -> List[str]:
     """
     Parse the header of the query SQL file to extract the list of required CTEs.
-    Expected header format: "-- CTEs used: CTE1, CTE2, CTE3"
+    Expected header format: "-- CTEs used: excluded_codes.sql, base_procedures.sql"
     """
     required_ctes = []
     for line in query_sql.splitlines():
         if line.startswith('-- CTEs used:'):
             cte_line = line.replace('-- CTEs used:', '').strip()
+            # Get the filenames as-is, just strip whitespace
             required_ctes = [cte.strip() for cte in cte_line.split(',') if cte.strip()]
+            # Remove .sql extension if present
+            required_ctes = [cte[:-4] if cte.endswith('.sql') else cte for cte in required_ctes]
             break
     return required_ctes
 
@@ -133,6 +136,7 @@ def load_query_file(query_name: str) -> str:
 
 # Load a CTE file from the ctes subdirectory.
 def load_cte_file(cte_name: str) -> str:
+    """Load a CTE file using exact filename."""
     cte_path = CTES_DIR / f"{cte_name}.sql"
     try:
         return cte_path.read_text(encoding='utf-8')
@@ -146,6 +150,9 @@ def get_dynamic_ctes(
     global_start_date: Optional[str] = None,
     global_end_date: Optional[str] = None
 ) -> str:
+    if not required_ctes:
+        return ""
+        
     cte_statements = []
     for cte_name in required_ctes:
         cte_content = load_cte_file(cte_name)
@@ -153,8 +160,11 @@ def get_dynamic_ctes(
         start_date = global_start_date or file_start_date or '2024-01-01'
         end_date = global_end_date or file_end_date or '2025-01-01'
         cte_content = cte_content.replace('{{START_DATE}}', start_date).replace('{{END_DATE}}', end_date)
-        cte_statements.append(cte_content)
-    return "\n\n".join(cte_statements)
+        cte_statements.append(cte_content.strip())
+    
+    # Combine CTEs with WITH and commas
+    combined_ctes = "WITH " + ",\n".join(cte_statements)
+    return combined_ctes
 
 # Assemble export configurations for each query, replacing date placeholders dynamically.
 def get_exports(global_start_date: Optional[str] = None, global_end_date: Optional[str] = None) -> List[Dict]:
