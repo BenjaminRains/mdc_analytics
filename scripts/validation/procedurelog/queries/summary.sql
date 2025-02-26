@@ -1,5 +1,6 @@
 -- Procedure Log Summary Query
 -- Provides overall metrics for procedure validation
+-- CTEs used: ExcludedCodes, BaseProcedures, PaymentActivity, SuccessCriteria
 
 -- Define excluded codes that are exempt from payment validation
 WITH ExcludedCodes AS (

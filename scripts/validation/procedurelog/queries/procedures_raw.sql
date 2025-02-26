@@ -1,6 +1,7 @@
 -- Raw Procedure Data Query
 -- Extracts detailed procedure records with all relevant columns
 -- Now includes treatment plan context and periodontal information
+-- CTEs used: None
 
 SELECT 
     -- Procedure core information

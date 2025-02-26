@@ -1,5 +1,6 @@
 -- Appointment Overlap Query
 -- Analyzes the relationship between procedures and appointments
+-- CTEs used: ExcludedCodes, BaseProcedures, PaymentActivity, AppointmentDetails, AppointmentStatusCategories
 
 WITH 
 -- Define excluded codes that are exempt from payment validation
@@ -62,6 +63,26 @@ AppointmentDetails AS (
         a.AptStatus
     FROM appointment a
     WHERE a.AptDateTime >= '2024-01-01' AND a.AptDateTime < '2025-01-01'
+),
+
+-- Standardize appointment status codes
+AppointmentStatusCategories AS (
+    SELECT 
+        AptStatus,
+        CASE AptStatus
+            WHEN 1 THEN 'Scheduled'
+            WHEN 2 THEN 'Complete'
+            WHEN 3 THEN 'UnschedList'
+            WHEN 4 THEN 'ASAP'
+            WHEN 5 THEN 'Broken'
+            WHEN 6 THEN 'Planned'
+            WHEN 7 THEN 'CPHAScheduled'
+            WHEN 8 THEN 'PinBoard'
+            WHEN 9 THEN 'WebSchedNewPt'
+            WHEN 10 THEN 'WebSchedRecall'
+            ELSE 'Unknown'
+        END AS StatusDescription
+    FROM (SELECT DISTINCT AptStatus FROM AppointmentDetails) AS statuses
 )
 
 SELECT
@@ -82,19 +103,12 @@ FROM (
         pa.total_paid,
         CASE
             WHEN bp.AptNum IS NULL THEN 'No Appointment'
-            WHEN ad.AptStatus = 1 THEN 'Scheduled'
-            WHEN ad.AptStatus = 2 THEN 'Complete'
-            WHEN ad.AptStatus = 3 THEN 'UnschedList'
-            WHEN ad.AptStatus = 4 THEN 'ASAP'
-            WHEN ad.AptStatus = 5 THEN 'Broken'
-            WHEN ad.AptStatus = 6 THEN 'Planned'
-            WHEN ad.AptStatus = 7 THEN 'PtNote'
-            WHEN ad.AptStatus = 8 THEN 'PtNoteCompleted'
-            ELSE 'Unknown'
+            ELSE ast.StatusDescription
         END AS appointment_status
     FROM BaseProcedures bp
     LEFT JOIN PaymentActivity pa ON bp.ProcNum = pa.ProcNum
     LEFT JOIN AppointmentDetails ad ON bp.AptNum = ad.AptNum
+    LEFT JOIN AppointmentStatusCategories ast ON ad.AptStatus = ast.AptStatus
 ) AS combined_data
 GROUP BY appointment_status
 ORDER BY procedure_count DESC;

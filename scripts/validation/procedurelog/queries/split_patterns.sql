@@ -1,5 +1,6 @@
 -- Split Patterns Query
 -- Analyzes how payments are split between insurance and direct payments
+-- CTEs used: ExcludedCodes, BaseProcedures, PaymentActivity, PaymentSplits
 
 WITH 
 -- Define excluded codes that are exempt from payment validation

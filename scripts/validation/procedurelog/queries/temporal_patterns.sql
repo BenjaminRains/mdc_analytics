@@ -1,5 +1,6 @@
 -- Temporal Patterns Query
 -- Analyzes procedures and payments across time
+-- CTEs used: ExcludedCodes, BaseProcedures, PaymentActivity, SuccessCriteria, MonthlyData
 
 WITH 
 -- Define excluded codes that are exempt from payment validation

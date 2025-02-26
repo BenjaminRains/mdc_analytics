@@ -1,5 +1,6 @@
 -- Status Transitions Query
 -- Validates the status transitions of procedures and identifies potential issues
+-- CTEs used: ExcludedCodes, BaseProcedures, PaymentActivity, SuccessCriteria, StatusHistory, TransitionAnalysis
 
 -- Define excluded codes that are exempt from payment validation
 WITH ExcludedCodes AS (

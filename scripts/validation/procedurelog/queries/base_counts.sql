@@ -1,5 +1,6 @@
 -- Base Counts Query
 -- Provides fundamental counts and statistics for procedures
+-- CTEs used: ExcludedCodes, BaseProcedures, PaymentActivity
 
 -- Define excluded codes that are exempt from payment validation
 WITH ExcludedCodes AS (

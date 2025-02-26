@@ -1,5 +1,6 @@
 -- Bundled Procedures Query
 -- Analyzes procedures that are commonly performed together (bundled)
+-- CTEs used: ExcludedCodes, BaseProcedures, PaymentActivity
 
 WITH 
 -- Import required CTEs from common_ctes.sql

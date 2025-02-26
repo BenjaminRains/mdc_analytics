@@ -1,5 +1,6 @@
 -- Fee Relationship Analysis
 -- Examines how procedure fees compare to standard fee schedules
+-- CTEs used: ExcludedCodes, BaseProcedures, StandardFees
 
 WITH ExcludedCodes AS (
     SELECT CodeNum 

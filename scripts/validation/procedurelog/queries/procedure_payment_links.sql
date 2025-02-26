@@ -1,5 +1,6 @@
 -- Procedure Payment Links Query
 -- Validates the relationships between procedures and their associated payments
+-- CTEs used: ExcludedCodes, BaseProcedures, PaymentActivity, PaymentLinks, LinkagePatterns
 
 WITH 
 -- Define excluded codes that are exempt from payment validation

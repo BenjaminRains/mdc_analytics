@@ -1,5 +1,6 @@
 -- Status Distribution Query
 -- Analyzes the distribution of procedures by status code
+-- CTEs used: ExcludedCodes, BaseProcedures, PaymentActivity, SuccessCriteria, AppointmentDetails
 
 -- Define excluded codes that are exempt from payment validation
 WITH ExcludedCodes AS (

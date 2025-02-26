@@ -1,5 +1,6 @@
 -- Edge Case Query
 -- Identifies edge cases and anomalies in procedure payments
+-- CTEs used: ExcludedCodes, BaseProcedures, PaymentActivity
 
 WITH 
 -- Define excluded codes that are exempt from payment validation

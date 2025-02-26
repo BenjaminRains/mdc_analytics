@@ -1,5 +1,6 @@
 -- Monthly Unpaid Procedures Query
 -- Analyzes unpaid completed procedures by month to identify trends
+-- CTEs used: ExcludedCodes, BaseProcedures, PaymentActivity
 
 WITH 
 -- Define excluded codes that are exempt from payment validation

@@ -7,6 +7,8 @@ This query aggregates provider performance metrics from the Open Dental system,
 combining data from multiple tables (provider, appointment, procedurelog, and
 procedurecode) to produce a comprehensive provider report.
 
+-- CTEs used: provider_base, provider_volume, procedure_categories, hygiene_metrics, payment_metrics, appt_durations, appt_production, productivity_metrics
+
 Metrics Calculated:
 1. Provider Basic Information
    - Provider number, abbreviation, name, specialty, status
@@ -60,6 +62,7 @@ Tables Used:
 
 Note: Date range defaults to '2023-01-01' to '2023-12-31'. Adjust as needed.
 */
+
 
 WITH provider_base AS (
   SELECT 

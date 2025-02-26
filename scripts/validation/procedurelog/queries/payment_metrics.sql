@@ -1,5 +1,6 @@
 -- Payment Metrics Query
 -- Analyzes payment ratios and patterns for completed procedures
+-- CTEs used: ExcludedCodes, BaseProcedures, PaymentActivity
 
 WITH
 -- Define excluded codes that are exempt from payment validation

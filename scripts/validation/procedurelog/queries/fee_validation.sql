@@ -1,6 +1,7 @@
 -- Fee Validation Query
 -- Analyzes procedure fees across different ranges, categories, and relationships
 -- to fee schedules and adjustments
+-- CTEs used: ExcludedCodes, BaseProcedures, StandardFees, ProcedureAdjustments, PaymentActivity, PatientResponsibility, FeeRanges
 
 -- Define excluded codes that are exempt from payment validation
 WITH ExcludedCodes AS (
