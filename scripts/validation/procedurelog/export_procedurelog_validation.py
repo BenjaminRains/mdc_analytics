@@ -297,17 +297,16 @@ def export_validation_results(connection_factory, connection_type, database, que
     """
     # Set default output directory if none provided
     if output_dir is None:
-        output_dir = Path(__file__).parent / 'data'
+        output_dir = DATA_DIR
     
     logging.info(f"Starting export to {output_dir}")
     ensure_directory_exists(output_dir)
     
     # Load common CTEs once
     logging.info("Loading CTEs")
-    ctes = load_cte_file(start_date, end_date)
     
-    # Get export configurations, passing in the loaded CTEs
-    exports = get_exports(ctes)
+    # Get export configurations directly using the provided date parameters.
+    exports = get_exports(start_date, end_date)
     
     # Filter exports if specific queries requested
     if queries:
