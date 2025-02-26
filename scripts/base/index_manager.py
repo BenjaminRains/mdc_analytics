@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Index Manager for ML Pipeline
 
