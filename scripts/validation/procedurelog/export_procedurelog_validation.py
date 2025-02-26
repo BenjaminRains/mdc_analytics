@@ -78,64 +78,63 @@ def ensure_directory_exists(directory):
     Path(directory).mkdir(parents=True, exist_ok=True)
     logging.info(f"Ensured directory exists: {directory}")
 
-def load_query_file(query_name: str) -> str:
-    """Load a query from the queries directory using pathlib."""
-    query_path = Path(__file__).parent / 'queries' / f'{query_name}.sql'
+def parse_required_ctes(query_sql: str) -> List[str]:
+    """
+    Parse the header of the query SQL file to extract the list of required CTEs.
+    Expected header format: "-- CTEs used: CTE1, CTE2, CTE3"
+    """
+    required_ctes = []
+    for line in query_sql.splitlines():
+        if line.startswith('-- CTEs used:'):
+            # Remove the comment prefix and split by comma
+            cte_line = line.replace('-- CTEs used:', '').strip()
+            required_ctes = [cte.strip() for cte in cte_line.split(',') if cte.strip()]
+            break  # Only consider the first occurrence
+    return required_ctes
+
+def load_cte_file(cte_name: str) -> str:
+    """
+    Load an individual CTE file from the ctes subdirectory.
+    For example, if cte_name is "ExcludedCodes", load "queries/ctes/ExcludedCodes.sql"
+    """
+    cte_path = Path(__file__).parent / 'queries' / 'ctes' / f'{cte_name}.sql'
     try:
-        with query_path.open('r') as f:
+        with cte_path.open('r') as f:
             return f.read()
     except Exception as e:
-        logging.error(f"Error loading query file {query_name}: {str(e)}")
+        logging.error(f"Error loading CTE file {cte_name}: {str(e)}")
         raise
 
-def get_ctes(start_date: Optional[str] = None, end_date: Optional[str] = None) -> str:
+def get_dynamic_ctes(required_ctes: List[str], start_date: Optional[str] = None, end_date: Optional[str] = None) -> str:
     """
-    Load common table expressions (CTEs) from file with optional date filtering.
-    
-    Args:
-        start_date: Optional start date filter in YYYY-MM-DD format
-        end_date: Optional end date filter in YYYY-MM-DD format
-        
-    Returns:
-        String containing all common CTEs with date filters applied if provided
+    Assemble and return the SQL for the required CTEs.
+    Applies date substitutions to each CTE file content.
     """
-    try:
-        cte_content = load_query_file('common_ctes')
-        
-        # Replace date placeholders if provided
-        if start_date:
-            cte_content = cte_content.replace('{{START_DATE}}', start_date)
-        else:
-            cte_content = cte_content.replace('{{START_DATE}}', '2024-01-01')
-            
-        if end_date:
-            cte_content = cte_content.replace('{{END_DATE}}', end_date)
-        else:
-            cte_content = cte_content.replace('{{END_DATE}}', '2025-01-01')
-            
-        return cte_content
-    except Exception as e:
-        logging.error(f"Error loading or processing CTEs: {str(e)}")
-        raise
+    cte_statements = []
+    for cte_name in required_ctes:
+        cte_content = load_cte_file(cte_name)
+        # Replace date placeholders if present
+        cte_content = cte_content.replace('{{START_DATE}}', start_date or '2024-01-01')
+        cte_content = cte_content.replace('{{END_DATE}}', end_date or '2025-01-01')
+        cte_statements.append(cte_content)
+    return "\n\n".join(cte_statements)
 
-def get_exports(ctes: str) -> List[Dict]:
+def get_exports(start_date: Optional[str] = None, end_date: Optional[str] = None) -> List[Dict]:
     """
-    Define export configurations for each query.
-    
-    Args:
-        ctes: The common CTEs string to prepend to each query
-        
-    Returns:
-        List of export configurations
+    Assemble export configurations by dynamically loading only the needed CTEs for each query.
     """
     exports = []
     
-    # Add each query configuration
     for query_name, description in QUERY_DESCRIPTIONS.items():
         try:
             query_sql = load_query_file(query_name)
-            # Combine CTEs with the query
-            full_query = f"{ctes}\n\n{query_sql}"
+            # Parse required CTEs from the query file header
+            required_ctes = parse_required_ctes(query_sql)
+            if required_ctes:
+                cte_sql = get_dynamic_ctes(required_ctes, start_date, end_date)
+                full_query = f"{cte_sql}\n\n{query_sql}"
+            else:
+                full_query = query_sql  # No CTEs declared for this query
             
             exports.append({
                 'name': query_name,
@@ -145,10 +144,10 @@ def get_exports(ctes: str) -> List[Dict]:
             })
         except Exception as e:
             logging.error(f"Error setting up query {query_name}: {str(e)}")
-            # Continue with other queries instead of failing completely
             continue
     
     return exports
+
 
 def process_single_export(export, factory, connection_type, database, output_dir):
     """Process a single export query and save results to CSV."""
