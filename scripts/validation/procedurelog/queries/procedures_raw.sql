@@ -1,6 +1,7 @@
 -- Raw Procedure Data Query
 -- Extracts detailed procedure records with all relevant columns
 -- Now includes treatment plan context and periodontal information
+-- Date filter: 2024-01-01 to 2025-01-01
 -- CTEs used: None
 
 SELECT 
@@ -122,5 +123,5 @@ LEFT JOIN (
 -- Appointment information
 LEFT JOIN appointment apt ON pl.AptNum = apt.AptNum
 
-WHERE pl.ProcDate >= '2024-01-01' AND pl.ProcDate < '2025-01-01'
+WHERE pl.ProcDate >= '{{START_DATE}}' AND pl.ProcDate < '{{END_DATE}}'
 ORDER BY pl.ProcDate DESC, pl.ProcNum DESC;
