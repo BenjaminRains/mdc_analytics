@@ -1,66 +1,71 @@
-"""
-Treatment Journey ML Index Configurations
+# Treatment Journey ML Index Configurations
+#
+# This module defines specialized indexes for ML operations:
+# 1. Feature extraction optimization
+# 2. Training data queries
+# 3. Prediction serving
+# 4. Model validation
 
-This module defines specialized indexes for ML operations:
-1. Feature extraction optimization
-2. Training data queries
-3. Prediction serving
-4. Model validation
+# Note: Core business indexes are defined in database_setup/base_index_configs.py
 
-Note: Core business indexes are defined in database_setup/base_index_configs.py
-"""
+
+# -------------------------------
+# Treatment Journey ML Indexes
+# -------------------------------
 
 TREATMENT_JOURNEY_INDEXES = [
-    # Core Procedure Analysis Indexes
+    # --- Core Procedure Analysis Indexes ---
     "CREATE INDEX IF NOT EXISTS idx_ml_proc_core ON procedurelog (ProcDate, ProcStatus, ProcFee, CodeNum, ProvNum)",
     "CREATE INDEX IF NOT EXISTS idx_ml_proc_historical ON procedurelog (CodeNum, ProvNum, ProcDate, ProcFee)",
     
-    # Fee Analysis
+    # --- Fee Analysis ---
     "CREATE INDEX IF NOT EXISTS idx_ml_fee_core ON fee (CodeNum, Amount)",
     
-    # Insurance Processing
+    # --- Insurance Processing ---
     "CREATE INDEX IF NOT EXISTS idx_ml_claimproc_core ON claimproc (ProcNum, InsPayAmt, InsPayEst, Status, ClaimNum)",
     "CREATE INDEX IF NOT EXISTS idx_ml_claimproc_procnum ON claimproc (ProcNum)",
     "CREATE INDEX IF NOT EXISTS idx_ml_claimproc_status ON claimproc (Status)",
     
-    # Payment Analysis
+    # --- Payment Analysis ---
     "CREATE INDEX IF NOT EXISTS idx_ml_paysplit_payment ON paysplit (ProcNum, PayNum, SplitAmt)",
     "CREATE INDEX IF NOT EXISTS idx_ml_payment_core ON payment (PayNum, PayDate)",
     "CREATE INDEX IF NOT EXISTS idx_ml_payment_window ON payment (PayDate)",
     "CREATE INDEX IF NOT EXISTS idx_ml_paysplit_paynum ON paysplit (PayNum)",
     "CREATE INDEX IF NOT EXISTS idx_ml_paysplit_procnum ON paysplit (ProcNum)",
     
-    # Adjustment Tracking
+    # --- Adjustment Tracking ---
     "CREATE INDEX IF NOT EXISTS idx_ml_adj_core ON adjustment (ProcNum, DateEntry, AdjAmt)",
     "CREATE INDEX IF NOT EXISTS idx_ml_adj_type ON adjustment (ProcNum, AdjType)",
     
-    # Supporting Lookups
+    # --- Supporting Lookups ---
     "CREATE INDEX IF NOT EXISTS idx_ml_proccode_lookup ON procedurecode (CodeNum, ProcCat)",
     "CREATE INDEX IF NOT EXISTS idx_ml_proccode_category ON procedurecode (CodeNum, ProcCode)",
     "CREATE INDEX IF NOT EXISTS idx_ml_patient_core ON patient (PatNum, Birthdate, Gender, HasIns)",
     "CREATE INDEX IF NOT EXISTS idx_ml_definition_lookup ON definition (DefNum, ItemName)",
     "CREATE INDEX IF NOT EXISTS idx_ml_claim_lookup ON claim (ClaimNum)",
     
-    # Treatment Plan and History Analysis
+    # --- Treatment Plan and History Analysis ---
     "CREATE INDEX IF NOT EXISTS idx_ml_proc_tp ON procedurelog (DateTP, ProcDate, ProcFee)",
     "CREATE INDEX IF NOT EXISTS idx_ml_proc_patient_hist ON procedurelog (PatNum, ProcDate, CodeNum, ProcStatus)",
     "CREATE INDEX IF NOT EXISTS idx_ml_proc_code_hist ON procedurelog (CodeNum, ProcDate, ProcStatus, ProcFee)",
     
-    # For historical fee analysis
+    # --- Historical Fee Analysis ---
     "CREATE INDEX IF NOT EXISTS idx_ml_proc_fee_hist ON procedurelog (CodeNum, ProcDate, ProcFee, ProvNum)",
     
-    # For appointment history
+    # --- Appointment History ---
     "CREATE INDEX IF NOT EXISTS idx_ml_proc_appt_hist ON procedurelog (PatNum, ProcDate, CodeNum, ProcStatus)",
     
-    # For acceptance rate calculations
+    # --- Acceptance Rate Calculations ---
     "CREATE INDEX IF NOT EXISTS idx_ml_proc_acceptance ON procedurelog (CodeNum, ProcDate, ProcStatus, DateTP, ProcFee)",
     
-    # For payment tracking
+    # --- Payment Tracking ---
     "CREATE INDEX IF NOT EXISTS idx_ml_payment_tracking ON payment (PayDate)",
     "CREATE INDEX IF NOT EXISTS idx_ml_paysplit_proc_pay ON paysplit (ProcNum, PayNum, SplitAmt)"
 ]
 
-# Documentation for ML-specific indexes
+# -------------------------------
+# Index Documentation Dictionary
+# -------------------------------
 INDEX_DOCUMENTATION = {
     "idx_ml_pat_insurance": "Insurance status tracking",
     "idx_ml_pat_feesched": "Patient fee schedule lookups",
@@ -93,10 +98,12 @@ INDEX_DOCUMENTATION = {
     "idx_ml_paysplit_procnum": "Fast payment split lookup by procedure number"
 }
 
-# System indexes that were accidentally dropped and need to be restored
+# -------------------------------
+# System Indexes to Restore
+# -------------------------------
 SYSTEM_INDEXES = [
     "CREATE INDEX IDX_TEMPIMAGECONV_PATNUM ON tempimageconv (patnum)",
     "CREATE INDEX IDX_TEMPIMAGECONV2_FILENAME ON tempimageconv2 (filename)",
     "CREATE INDEX IDX_TEMPIMAGECONV2_ISDELETED ON tempimageconv2 (IsDeleted)",
     "CREATE INDEX IDX_TEMPIMAGECONV2_PATNUM ON tempimageconv2 (patnum)"
-] 
+]
