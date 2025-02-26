@@ -196,17 +196,15 @@ def get_exports(start_date: Optional[str] = None, end_date: Optional[str] = None
     
     for query_name, description in QUERY_DESCRIPTIONS.items():
         try:
-            # Load the query file from the specified directory.
             query_sql = load_query_file(query_name)
             
             # Parse the required CTEs from the query header comment.
             required_ctes = parse_required_ctes(query_sql)
             if required_ctes:
                 cte_sql = get_dynamic_ctes(required_ctes, start_date, end_date)
-                # Concatenate the dynamically assembled CTEs with the query SQL.
                 full_query = f"{cte_sql}\n\n{query_sql}"
             else:
-                full_query = query_sql  # Query does not declare any CTE dependencies.
+                full_query = query_sql
             
             exports.append({
                 'name': query_name,
@@ -215,11 +213,12 @@ def get_exports(start_date: Optional[str] = None, end_date: Optional[str] = None
                 'file': f"{query_name}.csv"
             })
         except Exception as e:
-            # Include query name and path info in error logging for easier debugging.
-            logging.error(f"Error setting up query '{query_name}' (file: {Path(__file__).parent / 'queries' / f'{query_name}.sql'}): {e}")
+            query_path = QUERIES_DIR / f"{query_name}.sql"
+            logging.error(f"Error setting up query '{query_name}' (file: {query_path}): {e}")
             continue
     
     return exports
+
 
 
 def process_single_export(export, factory, connection_type, database, output_dir):
