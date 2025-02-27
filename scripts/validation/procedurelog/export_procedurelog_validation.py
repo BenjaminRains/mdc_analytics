@@ -129,7 +129,8 @@ QUERY_DESCRIPTIONS = {
     'edge_cases': 'Procedure and payment anomalies',
     'provider_performance': 'Provider-level procedure metrics',
     'procedures_raw': 'Raw procedure data with treatment plan and perio exam context',
-    'monthly_unpaid': 'Monthly analysis of unpaid completed procedures'
+    'monthly_unpaid': 'Monthly analysis of unpaid completed procedures',
+    'status_7_analysis': 'Detailed analysis of procedures with Status 7 including patterns and metrics'
 }
 
 # Setup logging; ensures LOG_DIR exists and creates a log file with timestamp.
