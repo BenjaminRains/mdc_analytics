@@ -1,5 +1,6 @@
 -- HYGIENE METRICS
 -- Tracks hygiene vs non-hygiene procedures and associated fees
+-- Date filter: 2024-01-01 to 2025-01-01
 -- Dependent CTEs: base_procedures.sql
 HygieneMetrics AS (
     SELECT 
