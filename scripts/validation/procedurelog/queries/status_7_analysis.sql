@@ -49,7 +49,7 @@ SELECT
         'unique_appt_dates', unique_appt_dates,
         'unique_categories', unique_categories,
         'cat_250_count', cat_250_count,
-        'procedure_categories', procedure_categories,  -- now a numeric count
+        'procedure_categories', procedure_categories_count,
         'other_status_count', other_status_count,
         'other_statuses', other_statuses,
         'data_quality_flag', data_quality_flag,
