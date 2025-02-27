@@ -9,14 +9,23 @@
 *.db
 
 # Ignore all files in a specific directory
-/temp/
-/data/
-/test/
-/logs/
-/notebooks/
+/temp/*
+!/temp/
+
+/data/*
+!/data/
+
+/test/*
+!/test/
+
+/notebooks/*
+!/notebooks/
+
 /src/connections/*
 !/src/connections/factory.py
-/src/opendental/
+
+/src/opendental/*
+!/src/opendental/
 
 
 # Ignore OS-generated files
@@ -155,8 +164,6 @@ mdc_analytics_env/
 !/reports/figures/.gitkeep
 /reports/model_results/*
 !/reports/model_results/.gitkeep
-/temp/*
-/test/*
 
 # IDE Settings
 .vscode/
@@ -170,18 +177,6 @@ mdc_analytics_env/
 **/CDT*.pdf
 **/mdc_opendental_config.txt
 **/CDT Content End User License.txt
-
-# Keep these directories but ignore their contents
-/data/*
-!/data/.gitkeep
-/exports/*
-!/exports/.gitkeep
-/logs/*
-!/logs/.gitkeep
-/reports/figures/*
-!/reports/figures/.gitkeep
-/reports/model_results/*
-!/reports/model_results/.gitkeep
 
 # Sensitive Source Files
 /src/db_config.py
@@ -210,6 +205,7 @@ mdc_analytics_env/
 **/*.ipynb
 .ipynb_checkpoints
 **/.ipynb_checkpoints
+#except these notebooks
 
 # Keep template notebooks
 !templates/**/*.ipynb
