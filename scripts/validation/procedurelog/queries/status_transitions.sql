@@ -1,6 +1,6 @@
 -- Status Transitions Query
 -- Validates the status transitions of procedures and identifies potential issues
--- Dependent CTEs: excluded_codes.sql, base_procedures.sql, payment_activity.sql, success_criteria.sql, status_history.sql, transition_analysis.sql
+-- Dependent CTEs: excluded_codes.sql, base_procedures.sql, status_history.sql, transition_analysis.sql
 -- Date filter: 2024-01-01 to 2025-01-01
 SELECT
     status_description,
