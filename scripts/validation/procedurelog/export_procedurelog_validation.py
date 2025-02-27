@@ -128,7 +128,8 @@ QUERY_DESCRIPTIONS = {
     'appointment_overlap': 'How procedures connect to appointments',
     'edge_cases': 'Procedure and payment anomalies',
     'provider_performance': 'Provider-level procedure metrics',
-    'procedures_raw': 'Raw procedure data with treatment plan and perio exam context'
+    'procedures_raw': 'Raw procedure data with treatment plan and perio exam context',
+    'monthly_unpaid': 'Monthly analysis of unpaid completed procedures'
 }
 
 # Setup logging; ensures LOG_DIR exists and creates a log file with timestamp.
