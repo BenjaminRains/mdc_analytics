@@ -1,6 +1,6 @@
 -- Bundled Procedures Query
 -- Analyzes procedures that are commonly performed together (bundled)
--- CTEs used: common_pairs.sql, excluded_codes.sql, base_procedures.sql, procedure_pairs.sql
+-- Dependent CTEs: common_pairs.sql, excluded_codes.sql, base_procedures.sql, procedure_pairs.sql
 SELECT 
     'Common Procedure Pairs' AS analysis_type,
     cp.proc1_code,

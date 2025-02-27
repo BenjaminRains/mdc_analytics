@@ -1,6 +1,6 @@
 -- Payment Metrics Query
 -- Analyzes payment ratios and patterns for completed procedures
--- CTEs used: excluded_codes.sql, base_procedures.sql, payment_activity.sql, payment_ratios.sql
+-- Dependent CTEs: excluded_codes.sql, base_procedures.sql, payment_activity.sql, payment_ratios.sql
 -- Date filter: 2024-01-01 to 2025-01-01
 SELECT
     payment_category,

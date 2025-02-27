@@ -1,6 +1,6 @@
 -- Appointment Overlap Query
 -- Analyzes the relationship between procedures and appointments
--- CTEs used: excluded_codes.sql, base_procedures.sql, payment_activity.sql, appointment_details.sql, appointment_status_categories.sql
+-- Dependent CTEs: excluded_codes.sql, base_procedures.sql, payment_activity.sql, appointment_details.sql, appointment_status_categories.sql
 -- Date filter: 2024-01-01 to 2025-01-01
 SELECT
     appointment_status,

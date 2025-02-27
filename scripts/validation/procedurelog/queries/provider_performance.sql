@@ -1,4 +1,4 @@
--- CTEs used: provider_base.sql, provider_volume.sql, procedure_categories.sql, hygiene_metrics.sql, payment_metrics.sql, appt_durations.sql, appt_production.sql, productivity_metrics.sql
+-- Dependent CTEs: provider_base.sql, provider_volume.sql, procedure_categories.sql, hygiene_metrics.sql, payment_metrics.sql, appt_durations.sql, appt_production.sql, productivity_metrics.sql
 /*
 Query: Provider Performance Analysis with Appointment Time Calculation
 -------------------------------------------------------------------------------

@@ -2,7 +2,7 @@
 -- Extracts detailed procedure records with all relevant columns
 -- Now includes treatment plan context and periodontal information
 -- Date filter: 2024-01-01 to 2025-01-01
--- CTEs used:
+-- Dependent CTEs:
 SELECT 
     -- Procedure core information
     pl.ProcNum,

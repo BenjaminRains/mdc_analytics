@@ -1,6 +1,6 @@
 -- Edge Case Query
 -- Identifies edge cases and anomalies in procedure payments
--- CTEs used: excluded_codes.sql, base_procedures.sql, payment_activity.sql, edge_cases.sql
+-- Dependent CTEs: excluded_codes.sql, base_procedures.sql, payment_activity.sql, edge_cases.sql
 SELECT 
     edge_case_type,
     COUNT(*) AS case_count,
