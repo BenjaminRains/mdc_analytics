@@ -1,4 +1,7 @@
--- Dependent CTEs: excluded_codes.sql, provider_base.sql, appt_durations.sql, appt_production.sql, BaseProcedures.sql, productivity_metrics.sql, ProcedureCategories.sql, ProviderVolume.sql, HygieneMetrics.sql, PaymentMetrics.sql
+-- This SET SESSION command must be executed separately before running this query:
+--   SET SESSION group_concat_max_len = 4096;
+
+-- Dependent CTEs: excluded_codes.sql, base_procedures.sql, procedure_categories.sql, provider_base.sql, provider_volume.sql, hygiene_metrics.sql, payment_metrics.sql, productivity_metrics.sql
 
 -- Date filter: 2024-01-01 to 2025-01-01
 
@@ -14,8 +17,6 @@ Duration calculation:
 - Non-provider time = max(count of leading "/", count of trailing "/") × 10
 - Total duration (hours) = (left non-provider + provider time + right non-provider) ÷ 60
 */
-
-SET SESSION group_concat_max_len = 4096;  -- Prevent category truncation
 
 SELECT 
   pb.ProvNum,
@@ -95,13 +96,13 @@ SELECT
        CONCAT(ProcCat, ':', CategoryCount, ' (', CategoryPct, '%)')
        ORDER BY CategoryCount DESC SEPARATOR '; '
    )
-   FROM procedure_categories 
+   FROM ProcedureCategories 
    WHERE ProvNum = pb.ProvNum
    GROUP BY ProvNum
   ) AS TopProcedureCategories
-FROM provider_base pb
-LEFT JOIN provider_volume pv ON pb.ProvNum = pv.ProvNum
-LEFT JOIN hygiene_metrics hm ON pb.ProvNum = hm.ProvNum
-LEFT JOIN payment_metrics pm ON pb.ProvNum = pm.ProvNum
-LEFT JOIN productivity_metrics ppm ON pb.ProvNum = ppm.ProvNum
+FROM ProviderBase pb
+LEFT JOIN ProviderVolume pv ON pb.ProvNum = pv.ProvNum
+LEFT JOIN HygieneMetrics hm ON pb.ProvNum = hm.ProvNum
+LEFT JOIN PaymentMetrics pm ON pb.ProvNum = pm.ProvNum
+LEFT JOIN ProductivityMetrics ppm ON pb.ProvNum = ppm.ProvNum
 ORDER BY COALESCE(pv.TotalProcedures, 0) DESC;
