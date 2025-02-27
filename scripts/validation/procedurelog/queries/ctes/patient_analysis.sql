@@ -15,8 +15,8 @@ PatientAnalysis AS (
         MIN(s7.ProcDate) as first_status_7,
         MAX(s7.ProcDate) as last_status_7,
         DATEDIFF(MAX(s7.ProcDate), MIN(s7.ProcDate)) + 1 as date_span_days,
-        -- Category metrics
-        GROUP_CONCAT(DISTINCT s7.ProcCat) as procedure_categories,
+        -- Category metrics: numeric count of distinct procedure categories
+        COUNT(DISTINCT s7.ProcCat) as procedure_categories_count,
         COUNT(DISTINCT s7.ProcCat) as unique_categories,
         SUM(CASE WHEN s7.ProcCat = '250' THEN 1 ELSE 0 END) as cat_250_count,
         -- Volume metrics
