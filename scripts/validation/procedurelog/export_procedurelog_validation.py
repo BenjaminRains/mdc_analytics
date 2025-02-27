@@ -259,10 +259,24 @@ def get_dynamic_ctes(
     required_ctes: List[str],
     global_date_range: Optional[DateRange] = None
 ) -> str:
-    """Assemble CTEs with proper date filtering."""
+    """Assemble CTEs in the exact order specified in the dependency comment.
+    
+    The comment line "-- Dependent CTEs:" must list CTEs in the correct dependency order,
+    from least dependent to most dependent. This order is preserved exactly in the
+    final SQL assembly.
+    
+    Args:
+        required_ctes: List of CTE names in their dependency order
+        global_date_range: Optional date range to apply to all CTEs
+        
+    Returns:
+        str: Complete WITH clause containing all CTEs in specified order
+    """
     if not required_ctes:
         return ""
-        
+    
+    logging.debug(f"Processing CTEs in specified order: {', '.join(required_ctes)}")
+    
     cte_statements = []
     for cte_name in required_ctes:
         try:
@@ -274,12 +288,27 @@ def get_dynamic_ctes(
             
             # Apply the date filter
             cte_content = apply_date_filter(cte_content, date_range, f"CTE {cte_name}")
-            cte_statements.append(cte_content.strip())
+            
+            # Extract just the CTE definition (everything after the comments)
+            cte_lines = cte_content.splitlines()
+            definition_start = 0
+            for i, line in enumerate(cte_lines):
+                if not line.strip().startswith('--'):
+                    definition_start = i
+                    break
+            cte_definition = '\n'.join(cte_lines[definition_start:]).strip()
+            
+            cte_statements.append(cte_definition)
+            logging.debug(f"Added CTE: {cte_name}")
+            
         except Exception as e:
             logging.error(f"Error processing CTE {cte_name}: {e}")
             raise
     
-    return "WITH " + ",\n".join(cte_statements)
+    # Join CTEs with commas between them
+    joined_ctes = ',\n\n'.join(cte_statements)
+    
+    return f"WITH {joined_ctes}"
 
 def get_exports(
     global_start_date: Optional[str] = None,
@@ -312,9 +341,10 @@ def get_exports(
             # Apply date filter to query
             query_sql = apply_date_filter(query_sql, date_range, f"query {query_name}")
             
-            # Handle CTEs with the same date range
+            # Get CTEs in their specified order
             required_ctes = parse_required_ctes(query_sql)
             if required_ctes:
+                logging.info(f"Query {query_name} requires CTEs (in order): {', '.join(required_ctes)}")
                 cte_sql = get_dynamic_ctes(required_ctes, date_range)
                 full_query = f"{cte_sql}\n\n{query_sql}"
             else:
