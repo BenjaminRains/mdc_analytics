@@ -2,7 +2,7 @@
 -- Core procedure dataset filtered by date range with key attributes
 -- Joins to procedure codes and flags excluded codes for special handling
 -- Date filter: 2024-01-01 to 2025-01-01
--- dependent CTEs: ExcludedCodes
+-- dependent CTEs: excluded_codes.sql
 BaseProcedures AS (
     SELECT 
         pl.ProcNum,
@@ -20,5 +20,6 @@ BaseProcedures AS (
     FROM procedurelog pl
     JOIN procedurecode pc ON pl.CodeNum = pc.CodeNum
     LEFT JOIN ExcludedCodes ec ON pl.CodeNum = ec.CodeNum
-    WHERE pl.ProcDate >= '{{START_DATE}}' AND pl.ProcDate < '{{END_DATE}}'
+    WHERE pl.ProcDate >= '{{START_DATE}}' 
+      AND pl.ProcDate < '{{END_DATE}}'
 )

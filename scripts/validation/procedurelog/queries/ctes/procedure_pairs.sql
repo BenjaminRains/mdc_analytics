@@ -1,7 +1,7 @@
 -- PROCEDURE PAIRS
 -- Identifies pairs of procedures performed on the same patient on the same day
 -- Used for analyzing common procedure combinations and bundling patterns
--- dependent CTEs: BaseProcedures
+-- dependent CTEs: base_procedures.sql
 ProcedurePairs AS (
     SELECT 
         p1.PatNum,
@@ -14,8 +14,8 @@ ProcedurePairs AS (
         p2.ProcFee AS proc2_fee,
         p1.ProcFee + p2.ProcFee AS combined_fee
     FROM BaseProcedures p1
-    JOIN BaseProcedures p2 ON 
-        p1.PatNum = p2.PatNum AND 
-        p1.ProcDate = p2.ProcDate AND
-        p1.ProcNum < p2.ProcNum -- Ensures each pair is counted only once
+    JOIN BaseProcedures p2 
+        ON  p1.PatNum = p2.PatNum 
+        AND p1.ProcDate = p2.ProcDate
+        AND p1.ProcNum < p2.ProcNum -- Ensures each pair is counted only once
 )
