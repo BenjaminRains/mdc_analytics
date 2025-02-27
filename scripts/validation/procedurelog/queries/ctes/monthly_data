@@ -26,10 +26,7 @@
 --     - Identify seasonal patterns in procedure volume
 --     - Track revenue trends and unpaid procedure backlog
 --
--- CTE Dependencies:
---     - BaseProcedures CTE
---     - PaymentActivity CTE
---     - SuccessCriteria CTE
+-- Dependent CTEs: base_procedures.sql, payment_activity.sql, success_criteria.sql
 MonthlyData AS (
     SELECT 
         EXTRACT(YEAR FROM pl.ProcDate) AS proc_year,
