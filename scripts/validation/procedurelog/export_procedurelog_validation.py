@@ -155,12 +155,12 @@ def ensure_directory_exists(directory: str):
 def parse_required_ctes(query_sql: str) -> List[str]:
     """
     Parse the header of the query SQL file to extract the list of required CTEs.
-    Expected header format: "-- CTEs used: excluded_codes.sql, base_procedures.sql"
+    Expected header format: "-- Dependent CTEs: excluded_codes.sql, base_procedures.sql"
     """
     required_ctes = []
     for line in query_sql.splitlines():
-        if line.startswith('-- CTEs used:'):
-            cte_line = line.replace('-- CTEs used:', '').strip()
+        if line.startswith('-- Dependent CTEs:'):
+            cte_line = line.replace('-- Dependent CTEs:', '').strip()
             # Get the filenames as-is, just strip whitespace
             required_ctes = [cte.strip() for cte in cte_line.split(',') if cte.strip()]
             # Remove .sql extension if present
