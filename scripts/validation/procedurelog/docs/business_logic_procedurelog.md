@@ -16,16 +16,118 @@ The primary table tracking all dental procedures. Key fields include:
 - **CodeNum**: Foreign key to the procedure code definition
 - **AptNum**: Appointment number associated with the procedure (if any)
 
-### ProcStatus Codes
+### ProcStatus Codes and Distribution (2024 Dataset)
 The `ProcStatus` field uses the following values:
-1. **Treatment Planned**: Procedure is planned but not yet performed (20.37% of procedures)
-2. **Completed**: Procedure has been performed and completed (51.68% of procedures)
-3. **In Progress**: Procedure is currently being performed (6.00% of procedures)
-4. **Deleted**: Existing condition that is not currently relevant (0.48% of procedures)
-5. **Rejected**: Procedure was rejected (1.71% of procedures)
-6. **CondPlanned**: A condition-based procedure is planned (15.83% of procedures)
-7. **NeedToDo**: Procedure requires further action (3.88% of procedures)
-8. **Invalid**: Invalid or erroneous procedure entry (0.05% of procedures)
+
+1. **Treatment Planned (Status 1)** - 20.38%
+   - Represents planned/scheduled procedures
+   - No completion dates (0% have DateComplete)
+   - Moderate appointment linkage (25.18%)
+   - Very low treatment plan date presence (2.30%)
+   - Significant increase from historical 6.55%
+
+2. **Completed (Status 2)** - 51.67%
+   - Represents completed procedures
+   - 100% have completion dates
+   - High appointment linkage (90.67%)
+   - Strong data consistency
+   - Decrease from historical 75.44%
+
+3. **Administrative/Documentation (Status 3)** - 6.00%
+   - Almost exclusively zero-fee procedures (99.96%)
+   - No appointment links
+   - No completion dates
+   - Used for "Group Note" entries
+   - Increase from historical 4.31%
+
+4. **Existing Prior (Status 4)** - 0.48%
+   - Average fee: $246.30
+   - No appointment links
+   - No completion dates
+   - Historical conditions/procedures
+   - Decrease from historical 5.05%
+
+5. **Referred (Status 5)** - 1.71%
+   - External provider referrals
+   - Very low completion date rate (0.94%)
+   - No appointment links
+   - Increase from historical 0.33%
+
+6. **Ordered/Planned (Status 6)** - 15.83%
+   - Average fee: $204.05
+   - No appointment links
+   - Very low completion dates (0.74%)
+   - Very low treatment plan dates (0.46%)
+   - Used for preventive care and diagnostics
+   - Increase from historical 7.23%
+
+7. **Condition (Status 7)** - 3.88%
+   - Purpose requires further investigation
+   - No appointment links
+   - No completion dates
+   - Increase from historical 1.03%
+   - Note: Previously thought to represent declined treatment plans, but 3.88% is too low given expected treatment plan acceptance rate of ~70%
+   - Further analysis needed to determine actual business purpose
+
+8. **Unknown (Status 8)** - 0.05%
+   - Very rarely used
+   - No appointment links
+   - No completion dates
+   - Consistent with historical usage
+
+### Key Status Patterns and Relationships
+
+1. **Completion Date Patterns**
+   - Status 2 (Completed): 100% have completion dates
+   - Status 5 and 6: <1% have completion dates
+   - All other statuses: 0% completion dates
+
+2. **Appointment Linkage Patterns**
+   - Status 2: 90.67% have appointments
+   - Status 1: 25.18% have appointments
+   - All other statuses: No appointment links
+
+3. **Treatment Plan Integration**
+   - Generally low across all statuses
+   - Status 1: Only 2.30% have treatment plan dates
+   - Status 6: Only 0.46% have treatment plan dates
+
+4. **Fee Distribution Patterns**
+   - Status 3: 99.96% zero-fee procedures
+   - Status 4: Average fee $246.30
+   - Status 6: Average fee $204.05
+
+### Notable Changes in Status Distribution
+
+1. **Planning Status Increase**
+   - Treatment Planned (1): ↑ from 6.55% to 20.38%
+   - Ordered/Planned (6): ↑ from 7.23% to 15.83%
+   - Combined planning statuses increased from 13.78% to 36.21%
+
+2. **Completion Status Decrease**
+   - Completed (2): ↓ from 75.44% to 51.67%
+   - Suggests shift toward more planning-oriented workflow
+
+3. **Administrative Status Changes**
+   - Administrative (3): ↑ from 4.31% to 6.00%
+   - Status 7: ↑ from 1.03% to 3.88% (purpose needs investigation)
+   - Indicates increased documentation but Status 7's role unclear
+
+4. **Historical Status Reduction**
+   - Existing Prior (4): ↓ from 5.05% to 0.48%
+   - Suggests cleanup of historical conditions
+
+### Areas Requiring Further Investigation
+
+1. **Status 7 Purpose**
+   - Current hypothesis of representing declined treatment plans is unlikely
+   - 3.88% prevalence is too low for declined plans given expected ~70% acceptance rate
+   - Need to analyze:
+     - Procedure types commonly marked as Status 7
+     - Relationship with treatment planning workflow
+     - Temporal patterns (when/how Status 7 is assigned)
+     - Associated procedure codes and fees
+     - Relationship with other planning statuses (1 and 6)
 
 ### Related Entities
 - **procedurecode**: Defines the type of procedure (e.g., D0120, D1110)
