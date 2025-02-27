@@ -13,6 +13,7 @@ UnpaidCompleted AS (
         bp.Descript,
         bp.ProcFee,
         bp.CodeCategory,
+        DATE_FORMAT(bp.ProcDate, '%Y-%m') AS proc_month,
         DATEDIFF(CURRENT_DATE, bp.DateComplete) AS days_since_completion
     FROM BaseProcedures bp
     LEFT JOIN PaymentActivity pa ON bp.ProcNum = pa.ProcNum
