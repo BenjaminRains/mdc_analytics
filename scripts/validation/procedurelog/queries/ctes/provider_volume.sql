@@ -1,5 +1,6 @@
 -- PROVIDER VOLUME
 -- Aggregates procedure volumes and status metrics by provider
+-- Date filter: 2024-01-01 to 2025-01-01
 -- Dependent CTEs: base_procedures.sql
 ProviderVolume AS (
     SELECT 

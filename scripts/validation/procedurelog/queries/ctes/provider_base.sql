@@ -1,7 +1,8 @@
 -- PROVIDER BASE
 -- Core provider information and attributes
 -- Used as the foundation for provider-based analytics
--- No dependencies
+-- Date filter: 2024-01-01 to 2025-01-01
+-- Dependent CTEs:
 
 ProviderBase AS (
     SELECT 
