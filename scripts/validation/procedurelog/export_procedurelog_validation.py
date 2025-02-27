@@ -368,6 +368,10 @@ def process_single_export(export, factory, connection_type, database, output_dir
     fresh_connection = None
     start_time = datetime.now()
     try:
+        # Add debug logging for the full SQL
+        logging.debug(f"Executing query for {export['name']}:")
+        logging.debug("SQL:\n" + export['query'])
+        
         fresh_connection = factory.create_connection(connection_type, database)
         mysql_connection = fresh_connection.connect()
         with mysql_connection.cursor(dictionary=True) as cursor:
@@ -395,6 +399,8 @@ def process_single_export(export, factory, connection_type, database, output_dir
         }
     except Exception as e:
         duration = (datetime.now() - start_time).total_seconds()
+        logging.error(f"Query that failed for {export['name']}:")
+        logging.error("SQL:\n" + export['query'])
         return {
             'name': export['name'],
             'success': False,
