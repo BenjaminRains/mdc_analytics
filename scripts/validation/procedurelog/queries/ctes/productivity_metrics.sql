@@ -1,4 +1,6 @@
 -- Aggregate appointment durations and production by provider
+-- Used for analyzing provider productivity and efficiency
+-- Dependent CTEs: appt_durations.sql, appt_production.sql
 productivity_metrics AS (
   SELECT 
     ad.ProvNum,
