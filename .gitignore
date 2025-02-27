@@ -112,7 +112,6 @@ coverage.xml
 .env.*.local
 
 # Logs and diagnostics
-**/logs/
 **/diagnostics/
 **/*.log
 
