@@ -175,12 +175,29 @@ DATE_FILTER_REGEX = re.compile(
 )
 
 class DateRange(NamedTuple):
+    """Represents a date range for filtering data in queries and CTEs.
+    
+    The date range is used to replace {{START_DATE}} and {{END_DATE}} placeholders
+    in SQL queries and CTEs. These placeholders should be present in any query or CTE
+    that needs date filtering.
+    """
     start_date: date
     end_date: date
 
     @classmethod
     def from_strings(cls, start: Optional[str], end: Optional[str]) -> 'DateRange':
-        """Create a DateRange from string dates, with validation."""
+        """Create a DateRange from string dates, with validation.
+        
+        Args:
+            start: Start date in YYYY-MM-DD format, or None for default
+            end: End date in YYYY-MM-DD format, or None for default
+            
+        Returns:
+            DateRange object with validated dates
+            
+        Raises:
+            ValueError: If dates are invalid or end_date <= start_date
+        """
         try:
             start_date = datetime.strptime(start, '%Y-%m-%d').date() if start else date(2024, 1, 1)
             end_date = datetime.strptime(end, '%Y-%m-%d').date() if end else date(2025, 1, 1)
@@ -193,53 +210,51 @@ class DateRange(NamedTuple):
             logging.error(f"Date parsing error: {e}")
             raise
 
-def parse_date_filter(content: str) -> Optional[DateRange]:
-    """
-    Parse the date filter from SQL content.
-    Expected format: -- Date filter: 2024-01-01 to 2025-01-01
+def parse_date_filter(content: str, filename: str = "unknown") -> Optional[DateRange]:
+    """Parse the date filter from SQL content.
+    
+    Looks for a comment in the format:
+    -- Date filter: 2024-01-01 to 2025-01-01
+    
+    Args:
+        content: SQL content to parse
+        filename: Name of file being parsed (for logging)
+        
+    Returns:
+        DateRange if found and valid, None otherwise
     """
     match = DATE_FILTER_REGEX.search(content)
-    if match:
-        try:
-            return DateRange.from_strings(match.group(1), match.group(2))
-        except ValueError:
-            return None
-    return None
-
-def apply_date_filter(sql: str, date_range: DateRange) -> str:
-    """Apply date range to SQL, with validation of the template variables."""
-    if '{{START_DATE}}' not in sql or '{{END_DATE}}' not in sql:
-        logging.warning("SQL missing date filter placeholders")
-        return sql
+    if not match:
+        logging.debug(f"No date filter found in {filename}")
+        return None
         
-    return sql.replace('{{START_DATE}}', str(date_range.start_date)).replace('{{END_DATE}}', str(date_range.end_date))
-
-def parse_query_date_filter(query_sql: str) -> Optional[DateRange]:
-    return parse_date_filter(query_sql)
-
-def parse_cte_date_filter(cte_sql: str) -> Optional[DateRange]:
-    return parse_date_filter(cte_sql)
-
-# Load a query file from the queries directory.
-def load_query_file(query_name: str) -> str:
-    query_path = QUERIES_DIR / f"{query_name}.sql"
     try:
-        return query_path.read_text(encoding="utf-8")
-    except Exception as e:
-        logging.error(f"Error loading query file '{query_name}' from {query_path}: {e}")
-        raise
+        return DateRange.from_strings(match.group(1), match.group(2))
+    except ValueError:
+        logging.warning(f"Invalid date filter in {filename}")
+        return None
 
-# Load a CTE file from the ctes subdirectory.
-def load_cte_file(cte_name: str) -> str:
-    """Load a CTE file using exact filename."""
-    cte_path = CTES_DIR / f"{cte_name}.sql"
-    try:
-        return cte_path.read_text(encoding='utf-8')
-    except Exception as e:
-        logging.error(f"Error loading CTE file {cte_name} from {cte_path}: {e}")
-        raise
+def apply_date_filter(sql: str, date_range: DateRange, filename: str = "unknown") -> str:
+    """Apply date range to SQL, replacing template variables.
+    
+    Args:
+        sql: SQL content with optional {{START_DATE}} and {{END_DATE}} placeholders
+        date_range: DateRange object with dates to apply
+        filename: Name of file being processed (for logging)
+        
+    Returns:
+        SQL with date placeholders replaced if present, original SQL otherwise
+    """
+    has_start = '{{START_DATE}}' in sql
+    has_end = '{{END_DATE}}' in sql
+    
+    if has_start or has_end:
+        if not (has_start and has_end):
+            logging.warning(f"Incomplete date placeholders in {filename} - needs both {{START_DATE}} and {{END_DATE}}")
+        return sql.replace('{{START_DATE}}', str(date_range.start_date)).replace('{{END_DATE}}', str(date_range.end_date))
+    
+    return sql
 
-# Dynamically assemble the required CTEs with date substitutions.
 def get_dynamic_ctes(
     required_ctes: List[str],
     global_date_range: Optional[DateRange] = None
@@ -250,19 +265,22 @@ def get_dynamic_ctes(
         
     cte_statements = []
     for cte_name in required_ctes:
-        cte_content = load_cte_file(cte_name)
-        file_date_range = parse_date_filter(cte_content)
-        
-        # Use global date range if provided, otherwise use file's default
-        date_range = global_date_range or file_date_range or DateRange(date(2024, 1, 1), date(2025, 1, 1))
-        
-        # Apply the date filter
-        cte_content = apply_date_filter(cte_content, date_range)
-        cte_statements.append(cte_content.strip())
+        try:
+            cte_content = load_cte_file(cte_name)
+            file_date_range = parse_date_filter(cte_content, f"CTE {cte_name}")
+            
+            # Use global range if provided, otherwise use file's default
+            date_range = global_date_range or file_date_range or DateRange(date(2024, 1, 1), date(2025, 1, 1))
+            
+            # Apply the date filter
+            cte_content = apply_date_filter(cte_content, date_range, f"CTE {cte_name}")
+            cte_statements.append(cte_content.strip())
+        except Exception as e:
+            logging.error(f"Error processing CTE {cte_name}: {e}")
+            raise
     
     return "WITH " + ",\n".join(cte_statements)
 
-# Assemble export configurations for each query, replacing date placeholders dynamically.
 def get_exports(
     global_start_date: Optional[str] = None,
     global_end_date: Optional[str] = None,
@@ -286,13 +304,13 @@ def get_exports(
             query_sql = load_query_file(query_name)
             
             # Get query's default date range
-            query_date_range = parse_date_filter(query_sql)
+            query_date_range = parse_date_filter(query_sql, f"query {query_name}")
             
             # Use global range if provided, otherwise use query's default
             date_range = global_date_range or query_date_range or DateRange(date(2024, 1, 1), date(2025, 1, 1))
             
             # Apply date filter to query
-            query_sql = apply_date_filter(query_sql, date_range)
+            query_sql = apply_date_filter(query_sql, date_range, f"query {query_name}")
             
             # Handle CTEs with the same date range
             required_ctes = parse_required_ctes(query_sql)
@@ -508,10 +526,80 @@ def ensure_indexes(connection, database_name):
     except Exception as e:
         logging.error(f"Error creating indexes: {str(e)}", exc_info=True)
 
+# File loading functions
+def load_query_file(query_name: str) -> str:
+    """Load a query file from the queries directory.
+    
+    Args:
+        query_name: Name of the query file without .sql extension
+        
+    Returns:
+        str: Content of the SQL query file
+        
+    Raises:
+        FileNotFoundError: If query file doesn't exist
+        IOError: If there's an error reading the file
+    """
+    query_path = QUERIES_DIR / f"{query_name}.sql"
+    if not query_path.exists():
+        raise FileNotFoundError(f"Query file not found: {query_path}")
+    try:
+        return query_path.read_text(encoding="utf-8")
+    except Exception as e:
+        logging.error(f"Error loading query file '{query_name}' from {query_path}: {e}")
+        raise IOError(f"Failed to read query file {query_path}: {str(e)}")
+
+def load_cte_file(cte_name: str) -> str:
+    """Load a CTE file from the ctes subdirectory.
+    
+    Args:
+        cte_name: Name of the CTE file without .sql extension
+        
+    Returns:
+        str: Content of the SQL CTE file
+        
+    Raises:
+        FileNotFoundError: If CTE file doesn't exist
+        IOError: If there's an error reading the file
+    """
+    cte_path = CTES_DIR / f"{cte_name}.sql"
+    if not cte_path.exists():
+        raise FileNotFoundError(f"CTE file not found: {cte_path}")
+    try:
+        return cte_path.read_text(encoding='utf-8')
+    except Exception as e:
+        logging.error(f"Error loading CTE file {cte_name} from {cte_path}: {e}")
+        raise IOError(f"Failed to read CTE file {cte_path}: {str(e)}")
+
+def validate_sql_directories():
+    """Validate that required SQL directories exist and are accessible.
+    
+    Raises:
+        FileNotFoundError: If required directories don't exist
+        PermissionError: If directories aren't accessible
+    """
+    for path, name in [
+        (QUERIES_DIR, "queries"),
+        (CTES_DIR, "CTEs")
+    ]:
+        if not path.exists():
+            raise FileNotFoundError(f"Required {name} directory not found: {path}")
+        if not path.is_dir():
+            raise NotADirectoryError(f"Required {name} path is not a directory: {path}")
+        # Test accessibility
+        try:
+            next(path.iterdir(), None)
+        except PermissionError:
+            raise PermissionError(f"Cannot access {name} directory: {path}")
+
 def main():
     try:
         args = parse_args()
         setup_logging(args.log_dir)
+        
+        # Validate SQL directories before proceeding
+        validate_sql_directories()
+        
         logging.info(f"Output directory: {args.output_dir}")
         logging.info(f"Database: {args.database}")
         logging.info(f"Connection type: {args.connection_type}")
