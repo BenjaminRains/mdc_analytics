@@ -1,27 +1,27 @@
 -- PROVIDER BASE
 -- Core provider information and attributes
 -- Used as the foundation for provider-based analytics
--- Date filter: 2024-01-01 to 2025-01-01
+-- Date filter: {{START_DATE}} to {{END_DATE}}
 -- Dependent CTEs:
 
 ProviderBase AS (
-    SELECT 
-        p.ProvNum,
-        p.Abbr AS ProviderAbbr,
+    SELECT DISTINCT 
+        provider.ProvNum,
+        provider.Abbr AS ProviderAbbr,
         CONCAT(
-            COALESCE(p.PreferredName, p.FName),
+            COALESCE(provider.PreferredName, provider.FName),
             CASE 
-                WHEN p.MI > '' THEN CONCAT(' ', p.MI)
+                WHEN provider.MI > '' THEN CONCAT(' ', provider.MI)
                 ELSE ''
             END,
             ' ',
-            p.LName,
+            provider.LName,
             CASE 
-                WHEN p.Suffix > '' THEN CONCAT(' ', p.Suffix)
+                WHEN provider.Suffix > '' THEN CONCAT(' ', provider.Suffix)
                 ELSE ''
             END
         ) AS ProviderName,
-        CASE p.Specialty
+        CASE provider.Specialty
             WHEN 0 THEN 'General'
             WHEN 1 THEN 'Hygienist'
             WHEN 2 THEN 'Endodontist'
@@ -34,26 +34,25 @@ ProviderBase AS (
             WHEN 9 THEN 'Assistant'
             ELSE 'Other'
         END AS Specialty,
-        p.ProvStatus,
-        p.IsHidden,
-        p.IsHiddenReport,
-        p.HourlyProdGoalAmt,
-        p.DateTerm,
+        provider.ProvStatus,
+        provider.IsHidden,
+        provider.IsHiddenReport,
+        COALESCE(provider.HourlyProdGoalAmt, 0) AS HourlyProdGoalAmt,
+        provider.DateTerm,
         -- Additional fields for filtering and grouping
         CASE 
-            WHEN p.DateTerm = '0001-01-01' THEN NULL 
-            ELSE p.DateTerm 
+            WHEN provider.DateTerm = '0001-01-01' THEN NULL 
+            ELSE provider.DateTerm 
         END AS TerminationDate,
-        p.IsSecondary,
+        provider.IsSecondary,
         -- Normalize production goal (handle nulls and zeros)
         CASE 
-            WHEN p.HourlyProdGoalAmt <= 0 THEN NULL
-            ELSE p.HourlyProdGoalAmt
+            WHEN COALESCE(provider.HourlyProdGoalAmt, 0) <= 0 THEN NULL
+            ELSE COALESCE(provider.HourlyProdGoalAmt, 0)
         END AS NormalizedProdGoal
-    FROM provider p
-    WHERE 
-        p.IsNotPerson = 0  -- Exclude non-person providers
-        AND p.ProvStatus = 0  -- Active providers only
-        AND p.IsHidden = 0  -- Not hidden
-        AND (p.DateTerm = '0001-01-01' OR p.DateTerm >= '{{START_DATE}}')  -- Not terminated before period
+    FROM provider
+    -- Join to procedurelog to get only providers with activity in date range
+    INNER JOIN procedurelog pl ON pl.ProvNum = provider.ProvNum
+    WHERE pl.ProcDate BETWEEN '{{START_DATE}}' AND '{{END_DATE}}'
+    AND provider.IsHidden = 0
 ) 
