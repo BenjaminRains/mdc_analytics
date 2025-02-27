@@ -43,4 +43,4 @@ ProviderVolume AS (
     FROM BaseProcedures bp
     WHERE bp.ProvNum > 0
     GROUP BY bp.ProvNum
-) 
+)
