@@ -1,7 +1,7 @@
 -- COMMON PAIRS
 -- Counts the most frequent procedure pairs and their associated fees
 -- Used for bundling analysis and procedure combination patterns
--- dependent CTEs: ProcedurePairs
+-- dependent CTEs: procedure_pairs.sql
 CommonPairs AS (
     SELECT 
         proc1_code,
