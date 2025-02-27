@@ -1,6 +1,6 @@
 -- Edge Case Query
 -- Identifies edge cases and anomalies in procedure payments
--- Dependent CTEs: excluded_codes.sql, base_procedures.sql, payment_activity.sql, edge_cases.sql
+-- Dependent CTEs: excluded_codes.sql, base_procedures.sql, payment_activity.sql, payment_edge_cases.sql
 SELECT 
     edge_case_type,
     COUNT(*) AS case_count,
@@ -11,6 +11,6 @@ SELECT
     SUM(ProcFee) AS total_fees,
     SUM(total_paid) AS total_paid,
     ROUND(SUM(total_paid) / NULLIF(SUM(ProcFee), 0) * 100, 2) AS payment_percentage
-FROM EdgeCases
+FROM PaymentEdgeCases
 GROUP BY edge_case_type
 ORDER BY case_count DESC;
