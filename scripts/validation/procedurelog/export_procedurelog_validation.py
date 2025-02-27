@@ -7,6 +7,69 @@ a series of SQL queries for procedure log validation. The results for each query
 are exported to separate CSV files. The files are then analyzed to identify and
 diagnose issues with procedure logging and payment tracking.
 
+The exported CSV files are loaded and analyzed in the Jupyter notebook:
+    notebooks/procedurelog_analysis.ipynb
+This notebook provides interactive visualizations, statistical analysis, and
+detailed investigation of validation results. It helps identify patterns,
+anomalies, and potential issues in the procedure log data.
+
+Validation Scope:
+----------------
+1. Procedure Data Integrity
+   - Basic procedure attributes and relationships
+   - Status transitions and workflow
+   - Fee assignment and accuracy
+   - Appointment linkage
+
+2. Basic Payment Coverage
+   - Presence/absence of payments
+   - Payment rate statistics
+   - Payment-procedure relationship flags
+   Note: Detailed payment validation is handled in payment_split_validation/
+
+3. Time-based Analysis
+   - Temporal patterns
+   - Status transitions over time
+   - Procedure bundling patterns
+
+Key Validation Questions:
+-----------------------
+Procedure Integrity:
+- Are procedures being recorded with valid status codes?
+- Do procedures have appropriate fees assigned?
+- Are procedure codes valid and properly categorized?
+- Are procedures properly linked to appointments?
+- Are procedure status transitions logical?
+
+Workflow Validation:
+- What is the distribution of procedure statuses?
+- Are completed procedures properly marked?
+- Are treatment planned procedures being tracked?
+- Are deleted procedures properly handled?
+
+Fee Validation:
+- Are procedure fees within expected ranges?
+- Are zero-fee procedures appropriate?
+- Do fee patterns match procedure types?
+- Are provider-specific fee schedules consistent?
+
+Basic Payment Coverage:
+- What percentage of procedures have associated payments?
+- Are completed procedures receiving payments?
+- Are payments only on completed procedures?
+- Are there anomalies in payment patterns?
+Note: Detailed payment validation and reconciliation is handled in payment_split_validation/
+
+Appointment Integration:
+- Are procedures properly linked to appointments?
+- Do appointment statuses align with procedure statuses?
+- Are there orphaned procedures without appointments?
+
+Provider Analysis:
+- Are procedures properly attributed to providers?
+- Are there provider-specific patterns in procedure data?
+- Do provider fee schedules show consistency?
+
 Usage:
     python export_procedurelog_validation.py [--output-dir <path>] [--log-dir <path>]
                                               [--database <dbname>] [--queries <names>]
@@ -18,6 +81,12 @@ Usage:
 Query files and common CTE definitions are stored as separate .sql files in the
 'queries' directory. The required CTEs are dynamically prepended to each query,
 with date filters replaced by CLI parameters (if provided).
+
+Related Validation Scripts:
+-------------------------
+- payment_split_validation/: Detailed payment validation and reconciliation
+- treatment_plan_validation/: Treatment planning workflow validation
+- appointment_validation/: Appointment scheduling and status validation
 """
 
 import pandas as pd
