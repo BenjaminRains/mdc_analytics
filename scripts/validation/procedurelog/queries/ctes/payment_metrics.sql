@@ -1,5 +1,6 @@
 -- PAYMENT METRICS
 -- Tracks payment statistics including insurance and patient payments
+-- Date filter: 2024-01-01 to 2025-01-01
 -- Dependent CTEs: base_procedures.sql
 PaymentMetrics AS (
     SELECT 
