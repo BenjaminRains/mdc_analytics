@@ -115,6 +115,7 @@ QUERY_DESCRIPTIONS = {
     'summary': 'Overall procedure data summary',
     'base_counts': 'Fundamental counts and statistics for procedures',
     'bundled_procedures': 'Analyzes procedures that are commonly performed together (bundled)',
+    'bundle_size_payment_analysis': 'Analyzes payment patterns based on procedure bundle sizes',
     'status_distribution': 'Procedure status code distribution',
     'status_transitions': 'Procedure status transition patterns',
     'temporal_patterns': 'Month-by-month procedure analytics',
