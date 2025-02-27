@@ -1,65 +1,19 @@
 -- Dependent CTEs: provider_base.sql, provider_volume.sql, procedure_categories.sql, hygiene_metrics.sql, payment_metrics.sql, appt_durations.sql, appt_production.sql, productivity_metrics.sql
+-- Date filter: 2024-01-01 to 2025-01-01
+
 /*
-Query: Provider Performance Analysis with Appointment Time Calculation
--------------------------------------------------------------------------------
-
-Description:
-This query aggregates provider performance metrics from the Open Dental system,
-combining data from multiple tables (provider, appointment, procedurelog, and
-procedurecode) to produce a comprehensive provider report.
-Metrics Calculated:
-1. Provider Basic Information
-   - Provider number, abbreviation, name, specialty, status
-   - Hourly production goal
-
-2. Procedure Volume Metrics
-   - Total procedures
-   - Total procedure fees
-   - Unique patients
-   - Days with activity
-   - Unique procedure codes
-   - Procedure counts by status (treatment planned, complete, in progress, etc.)
-
-3. Procedure Category Distribution
-   - Count and percentage by category
-
-4. Hygiene Metrics
-   - Count and percentages of hygiene vs. non-hygiene procedures
-   - Associated fees
-
-5. Payment Metrics
-   - Total billed
-   - Total insurance paid
-   - Total patient paid
-   - Total paid
-   - Collection rate
-
-6. Productivity Metrics
-   - Appointment count
-   - Scheduled hours
-   - Total production
-   - Hourly production
-
 Appointment Time Calculation:
 ---------------------------
-Pattern field interpretation (VARCHAR):
+Pattern field interpretation:
 - "/" = 10 minutes of non-provider time
 - "X" = 10 minutes of provider time
 
-Multiple procedures calculation:
-- Provider time = count of "X" characters × 10
+Duration calculation:
+- Provider time = count of "X" × 10
 - Non-provider time = max(count of leading "/", count of trailing "/") × 10
 - Total duration (hours) = (left non-provider + provider time + right non-provider) ÷ 60
-
-Tables Used:
------------
-- provider: Provider information
-- appointment: Appointment details and patterns
-- procedurelog: Procedure details, fees, and status
-- procedurecode: Procedure category information
-
-Note: Date range defaults to '2023-01-01' to '2023-12-31'. Adjust as needed.
 */
+
 SELECT 
   pb.ProvNum,
   pb.ProviderAbbr,
@@ -123,7 +77,7 @@ SELECT
    WHERE ProvNum = pb.ProvNum
    GROUP BY ProvNum
   ) AS TopProcedureCategories
-FROM provider_base pb
+FROM ProviderBase pb
 LEFT JOIN provider_volume pv ON pb.ProvNum = pv.ProvNum
 LEFT JOIN hygiene_metrics hm ON pb.ProvNum = hm.ProvNum
 LEFT JOIN payment_metrics pm ON pb.ProvNum = pm.ProvNum
