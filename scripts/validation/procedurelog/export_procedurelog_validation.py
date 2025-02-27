@@ -370,14 +370,32 @@ def process_single_export(export, factory, connection_type, database, output_dir
     fresh_connection = None
     start_time = datetime.now()
     try:
-        # Add debug logging for the full SQL
-        logging.debug(f"Executing query for {export['name']}:")
-        logging.debug("SQL:\n" + export['query'])
-        
         fresh_connection = factory.create_connection(connection_type, database)
         mysql_connection = fresh_connection.connect()
+        
+        # Extract and execute any SET statements first
+        query_lines = export['query'].split('\n')
+        set_statements = []
+        main_query_lines = []
+        
+        for line in query_lines:
+            if line.strip().upper().startswith('SET '):
+                set_statements.append(line.strip())
+            else:
+                main_query_lines.append(line)
+        
+        # Execute SET statements first
         with mysql_connection.cursor(dictionary=True) as cursor:
-            cursor.execute(export['query'])
+            for set_stmt in set_statements:
+                logging.debug(f"Executing SET statement: {set_stmt}")
+                cursor.execute(set_stmt)
+            
+            # Now execute the main query
+            main_query = '\n'.join(main_query_lines).strip()
+            logging.debug(f"Executing main query for {export['name']}:")
+            logging.debug("SQL:\n" + main_query)
+            
+            cursor.execute(main_query)
             results = cursor.fetchall()
             df = pd.DataFrame(results)
             if len(df) == 0:
