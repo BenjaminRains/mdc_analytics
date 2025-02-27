@@ -49,7 +49,7 @@ SELECT
         'unique_appt_dates', unique_appt_dates,
         'unique_categories', unique_categories,
         'cat_250_count', cat_250_count,
-        'procedure_categories', procedure_categories,
+        'procedure_categories', procedure_categories,  -- now a numeric count
         'other_status_count', other_status_count,
         'other_statuses', other_statuses,
         'data_quality_flag', data_quality_flag,
@@ -103,4 +103,4 @@ SELECT
         'high_volume_patients', high_volume_patients
     ) as analysis_data
 FROM MonthlyTrends
-ORDER BY analysis_type; 
+ORDER BY analysis_type;
