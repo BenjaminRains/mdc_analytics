@@ -2,88 +2,101 @@
 
 ### Status Values and Meanings
 NOTE: The UI shows **Status: ExstCurPro, ExstOther, Referred, Condition**
-1. **ProcStatus = 1: Treatment Planned**
+
+1. **ProcStatus = 1: Treatment Planned** (20.38%)
    - Represents planned/scheduled procedures
-   - No completion dates (DateComplete = '0001-01-01')
-   - Can be linked to appointments with various statuses:
-     - No appointment yet (NULL AptStatus)
-     - Scheduled appointments (AptStatus = 1)
-     - Completed appointments (AptStatus = 2)
-     - Broken/missed appointments (AptStatus = 5)
+   - No completion dates (0% have DateComplete)
+   - 25.18% have appointment links
+   - Can be linked to appointments with various statuses
+   - Treatment plan dates are rare (2.30% have TreatPlanDate)
 
-2. **ProcStatus = 2: Completed**
+2. **ProcStatus = 2: Completed** (51.67%)
    - Represents completed procedures
-   - Always has valid completion dates
-   - Majority are linked to completed appointments (AptStatus = 2)
-   - Some may have no appointment link
-   - Makes up ~75% of all procedures
+   - 100% have completion dates
+   - High appointment linkage (90.67% have appointments)
+   - Makes up majority of all procedures
+   - Strong data consistency (no completion date anomalies)
 
-3. **ProcStatus = 3: Administrative/Documentation** (4.31%)
-   - Almost exclusively used for "Group Note" entries (>99%)
-   - Zero-fee procedures
-   - Has treatment plan dates
-   - No appointment links
+3. **ProcStatus = 3: Administrative/Documentation** (6.00%)
+   - Almost exclusively zero-fee procedures (99.96%)
+   - No appointment links (0%)
+   - No completion dates (0%)
    - Used for administrative documentation rather than actual procedures
+   - Primarily "Group Note" entries
 
-4. **ProcStatus = 4** (5.05%)
-   - Higher average fees ($739.78)
-   - Has treatment plan dates
-   - No appointment links
-   - Multiple procedure types (15 unique codes)
-   - Purpose needs further investigation
+4. **ProcStatus = 4: Existing Prior** (0.48%)
+   - Average fee: $246.30 (lower than historical average of ~$740)
+   - No appointment links (0%)
+   - No completion dates (0%)
+   - Represents pre-existing conditions or historical procedures
+   - Usage has decreased significantly
 
-5. **ProcStatus = 5** (0.33%)
-   - Rarely used
-   - Purpose needs further investigation
-   - No appointment links
+5. **ProcStatus = 5: Referred** (1.71%)
+   - No appointment links (0%)
+   - Very low completion date rate (0.94%)
+   - Used for procedures referred to external providers
+   - Usage has increased from historical 0.33%
 
-6. **ProcStatus = 6: Ordered/Planned** (7.23%)
-   - Represents procedures that have been ordered/planned but not yet scheduled
-   - Common procedure types:
+6. **ProcStatus = 6: Ordered/Planned** (15.83%)
+   - Average fee: $204.05 (consistent with historical ~$208)
+   - No appointment links (0%)
+   - Very low completion date rate (0.74%)
+   - Very low treatment plan date rate (0.46%)
+   - Usage has increased from historical 7.23%
+   - Used for:
      - Preventive care (fluoride, cleanings, evaluations)
-     - Diagnostic procedures (various X-rays)
-     - Major treatments (core buildups, crowns, implants)
-   - Lower average fees ($208.30)
-   - Most have treatment plan dates (97%)
-   - No appointment links yet
-   - Includes tracking codes (Post Op, Tooth Watch)
-   - Actively managed procedures awaiting scheduling
-   - Note: While ~15% of cancelled appointments use this status, this is not its primary purpose
+     - Diagnostic procedures (X-rays)
+     - Major treatments awaiting scheduling
 
-7. **ProcStatus = 7: Unknown** (1.03%)
-   - No completion dates
-   - No appointment links
+7. **ProcStatus = 7: Condition** (3.88%)
+   - No appointment links (0%)
+   - No completion dates (0%)
    - Likely represents declined treatment plans
+   - Usage has increased from historical 1.03%
 
-8. **ProcStatus = 8: Unknown** (0.06%)
-   - Very rarely used
-   - No completion dates
-   - No appointment links
+8. **ProcStatus = 8: In Progress** (0.05%)
+   - Very rarely used (consistent with historical data)
+   - No appointment links (0%)
+   - No completion dates (0%)
 
-### Distribution
-Based on analysis of procedurelog table:
-- Status 1: 6.55%
-- Status 2: 75.44%
-- Status 3: 4.31%
-- Status 4: 5.05%
-- Status 5: 0.33%
-- Status 6: 7.23%
-- Status 7: 1.03%
-- Status 8: 0.06%
+### Current Distribution (2024 Dataset)
+- Status 1: 20.38% (↑ from 6.55%)
+- Status 2: 51.67% (↓ from 75.44%)
+- Status 3: 6.00% (↑ from 4.31%)
+- Status 4: 0.48% (↓ from 5.05%)
+- Status 5: 1.71% (↑ from 0.33%)
+- Status 6: 15.83% (↑ from 7.23%)
+- Status 7: 3.88% (↑ from 1.03%)
+- Status 8: 0.05% (≈ 0.06%)
 
-### Key Relationships
-- Completed procedures (Status 2) almost always have:
-  - Valid completion dates
-  - Links to completed appointments (AptStatus = 2)
-  - Also used for completed administrative tasks (85% of missed/cancelled appointments)
-- Planned procedures (Status 1) always have:
-  - No completion date ('0001-01-01')
-  - May or may not have appointment links
-  - Can be associated with various appointment statuses
-- Missed and Cancelled Appointments:
-  - Primarily recorded with ProcStatus = 2 (~85%)
-  - Sometimes recorded with ProcStatus = 6 (~15%)
-  - Choice of status might depend on when the miss/cancellation occurred 
+### Key Data Quality Patterns
+
+1. **Completion Dates**
+   - Only Status 2 consistently has completion dates (100%)
+   - Status 5 and 6 have very low completion dates (<1%)
+   - All other statuses have 0% completion dates
+
+2. **Appointment Linkage**
+   - Status 2 has highest appointment linkage (90.67%)
+   - Status 1 has moderate appointment linkage (25.18%)
+   - All other statuses have 0% appointment linkage
+
+3. **Treatment Plan Dates**
+   - Generally low across all statuses
+   - Status 1 (Treatment Planned): only 2.30%
+   - Status 6 (Ordered/Planned): only 0.46%
+
+4. **Fee Patterns**
+   - Status 3: Almost exclusively zero-fee (99.96%)
+   - Status 4: Average fee $246.30
+   - Status 6: Average fee $204.05
+
+### Notable Changes from Historical Data
+1. Significant increase in Treatment Planned (Status 1)
+2. Decrease in Completed procedures (Status 2)
+3. Increase in Ordered/Planned procedures (Status 6)
+4. Decrease in average fees for Status 4
+5. General shift toward more planning statuses
 
 ## Appointment Status (appointment.AptStatus)
 
