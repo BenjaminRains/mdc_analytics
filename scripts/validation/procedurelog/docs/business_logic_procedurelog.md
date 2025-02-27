@@ -483,3 +483,22 @@ Analysis of monthly procedure data reveals consistent patterns in how procedures
    - Procedures linked to completed appointments show near-perfect procedure completion rates (99.99%)
    - Procedures with unknown appointment status show very low completion rates (10.03%)
    - This suggests appointment status is a strong predictor of procedure completion and payment outcomes
+
+   
+   
+
+DateComplete Missing for Non-Completed Procedures
+
+If a procedure is not truly finished or has a status like “Planned” or “Referred Out,” you’d expect no DateComplete.
+High missingness can be legitimate rather than a data error.
+AptDateTime Missing for Non-Scheduled Work
+
+Procedures that didn’t require or never had an appointment (e.g., certain administrative codes, external referrals) wouldn’t have an AptDateTime.
+TreatPlanDate Underused or Documented Elsewhere
+
+Many clinics don’t fill out the TreatPlanDate field if they track treatment planning in a different module or skip it altogether.
+The near 99% missing rate suggests a systemic workflow gap rather than random data entry errors.
+PerioExamDate Only Applies to Certain Procedures
+
+About 44% are missing. It may be that only certain categories (e.g., periodontal codes) require a perio exam.
+If a clinic doesn’t do full perio charting for every patient, the PerioExamDate will remain blank.
