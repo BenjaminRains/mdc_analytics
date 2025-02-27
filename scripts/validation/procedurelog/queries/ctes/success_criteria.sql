@@ -3,7 +3,7 @@
 -- A procedure is considered successful if:
 -- 1. It's completed with zero fee (for standard procedures), OR
 -- 2. It's completed with fee and has received at least 95% payment
--- dependent CTEs: BaseProcedures, PaymentActivity
+-- Dependent CTEs: base_procedures.sql, payment_activity.sql
 SuccessCriteria AS (
     SELECT
         bp.ProcNum,

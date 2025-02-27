@@ -1,4 +1,5 @@
 -- Calculate the duration of appointments in hours
+-- Dependent CTEs:
 appt_durations AS (
   SELECT
     AptNum,

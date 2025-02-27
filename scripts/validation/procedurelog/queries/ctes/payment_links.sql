@@ -1,7 +1,7 @@
 -- PAYMENT LINKS
 -- Calculates payment linkage metrics for procedures
 -- Used for identifying payment tracking issues and linkage patterns
--- dependent CTEs: BaseProcedures
+-- Dependent CTEs: base_procedures.sql
 PaymentLinks AS (
     SELECT 
         bp.ProcNum,

@@ -1,7 +1,7 @@
 -- APPOINTMENT STATUS CATEGORIES
 -- Standardizes appointment status code translations
 -- Ensures consistent categorization of appointment statuses across reports
--- dependent CTEs: AppointmentDetails
+-- Dependent CTEs: appointment_details.sql
 AppointmentStatusCategories AS (
     SELECT 
         AptStatus,

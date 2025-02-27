@@ -1,8 +1,7 @@
 -- APPOINTMENT DETAILS
 -- Provides appointment information within date range
 -- Used for joining procedures to appointments and tracking appointment status
--- dependent CTEs: None
-
+-- Dependent CTEs:
 -- NOTE: AptDateTime is formatted as '0001-01-01 00:00:00' when null
 AppointmentDetails AS (
     SELECT

@@ -1,7 +1,7 @@
 -- VISIT COUNTS
 -- Identifies patient visits with multiple procedures
 -- Used for analyzing bundling opportunities and visit optimization
--- dependent CTEs: base_procedures.sql
+-- Dependent CTEs: base_procedures.sql
 VisitCounts AS (
     SELECT
         PatNum,

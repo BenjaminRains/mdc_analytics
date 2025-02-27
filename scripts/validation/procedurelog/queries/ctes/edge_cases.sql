@@ -1,7 +1,7 @@
 -- EDGE CASES
 -- Identifies payment anomalies and edge cases in procedure billing
 -- Used for exception reporting and data quality analysis
--- dependent CTEs: BaseProcedures, PaymentActivity
+-- Dependent CTEs: base_procedures.sql, payment_activity.sql
 EdgeCases AS (
     SELECT
         bp.ProcNum,

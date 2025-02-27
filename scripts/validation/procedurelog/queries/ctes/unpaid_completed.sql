@@ -1,7 +1,7 @@
 -- UNPAID COMPLETED
 -- Identifies completed procedures with no payments
 -- Used for accounts receivable analysis and collection targeting
--- 
+-- Dependent CTEs: base_procedures.sql, payment_activity.sql
 UnpaidCompleted AS (
     SELECT
         bp.ProcNum,

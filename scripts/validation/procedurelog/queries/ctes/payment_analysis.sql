@@ -4,7 +4,7 @@
 -- Computes financial metrics including fees, payments, and payment completion rates
 -- Identifies fully paid visits (defined as >= 95% payment ratio)
 -- Used for: Financial reporting and identifying payment patterns based on bundle complexity
--- dependent CTEs: bundled_payments.sql
+-- Dependent CTEs: bundled_payments.sql
 PaymentAnalysis AS (
     SELECT 
         CASE 

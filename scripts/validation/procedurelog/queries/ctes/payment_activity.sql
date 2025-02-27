@@ -2,7 +2,7 @@
 -- Aggregates payment information from insurance and direct patient payments
 -- Calculates total payments and payment ratio (percentage of fee paid)
 -- Date filter: 2024-01-01 to 2025-01-01
--- dependent CTEs: base_procedures.sql
+-- Dependent CTEs: base_procedures.sql
 PaymentActivity AS (
     SELECT 
         pl.ProcNum,

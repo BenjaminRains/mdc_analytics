@@ -1,7 +1,7 @@
 -- PROCEDURE METRICS
 -- Calculates key metrics about procedures including counts, status, fees, and payments
 -- Used for dashboard metrics and summary reports
--- dependent CTEs: ProcedureAppointmentSummary
+-- Dependent CTEs: procedure_appointment_summary.sql
 ProcedureMetrics AS (
     SELECT
         COUNT(*) AS total_procedures,

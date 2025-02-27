@@ -1,7 +1,7 @@
 -- PATIENT RESPONSIBILITY
 -- Calculates patient responsibility after payments and adjustments
 -- Used for analyzing patient financial burden and collection opportunities
--- dependent CTEs: BaseProcedures, PaymentActivity, ProcedureAdjustments
+-- Dependent CTEs: base_procedures.sql, payment_activity.sql, procedure_adjustments.sql
 PatientResponsibility AS (
     SELECT
         bp.ProcNum,

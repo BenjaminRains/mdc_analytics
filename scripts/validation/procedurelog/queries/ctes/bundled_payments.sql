@@ -1,7 +1,7 @@
 -- BUNDLED PAYMENTS
 -- Calculates payment data for visits with multiple procedures
 -- Used for analyzing how bundled procedures are billed and paid
--- dependent CTEs: visit_counts.sql, base_procedures.sql, payment_activity.sql
+-- Dependent CTEs: visit_counts.sql, base_procedures.sql, payment_activity.sql
 BundledPayments AS (
     SELECT
         vc.PatNum,
