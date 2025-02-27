@@ -1,7 +1,7 @@
 
 -- Bundle Size Payment Analysis
 -- Analyzes payment patterns for bundled procedures
--- CTEs used: excluded_codes.sql, base_procedures.sql, payment_activity.sql, visit_counts.sql, bundled_payments.sql, payment_analysis.sql
+-- Dependent CTEs: excluded_codes.sql, base_procedures.sql, payment_activity.sql, visit_counts.sql, bundled_payments.sql, payment_analysis.sql
 SELECT
     bundle_size,
     visit_count,
