@@ -1,288 +1,228 @@
 /*
- * Claim Denial Patterns and Processing Times Analysis
- *
- * Purpose: Analyze patterns in claim denials, processing times, and resubmission outcomes
- * with detailed breakdowns by denial code, procedure type, and temporal patterns
- *
- * Output columns:
- * - DenialMetrics: Various denial-related statistics
- * - ProcessingTimes: Time-based analysis of claim lifecycle
- * - ResubmissionOutcomes: Results of claim resubmissions
- * - CarrierPatterns: Carrier-specific denial patterns
- * - DenialCodeAnalysis: Specific denial code patterns and resolutions
- * - ProcedureImpact: Procedure-specific denial patterns
- * - TemporalTrends: Time-based comparison of denial patterns
+ * Claim Denial Patterns Raw Data Query
+ * 
+ * Purpose: Extract raw claim data for analysis in pandas with data quality checks
+ * 
+ * Note on Data Quality:
+ * Several data quality issues are better handled in pandas post-extraction:
+ * 1. Date Handling
+ *    - Future DateService values (2025)
+ *    - NULL DateEntry values
+ *    - DateCP range validation
+ *    Example:
+ *    df['DateService'] = pd.to_datetime(df['DateService'])
+ *    df.loc[df['DateService'].dt.year > 2024, 'DateService'] = None
+ * 
+ * 2. Processing Time Calculations
+ *    - Large values (739000+ days) due to date validation
+ *    - Negative processing times
+ *    Example:
+ *    df['processing_time'] = (df['DateCP'] - df['DateEntry']).dt.days
+ *    df.loc[df['processing_time'] < 0, 'processing_time'] = None
+ * 
+ * 3. Status Analysis
+ *    - All claims currently "Pending/Not Sent"
+ *    - Stale claims analysis
+ *    Example:
+ *    df['days_pending'] = (pd.Timestamp.now() - df['DateCP']).dt.days
+ *    df['is_stale'] = df['days_pending'] > 30
+ * 
+ * 4. Financial Analysis
+ *    - Payment patterns and outliers
+ *    - Carrier/procedure aggregations
+ *    - Deductible analysis
+ *    Best handled with pandas groupby operations
+ * 
+ * Analysis Questions:
+ * 1. Claim Status Patterns
+ *    - What is the distribution of claim statuses across carriers?
+ *    - How do status patterns vary by procedure type?
+ *    - What is the average time between status changes?
+ *    Note: Status Codes Observed:
+ *    - 0: Pending/Not Sent
+ *    - 1: Received by Carrier
+ *    - 4: Other
+ * 
+ * 2. Financial Analysis
+ *    - What is the average payment amount by carrier and procedure?
+ *    - How do deductibles vary across carriers?
+ *    - What procedures have the highest write-off rates?
+ *    - Is there a correlation between claim status and payment amounts?
+ * 
+ * 3. Procedure Analysis
+ *    - Which procedures are most commonly denied/delayed?
+ *    - Are certain procedures more likely to be approved by specific carriers?
+ *    - What is the average number of procedures per claim by carrier?
+ * 
+ * 4. Temporal Patterns
+ *    - Are there seasonal patterns in claim submissions or approvals?
+ *    - How do processing times vary by carrier and procedure type?
+ *    - What is the typical lifecycle of a claim from submission to resolution?
+ * 
+ * 5. Carrier Analysis
+ *    - Which carriers have the highest/lowest approval rates?
+ *    - How do processing times compare across carriers?
+ *    - Are there carriers with unusual denial patterns?
+ * 
+ * 6. Denial Code Analysis
+ *    - What are the most common denial codes?
+ *    - Do certain carriers use specific denial codes more frequently?
+ *    - Are particular procedures associated with specific denial codes?
+ * 
+ * 7. Patient Impact
+ *    - What is the average out-of-pocket cost by procedure?
+ *    - Which carriers have the highest patient cost burden?
+ *    - Are certain patient groups experiencing higher denial rates?
  */
+ -- Date Range '2024-01-01' to '2024-12-31'
+ -- Dependent CTEs: date_range.sql
 
-WITH 
-ClaimDenialHistory AS (
+WITH DateRange AS (
     SELECT 
-        c.ClaimNum,
-        c.PatNum,
-        c.PlanNum,
-        i.CarrierNum,
-        cp.ProcNum,
-        cp.Status as claim_status,
-        cp.DateCP,
-        cp.DateEntry,
-        c.DateService,
-        cp.WriteOff,
-        cp.InsPayAmt,
-        cp.DedApplied,
-        cp.ClaimNote,
-        cp.ReasonCode as denial_code,
-        -- Track claim versions
-        ROW_NUMBER() OVER (PARTITION BY c.ClaimNum ORDER BY cp.DateCP) as submission_attempt,
-        COUNT(*) OVER (PARTITION BY c.ClaimNum) as total_submissions,
-        -- Time calculations
-        DATEDIFF(DAY, c.DateService, cp.DateEntry) as days_to_submission,
-        DATEDIFF(DAY, cp.DateEntry, cp.DateCP) as processing_duration,
-        DATEDIFF(DAY, c.DateService, cp.DateCP) as total_resolution_time
-    FROM claim c
-    JOIN claimproc cp ON c.ClaimNum = cp.ClaimNum
-    JOIN insplan i ON c.PlanNum = i.PlanNum
-    WHERE c.DateService BETWEEN '2024-01-01' AND '2024-12-31'
-        AND cp.Status IN (6, 7, 8) -- Focus on denied, rejected, or pending claims
-),
-DenialReasonAnalysis AS (
-    SELECT 
-        cdh.CarrierNum,
-        cdh.denial_code,
-        COUNT(DISTINCT cdh.ClaimNum) as denied_claims,
-        AVG(cdh.processing_duration) as avg_processing_time,
-        SUM(CASE WHEN cdh.total_submissions > 1 THEN 1 ELSE 0 END) as resubmitted_claims,
-        SUM(CASE 
-            WHEN cdh.submission_attempt > 1 
-            AND cdh.Status = 1 -- Successfully paid after resubmission
-            THEN 1 ELSE 0 END) as successful_resubmissions,
-        AVG(cdh.total_resolution_time) as avg_total_resolution_time,
-        STRING_AGG(DISTINCT SUBSTRING(cdh.ClaimNote, 1, 100), '|') as common_notes
-    FROM ClaimDenialHistory cdh
-    GROUP BY 
-        cdh.CarrierNum,
-        cdh.denial_code
-),
-ProcessingTimeAnalysis AS (
-    SELECT 
-        cdh.CarrierNum,
-        AVG(cdh.days_to_submission) as avg_submission_delay,
-        AVG(cdh.processing_duration) as avg_processing_time,
-        MIN(cdh.processing_duration) as fastest_processing,
-        MAX(cdh.processing_duration) as slowest_processing,
-        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY cdh.processing_duration) as median_processing_time,
-        COUNT(DISTINCT cdh.ClaimNum) as total_claims,
-        COUNT(DISTINCT CASE 
-            WHEN cdh.processing_duration > 30 
-            THEN cdh.ClaimNum END) as delayed_claims
-    FROM ClaimDenialHistory cdh
-    GROUP BY cdh.CarrierNum
-),
-DenialCodeResolutionAnalysis AS (
-    SELECT 
-        cdh.CarrierNum,
-        cdh.denial_code,
-        -- Denial frequency
-        COUNT(DISTINCT cdh.ClaimNum) as denial_count,
-        -- Resolution success
-        SUM(CASE 
-            WHEN cdh.submission_attempt > 1 AND cdh.Status = 1 
-            THEN 1 ELSE 0 END) * 100.0 / 
-            NULLIF(COUNT(*), 0) as resolution_success_rate,
-        -- Average attempts needed
-        AVG(CAST(cdh.total_submissions AS FLOAT)) as avg_submissions_needed,
-        -- Time to resolution
-        AVG(cdh.total_resolution_time) as avg_days_to_resolve,
-        -- Financial impact
-        AVG(cdh.InsPayAmt) as avg_payment_when_resolved,
-        -- Common resolution paths
-        STRING_AGG(
-            DISTINCT CASE 
-                WHEN cdh.submission_attempt > 1 AND cdh.Status = 1 
-                THEN SUBSTRING(cdh.ClaimNote, 1, 100)
-            END,
-            ' | '
-        ) as successful_resolution_notes
-    FROM ClaimDenialHistory cdh
-    GROUP BY 
-        cdh.CarrierNum,
-        cdh.denial_code
-),
-ProcedureTypeAnalysis AS (
-    SELECT 
-        cdh.CarrierNum,
-        p.ProcCode,
-        p.Descript as procedure_description,
-        COUNT(DISTINCT cdh.ClaimNum) as total_denials,
-        -- Denial rate for this procedure
-        COUNT(DISTINCT cdh.ClaimNum) * 100.0 / 
-            NULLIF(COUNT(DISTINCT p.ProcNum), 0) as procedure_denial_rate,
-        -- Most common denial reasons
-        STRING_AGG(
-            DISTINCT CONCAT(
-                cdh.denial_code, ': ',
-                COUNT(*), ' denials'
-            ),
-            '; '
-        ) as common_denial_reasons,
-        -- Resolution success by procedure
-        SUM(CASE 
-            WHEN cdh.submission_attempt > 1 AND cdh.Status = 1 
-            THEN 1 ELSE 0 END) * 100.0 / 
-            NULLIF(COUNT(*), 0) as procedure_resolution_rate,
-        -- Average processing time
-        AVG(cdh.processing_duration) as avg_processing_days
-    FROM ClaimDenialHistory cdh
-    JOIN procedurelog p ON cdh.ProcNum = p.ProcNum
-    GROUP BY 
-        cdh.CarrierNum,
-        p.ProcCode,
-        p.Descript
-),
-TemporalDenialAnalysis AS (
-    SELECT 
-        cdh.CarrierNum,
-        -- Time period buckets
-        DATEADD(MONTH, DATEDIFF(MONTH, 0, cdh.DateService), 0) as service_month,
-        COUNT(DISTINCT cdh.ClaimNum) as monthly_denials,
-        -- Denial rate trends
-        COUNT(DISTINCT cdh.ClaimNum) * 100.0 / 
-            NULLIF(COUNT(DISTINCT c.ClaimNum), 0) as monthly_denial_rate,
-        -- Processing time trends
-        AVG(cdh.processing_duration) as avg_processing_time,
-        -- Resolution rate trends
-        SUM(CASE 
-            WHEN cdh.submission_attempt > 1 AND cdh.Status = 1 
-            THEN 1 ELSE 0 END) * 100.0 / 
-            NULLIF(COUNT(*), 0) as monthly_resolution_rate,
-        -- Common denial reasons by month
-        STRING_AGG(
-            DISTINCT CONCAT(
-                cdh.denial_code, ': ',
-                COUNT(*), ' denials'
-            ),
-            '; '
-        ) as monthly_denial_reasons
-    FROM ClaimDenialHistory cdh
-    JOIN claim c ON cdh.ClaimNum = c.ClaimNum
-    GROUP BY 
-        cdh.CarrierNum,
-        service_month
+        '2024-01-01' AS start_date,
+        '2024-12-31' AS end_date
 )
-
 SELECT 
-    c.CarrierName,
-    c.ElectID,
-    
-    -- Denial Volume Metrics
-    COUNT(DISTINCT cdh.ClaimNum) as total_denied_claims,
-    COUNT(DISTINCT CASE 
-        WHEN cdh.total_submissions > 1 
-        THEN cdh.ClaimNum END) as resubmitted_claims,
-    
-    -- Processing Time Metrics
-    pta.avg_submission_delay,
-    pta.avg_processing_time,
-    pta.median_processing_time,
-    pta.delayed_claims,
-    
-    -- Financial Impact
-    SUM(cdh.InsPayAmt) as total_denied_amount,
-    SUM(cdh.WriteOff) as total_writeoffs_on_denials,
-    SUM(cdh.DedApplied) as total_deductibles_on_denials,
-    
-    -- Resubmission Success
-    CAST(SUM(CASE 
-        WHEN cdh.submission_attempt > 1 AND cdh.Status = 1 
-        THEN 1 ELSE 0 END) * 100.0 / 
-        NULLIF(COUNT(DISTINCT CASE 
-            WHEN cdh.total_submissions > 1 
-            THEN cdh.ClaimNum END), 0) AS DECIMAL(5,2)) as resubmission_success_rate,
-    
-    -- Top Denial Reasons
-    STRING_AGG(
-        DISTINCT CONCAT(
-            dra.denial_code, ': ',
-            dra.denied_claims, ' claims, ',
-            CAST(ROUND(dra.avg_processing_time, 1) AS VARCHAR), ' days avg'
-        ),
-        '; '
-    ) as top_denial_reasons,
-    
-    -- Processing Time Patterns
-    STRING_AGG(
-        DISTINCT CONCAT(
-            FORMAT(DATEADD(MONTH, DATEDIFF(MONTH, 0, cdh.DateCP), 0), 'yyyy-MM'), ': ',
-            COUNT(DISTINCT cdh.ClaimNum), ' denials, ',
-            CAST(ROUND(AVG(cdh.processing_duration), 1) AS VARCHAR), ' days avg'
-        ),
-        '; '
-    ) as monthly_denial_patterns,
-    
-    -- Common Notes Analysis
-    STRING_AGG(DISTINCT dra.common_notes, ' | ') as denial_notes,
-    
-    -- Denial Code Resolution Patterns
-    STRING_AGG(
-        DISTINCT CONCAT(
-            dcra.denial_code, ' (',
-            dcra.denial_count, ' denials, ',
-            CAST(ROUND(dcra.resolution_success_rate, 1) AS VARCHAR), '% resolved, ',
-            CAST(ROUND(dcra.avg_submissions_needed, 1) AS VARCHAR), ' attempts avg)'
-        ),
-        '; '
-    ) as denial_code_patterns,
-    
-    -- Procedure-Specific Patterns
-    STRING_AGG(
-        DISTINCT CONCAT(
-            pta.ProcCode, ': ',
-            pta.total_denials, ' denials, ',
-            CAST(ROUND(pta.procedure_denial_rate, 1) AS VARCHAR), '% denial rate, ',
-            CAST(ROUND(pta.procedure_resolution_rate, 1) AS VARCHAR), '% resolved'
-        ),
-        '; '
-    ) as procedure_denial_patterns,
-    
-    -- Temporal Trends
-    STRING_AGG(
-        DISTINCT CONCAT(
-            FORMAT(tda.service_month, 'yyyy-MM'), ': ',
-            tda.monthly_denials, ' denials, ',
-            CAST(ROUND(tda.monthly_denial_rate, 1) AS VARCHAR), '% denial rate, ',
-            CAST(ROUND(tda.monthly_resolution_rate, 1) AS VARCHAR), '% resolved'
-        ),
-        '; '
-    ) as temporal_denial_patterns,
-    
-    -- Resolution Strategy Summary
-    STRING_AGG(
-        DISTINCT CASE 
-            WHEN dcra.resolution_success_rate >= 50 
-            THEN CONCAT(
-                dcra.denial_code, ' resolution: ',
-                dcra.successful_resolution_notes
-            )
-        END,
-        ' | '
-    ) as successful_resolution_strategies
-
-FROM carrier c
-LEFT JOIN ClaimDenialHistory cdh ON c.CarrierNum = cdh.CarrierNum
-LEFT JOIN DenialReasonAnalysis dra ON c.CarrierNum = dra.CarrierNum
-LEFT JOIN ProcessingTimeAnalysis pta ON c.CarrierNum = pta.CarrierNum
-LEFT JOIN DenialCodeResolutionAnalysis dcra ON c.CarrierNum = dcra.CarrierNum
-LEFT JOIN ProcedureTypeAnalysis pta2 ON c.CarrierNum = pta2.CarrierNum
-LEFT JOIN TemporalDenialAnalysis tda ON c.CarrierNum = tda.CarrierNum
-WHERE NOT c.IsHidden
-GROUP BY 
+    -- Carrier Information
     c.CarrierNum,
     c.CarrierName,
     c.ElectID,
-    pta.avg_submission_delay,
-    pta.avg_processing_time,
-    pta.median_processing_time,
-    pta.delayed_claims
-HAVING COUNT(DISTINCT cdh.ClaimNum) > 0
+    
+    -- Claim Details
+    cl.ClaimNum,
+    cl.PatNum,
+    cp.ProcNum,
+    cp.Status AS claim_status,
+    
+    -- Dates with Enhanced Validation
+    CASE 
+        WHEN cp.DateCP = '0001-01-01' OR cp.DateCP > CURRENT_DATE() THEN NULL
+        WHEN cp.DateCP < dr.start_date THEN NULL
+        ELSE cp.DateCP 
+    END AS DateCP,
+    CASE 
+        WHEN cp.DateEntry = '0001-01-01' OR cp.DateEntry > CURRENT_DATE() THEN NULL
+        WHEN cp.DateEntry < dr.start_date THEN NULL
+        ELSE cp.DateEntry 
+    END AS DateEntry,
+    CASE 
+        WHEN cl.DateService = '0001-01-01' OR cl.DateService > CURRENT_DATE() THEN NULL
+        WHEN cl.DateService < dr.start_date THEN NULL
+        ELSE cl.DateService
+    END AS DateService,
+    
+    -- Enhanced Data Quality Flags
+    CASE 
+        WHEN cl.DateService > CURRENT_DATE() THEN 'Future Service Date'
+        WHEN cp.DateCP > CURRENT_DATE() THEN 'Future Processing Date'
+        WHEN cp.DateEntry > CURRENT_DATE() THEN 'Future Entry Date'
+        WHEN cp.DateCP = '0001-01-01' AND cp.DateEntry = '0001-01-01' AND cl.DateService = '0001-01-01' THEN 'All Dates Missing'
+        WHEN cp.DateCP = '0001-01-01' THEN 'Missing DateCP'
+        WHEN cp.DateEntry = '0001-01-01' THEN 'Missing DateEntry'
+        WHEN cl.DateService = '0001-01-01' THEN 'Missing DateService'
+        WHEN cp.DateCP < cp.DateEntry THEN 'CP before Entry'
+        WHEN cl.DateService > cp.DateCP AND cp.DateCP IS NOT NULL THEN 'Service After Processing'
+        WHEN cp.Status = 0 AND cp.DateCP IS NOT NULL 
+             AND DATEDIFF(CURRENT_DATE(), cp.DateCP) > 30 THEN 'Stale Pending'
+        ELSE 'Valid'
+    END AS date_validation,
+    
+    -- Processing Times (Only for Valid Non-Future Dates)
+    CASE 
+        WHEN cp.DateCP IS NOT NULL 
+             AND cp.DateCP <= CURRENT_DATE()
+             AND cl.DateService IS NOT NULL 
+             AND cl.DateService <= CURRENT_DATE()
+             AND cl.DateService <= cp.DateCP
+        THEN DATEDIFF(cp.DateCP, cl.DateService)
+        ELSE NULL
+    END AS days_to_completion,
+    
+    CASE 
+        WHEN cp.DateCP IS NOT NULL 
+             AND cp.DateCP <= CURRENT_DATE()
+             AND cp.DateEntry IS NOT NULL 
+             AND cp.DateEntry <= CURRENT_DATE()
+             AND cp.DateEntry <= cp.DateCP
+        THEN DATEDIFF(cp.DateCP, cp.DateEntry)
+        ELSE NULL
+    END AS processing_time,
+    
+    -- Financial Information with Enhanced Validation
+    cp.WriteOff,
+    cp.InsPayAmt,
+    cp.DedApplied,
+    (COALESCE(cp.WriteOff, 0) + COALESCE(cp.DedApplied, 0)) AS patient_responsibility,
+    CASE 
+        WHEN cp.Status = 0 AND (cp.InsPayAmt > 0 OR cp.WriteOff > 0) THEN 'Pending with Payment'
+        WHEN cp.Status != 0 AND cp.InsPayAmt = 0 AND cp.WriteOff = 0 AND cp.DedApplied = 0 THEN 'Processed without Payment'
+        WHEN cp.DedApplied > 0 AND cp.Status = 0 THEN 'Pending with Deductible'
+        WHEN cp.Status = 0 AND cp.DateCP <= CURRENT_DATE() 
+             AND DATEDIFF(CURRENT_DATE(), cp.DateCP) > 30 THEN 'Stale Pending'
+        ELSE 'Valid'
+    END AS financial_validation,
+    
+    -- Status and Denial Information
+    NULLIF(cp.Remarks, '') AS Remarks,
+    NULLIF(cp.ClaimAdjReasonCodes, '') AS denial_code,
+    CASE 
+        WHEN cp.Status = 0 THEN 'Pending/Not Sent'
+        WHEN cp.Status = 1 THEN 'Received'
+        WHEN cp.Status = 4 THEN 'Other'
+        ELSE 'Unknown'
+    END AS status_description,
+    
+    -- Procedure Information
+    pc.ProcCode,
+    pc.Descript AS procedure_description,
+    
+    -- Claim Grouping with Date Validation
+    COUNT(*) OVER (PARTITION BY cl.ClaimNum) AS procedures_in_claim,
+    ROW_NUMBER() OVER (PARTITION BY cl.ClaimNum, cp.ProcNum ORDER BY 
+        CASE 
+            WHEN cp.DateCP > CURRENT_DATE() THEN NULL 
+            ELSE cp.DateCP 
+        END DESC,
+        CASE 
+            WHEN cp.DateEntry > CURRENT_DATE() THEN NULL
+            ELSE cp.DateEntry 
+        END DESC
+    ) AS proc_version,
+    
+    -- Additional Metrics with Date Validation
+    MONTH(COALESCE(
+        CASE WHEN cl.DateService <= CURRENT_DATE() THEN cl.DateService END,
+        CASE WHEN cp.DateEntry <= CURRENT_DATE() THEN cp.DateEntry END
+    )) AS service_month,
+    DAYNAME(COALESCE(
+        CASE WHEN cl.DateService <= CURRENT_DATE() THEN cl.DateService END,
+        CASE WHEN cp.DateEntry <= CURRENT_DATE() THEN cp.DateEntry END
+    )) AS service_day,
+    CASE WHEN cp.InsPayAmt > 0 THEN 1 ELSE 0 END AS is_paid,
+    CASE WHEN cp.ClaimAdjReasonCodes IS NOT NULL AND cp.ClaimAdjReasonCodes != '' THEN 1 ELSE 0 END AS is_denied
+
+FROM DateRange dr
+CROSS JOIN carrier c
+JOIN claim cl ON cl.PlanNum IN (
+    SELECT PlanNum 
+    FROM insplan 
+    WHERE CarrierNum = c.CarrierNum
+)
+JOIN claimproc cp ON cl.ClaimNum = cp.ClaimNum
+JOIN insplan i ON cl.PlanNum = i.PlanNum
+LEFT JOIN procedurelog pl ON cp.ProcNum = pl.ProcNum
+LEFT JOIN procedurecode pc ON pl.CodeNum = pc.CodeNum
+WHERE NOT c.IsHidden
+    AND (
+        -- Include claims with valid dates in range
+        (cp.DateCP BETWEEN dr.start_date AND CURRENT_DATE())
+        OR (cp.Status = 0 AND cl.DateService BETWEEN dr.start_date AND CURRENT_DATE())
+    )
 ORDER BY 
-    total_denied_claims DESC,
-    CarrierName; 
+    COALESCE(
+        CASE WHEN cl.DateService <= CURRENT_DATE() THEN cl.DateService END,
+        CASE WHEN cp.DateCP <= CURRENT_DATE() THEN cp.DateCP END,
+        CASE WHEN cp.DateEntry <= CURRENT_DATE() THEN cp.DateEntry END
+    ) DESC,
+    cl.ClaimNum,
+    cp.ProcNum;
