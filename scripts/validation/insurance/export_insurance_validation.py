@@ -91,7 +91,9 @@ DATA_DIR = BASE_DIR / "data"
 QUERY_DESCRIPTIONS = {
     'carrier_payment_analysis_optimized': 'Analyzes carrier payment patterns, efficiency, and fee schedule adherence',
     'carrier_plan_configuration': 'Analyzes carrier plan configuration, fee schedules, and electronic filing settings',
-    
+    'claim_denial_patterns': 'Analyzes claim denial patterns, including status, processing times, and financial data',
+    'insurance_opportunity_analysis': 'Analyzes insurance opportunity analysis, including carrier performance, procedure analysis, insurance plan insights, patient coverage patterns, and financial opportunity analysis',
+    'pending_treatment_ins_opportunities': 'Analyzes pending treatment insurance opportunities, including treatment plans, patients, procedures, and insurance information'
 }
 
 def setup_logging(log_dir: str = str(LOG_DIR)) -> str:
