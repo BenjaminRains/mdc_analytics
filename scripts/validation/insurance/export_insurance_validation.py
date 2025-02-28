@@ -90,6 +90,7 @@ DATA_DIR = BASE_DIR / "data"
 # Query descriptions and filenames
 QUERY_DESCRIPTIONS = {
     'carrier_payment_analysis_optimized': 'Analyzes carrier payment patterns, efficiency, and fee schedule adherence',
+    'carrier_plan_configuration': 'Analyzes carrier plan configuration, fee schedules, and electronic filing settings',
     
 }
 
