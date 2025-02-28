@@ -33,9 +33,10 @@ InsuranceFeeSchedules AS (
     JOIN feesched fs ON ip.FeeSched = fs.FeeSchedNum
     LEFT JOIN fee f ON fs.FeeSchedNum = f.FeeSched
     LEFT JOIN feeschedgroup fsg ON fs.FeeSchedNum = fsg.FeeSchedNum
-    LEFT JOIN claimproc cp ON ip.PlanNum = cp.PlanNum 
-        AND f.CodeNum = cp.CodeNum
-        AND cp.ProcDate BETWEEN '{{START_DATE}}' AND '{{END_DATE}}'
+    LEFT JOIN claimproc cp ON ip.PlanNum = cp.PlanNum
+    LEFT JOIN procedurelog pl ON cp.ProcNum = pl.ProcNum 
+        AND f.CodeNum = pl.CodeNum
+        AND pl.ProcDate BETWEEN '{{START_DATE}}' AND '{{END_DATE}}'
     GROUP BY 
         ip.PlanNum,
         ip.CarrierNum,
@@ -49,4 +50,4 @@ InsuranceFeeSchedules AS (
         f.UseDefaultFee,
         f.ClinicNum,
         COALESCE(fsg.Description, 'No Group')
-) 
+)
