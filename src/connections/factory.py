@@ -15,6 +15,11 @@ def get_port(env_var: str, default: int) -> int:
     value = os.getenv(env_var)
     return int(value) if value else default
 
+def get_valid_databases(env_var: str) -> list:
+    """Helper function to get list of valid databases from environment variable."""
+    databases = os.getenv(env_var, '').split(',')
+    return [db.strip() for db in databases if db.strip()]
+
 class ConnectionFactory:
     """Factory for creating database connections."""
     
@@ -47,20 +52,28 @@ class ConnectionFactory:
         
         # Validate database name based on connection type
         if connection_type == 'local_mariadb':
-            configured_db = os.getenv('MARIADB_DATABASE')
-            if not configured_db:
-                raise ValueError("MARIADB_DATABASE must be set in .env file")
-            if database and database != configured_db:
-                raise ValueError(f"Invalid database name. Must match MARIADB_DATABASE in .env: {configured_db}")
-            database = configured_db
+            # Default to the configured database if none is provided
+            if not database:
+                database = os.getenv('MARIADB_DATABASE')
+                if not database:
+                    raise ValueError("MARIADB_DATABASE must be set in .env file")
+            else:
+                # Validate against the list of valid databases
+                valid_databases = get_valid_databases('LOCAL_VALID_DATABASES')
+                if valid_databases and database not in valid_databases:
+                    raise ValueError(f"Invalid database name. Must be in LOCAL_VALID_DATABASES: {', '.join(valid_databases)}")
         elif connection_type == 'mdc':
-            # For MDC connections, validate against MDC_DATABASE env var
-            configured_db = os.getenv('MDC_DATABASE')
-            if not configured_db:
-                raise ValueError("MDC_DATABASE must be set in .env file")
-            if database and database != configured_db:
-                raise ValueError(f"Invalid MDC database name. Must match MDC_DATABASE in .env: {configured_db}")
-            database = configured_db
+            # For MDC connections, validate against MDC_VALID_DATABASES env var
+            if database:
+                valid_databases = get_valid_databases('MDC_VALID_DATABASES')
+                if valid_databases and database not in valid_databases:
+                    raise ValueError(f"Invalid MDC database name. Must be in MDC_VALID_DATABASES: {', '.join(valid_databases)}")
+            # Default to configured database if none is provided
+            else:
+                configured_db = os.getenv('MDC_DATABASE')
+                if not configured_db:
+                    raise ValueError("MDC_DATABASE must be set in .env file")
+                database = configured_db
         
         connection_class = cls._connection_types[connection_type]
         config = cls._get_config(connection_type, database, use_root)
