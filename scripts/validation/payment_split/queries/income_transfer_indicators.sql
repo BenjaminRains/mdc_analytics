@@ -12,7 +12,8 @@
  * USAGE:
  * - Run these queries separately as needed to investigate different aspects of
  *   unassigned provider transactions
- * - Modify date ranges and patient lists as needed for your specific analysis
+ * - Dates are parameterized using '2025-01-01' for start_date and '2025-02-28' or 
+ *   '2025-03-15' for end_date, which will be dynamically replaced by the export script
  * - For weekly monitoring, refer to the comprehensive unassigned provider report
  *   documented in income_transfer_workflow.md
  *
@@ -42,7 +43,7 @@
  * ===============================================================================
  */
 
-
+-- QUERY_NAME: recent_procedures_for_patients_with_unassigned_payments
 /*
  * QUERY 1: RECENT PROCEDURE ANALYSIS
  * ===============================================================================
@@ -54,14 +55,13 @@
  *
  * PARAMETERS:
  * - PatNum list: Update with the patient IDs you want to analyze
- * - Date range: Currently set to last 90 days, adjust as needed
+ * - Date range: Uses date parameters from command line ('2025-01-01' to current date)
  * - ProcStatus = 2: Shows only completed procedures (adjust if needed)
  * 
  * INTERPRETATION:
  * The provider listed for completed procedures is often the correct provider
  * for unassigned payment transactions from the same patient.
  */
--- Find recent procedures for patients with unassigned payments
 SELECT
     proc.ProcNum,
     proc.ProcDate,
@@ -85,7 +85,7 @@ AND proc.ProcDate BETWEEN DATE_SUB(CURDATE(), INTERVAL 90 DAY) AND CURDATE()
 AND proc.ProcStatus = 2 -- Completed procedures
 ORDER BY proc.PatNum, proc.ProcDate DESC;
 
-
+-- QUERY_NAME: user_groups_creating_unassigned_payments
 /*
  * QUERY 2: USER GROUP ANALYSIS
  * ===============================================================================
@@ -96,14 +96,13 @@ ORDER BY proc.PatNum, proc.ProcDate DESC;
  * to the most relevant staff members and departments.
  *
  * PARAMETERS:
- * - Date range: Currently set to 2025-01-01 onward, adjust as needed
+ * - Date range: Uses date parameters from command line ('2025-01-01' to '2025-02-28')
  * 
  * INTERPRETATION:
  * - Users with high transaction counts need targeted training
  * - User groups with systematic issues may need process redesign
  * - First/last transaction dates help identify when issues began
  */
--- Find which user groups are creating unassigned payments
 SELECT
     u.UserName,
     ug.Description AS UserGroupName,
@@ -116,11 +115,11 @@ LEFT JOIN userod u ON ps.SecUserNumEntry = u.UserNum
 LEFT JOIN usergroupattach uga ON u.UserNum = uga.UserNum
 LEFT JOIN usergroup ug ON uga.UserGroupNum = ug.UserGroupNum
 WHERE ps.ProvNum = 0
-AND ps.DatePay > '2025-01-01'
+AND ps.DatePay BETWEEN '2025-01-01' AND '2025-02-28'
 GROUP BY u.UserName, ug.Description
 ORDER BY COUNT(*) DESC;
 
-
+-- QUERY_NAME: payment_sources_for_unassigned_transactions
 /*
  * QUERY 3: PAYMENT SOURCE ANALYSIS
  * ===============================================================================
@@ -131,27 +130,26 @@ ORDER BY COUNT(*) DESC;
  * specific payment processing workflows are contributing to the issue.
  *
  * PARAMETERS:
- * - Date range: Currently set to February 2025, adjust as needed
+ * - Date range: Uses date parameters from command line ('2025-01-01' to '2025-02-28')
  * 
  * INTERPRETATION:
  * - Payment types with high occurrence rates may indicate workflow issues
  * - Can be used to target specific payment processing training
  */
--- Check payment sources for unassigned transactions
 SELECT
     pay.PayType,
-    def.ItemName AS PayTypeName,
+    COALESCE(def.ItemName, CONCAT('Type ', pay.PayType)) AS PayTypeName,
     COUNT(*) AS TransactionCount,
     SUM(ps.SplitAmt) AS TotalAmount
 FROM paysplit ps
 INNER JOIN payment pay ON ps.PayNum = pay.PayNum
-LEFT JOIN definition def ON pay.PayType = def.DefNum AND def.Category = 'PaymentTypes'
+LEFT JOIN definition def ON pay.PayType = def.DefNum
 WHERE ps.ProvNum = 0
-AND ps.DatePay BETWEEN '2025-02-01' AND '2025-02-28'
+AND ps.DatePay BETWEEN '2025-01-01' AND '2025-02-28'
 GROUP BY pay.PayType, def.ItemName
 ORDER BY COUNT(*) DESC;
 
-
+-- QUERY_NAME: appointments_near_payment_date
 /*
  * QUERY 4: APPOINTMENT ANALYSIS
  * ===============================================================================
@@ -163,190 +161,184 @@ ORDER BY COUNT(*) DESC;
  *
  * PARAMETERS:
  * - PatNum list: Update with the patient IDs you want to analyze
- * - Date range: Currently set to 2025-01-01 to 2025-03-15, adjust as needed
+ * - Date range: Uses date parameters from command line ('2025-01-01' to '2025-03-15')
  * 
  * INTERPRETATION:
  * The provider who saw the patient closest to the payment date is often
  * the correct provider to assign to the unassigned transaction.
  */
--- Find appointments near payment date to identify correct provider
 SELECT
     pat.PatNum,
     CONCAT(pat.LName, ', ', pat.FName) AS PatientName,
     apt.AptDateTime,
     apt.ProvNum,
-    CONCAT(prov.FName, ' ', prov.LName) AS ProviderName
+    CONCAT(prov.LName, ', ', prov.FName) AS ProviderName,
+    -- Find the most recent payment date for this patient
+    (SELECT MAX(ps.DatePay) 
+     FROM paysplit ps 
+     WHERE ps.PatNum = pat.PatNum 
+     AND ps.ProvNum = 0
+     AND ps.DatePay BETWEEN '2025-01-01' AND '2025-02-28') AS LastUnassignedPayment,
+    -- Calculate days between appointment and payment
+    ABS(DATEDIFF(
+        apt.AptDateTime, 
+        (SELECT MAX(ps.DatePay) 
+         FROM paysplit ps 
+         WHERE ps.PatNum = pat.PatNum 
+         AND ps.ProvNum = 0
+         AND ps.DatePay BETWEEN '2025-01-01' AND '2025-02-28')
+    )) AS DaysBetweenAptAndPayment
 FROM patient pat
 INNER JOIN appointment apt ON pat.PatNum = apt.PatNum
 LEFT JOIN provider prov ON apt.ProvNum = prov.ProvNum
 WHERE pat.PatNum IN (
-    -- List of PatNums from your results
+    -- List of PatNums with unassigned payments
     -- UPDATE THIS LIST as needed for your specific analysis
-    28775, 32743, 30358, 31310, 237, 32908, 32984, 15143, 
-    32615, 12210, 317, 31668, 32965, 25949, 31570, 32920, 
-    21829, 29049, 27501, 29623, 30864, 28778, 32332, 32823, 12042
+    28775, 32743, 30358, 31310, 237, 32908, 32984, 15143
 )
 AND apt.AptDateTime BETWEEN '2025-01-01' AND '2025-03-15'
-ORDER BY pat.PatNum, apt.AptDateTime;
+AND apt.AptStatus = 2  -- Completed appointments only
+ORDER BY pat.PatNum, DaysBetweenAptAndPayment;
 
-
+-- QUERY_NAME: time_patterns_by_hour
 /*
- * QUERY 5: TEMPORAL PATTERN ANALYSIS
+ * QUERY 5A: HOURLY PATTERN ANALYSIS
  * ===============================================================================
  * 
  * PURPOSE:
- * Analyzes the timing patterns of unassigned provider transactions by user,
- * helping identify if specific days or time periods are associated with higher
- * rates of unassigned transactions.
+ * Analyzes when unassigned provider transactions are occurring by hour of day
+ * to identify shift-related patterns or time periods with higher error rates.
  *
  * PARAMETERS:
- * - Date range: Currently set to 2025-01-01 onward, adjust as needed
+ * - Date range: Reference year should match date from command line parameters
  * 
  * INTERPRETATION:
- * - Patterns by day of week may indicate staffing or workload issues
- * - Spikes on specific dates may correlate with training changes or system updates
+ * - Patterns by hour may indicate shift change issues or specific staffing concerns
  */
--- Analyze time patterns of unassigned payments by user
 SELECT
-    u.UserName,
-    DATE(ps.DatePay) AS EntryDate,
+    HOUR(DatePay) AS HourOfDay,
     COUNT(*) AS TransactionCount,
-    SUM(ps.SplitAmt) AS TotalAmount
-FROM paysplit ps
-LEFT JOIN userod u ON ps.SecUserNumEntry = u.UserNum
-WHERE ps.ProvNum = 0
-AND ps.DatePay > '2025-01-01'
-GROUP BY u.UserName, DATE(ps.DatePay)
-ORDER BY u.UserName, DATE(ps.DatePay);
+    FORMAT(AVG(SplitAmt), 2) AS AverageAmount
+FROM paysplit
+WHERE ProvNum = 0
+AND DatePay BETWEEN '2025-01-01' AND '2025-02-28'
+GROUP BY HOUR(DatePay)
+ORDER BY HOUR(DatePay);
 
-
+-- QUERY_NAME: time_patterns_by_day
 /*
- * QUERY 6: COMPREHENSIVE UNASSIGNED TRANSACTION ANALYSIS
+ * QUERY 5B: WEEKDAY PATTERN ANALYSIS
  * ===============================================================================
  * 
  * PURPOSE:
- * Provides detailed information about unassigned provider transactions for specific
- * patients, including payment details, user information, suggested provider based on
- * appointment history, and related transactions.
- *
- * This is the most comprehensive query for investigating specific patient accounts
- * and determining the appropriate provider assignments.
+ * Analyzes when unassigned provider transactions are occurring by day of week
+ * to identify staffing or workflow issues on specific days.
  *
  * PARAMETERS:
- * - Patient list: Currently filtered by specific patient last names, modify as needed
- * - Amount filter: Currently shows only negative amounts, adjust based on your analysis needs
+ * - Date range: Reference year should match date from command line parameters
  * 
  * INTERPRETATION:
- * - The SuggestedProvider field indicates the likely correct provider based on appointment history
- * - RelatedSplits shows other payment splits from the same payment, which may help understand the context
- * - RecentProcedure provides information about recent treatment that may be related to the payment
+ * - Patterns by weekday may indicate staffing gaps or training issues on specific days
  */
--- Find detailed payment information for patients with unassigned provider transactions
-SELECT 
-    -- Patient Information
-    pat.PatNum,
-    CONCAT(pat.LName, ', ', pat.FName) AS PatientName,
-    
-    -- Payment Split Information
+SELECT
+    DAYNAME(DatePay) AS DayOfWeek,
+    COUNT(*) AS TransactionCount,
+    FORMAT(AVG(SplitAmt), 2) AS AverageAmount
+FROM paysplit
+WHERE ProvNum = 0
+AND DatePay BETWEEN '2025-01-01' AND '2025-02-28'
+GROUP BY DAYNAME(DatePay)
+ORDER BY FIELD(DAYNAME(DatePay), 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday');
+
+-- QUERY_NAME: time_patterns_by_month
+/*
+ * QUERY 5C: MONTHLY PATTERN ANALYSIS
+ * ===============================================================================
+ * 
+ * PURPOSE:
+ * Analyzes when unassigned provider transactions are occurring by month
+ * to identify seasonal trends or system update related issues.
+ *
+ * PARAMETERS:
+ * - Date range: Reference year should match date from command line parameters
+ * 
+ * INTERPRETATION:
+ * - Patterns by month may indicate seasonal trends or correlate with system updates
+ */
+SELECT
+    MONTH(DatePay) AS MonthNumber,
+    MONTHNAME(DatePay) AS MonthName,
+    COUNT(*) AS TransactionCount,
+    FORMAT(AVG(SplitAmt), 2) AS AverageAmount
+FROM paysplit
+WHERE ProvNum = 0
+AND DatePay BETWEEN '2025-01-01' AND '2025-02-28'
+GROUP BY MONTH(DatePay), MONTHNAME(DatePay)
+ORDER BY MONTH(DatePay);
+
+-- QUERY_NAME: detailed_payment_information
+/*
+ * QUERY 6: COMPREHENSIVE ANALYSIS
+ * ===============================================================================
+ * 
+ * PURPOSE:
+ * Provides detailed information about unassigned provider transactions for
+ * specific patients. This is useful for in-depth investigation of individual
+ * accounts and problem solving.
+ *
+ * PARAMETERS:
+ * - PatNum list: Update with the patient IDs you want to analyze
+ * - Date range: Uses date parameters from command line ('2025-01-01' to '2025-02-28')
+ * 
+ * INTERPRETATION:
+ * - Helps identify patterns specific to individual patients
+ * - Can be used to trace specific transactions back to their source
+ * - Useful for detailed reconciliation of accounts
+ */
+SELECT
     ps.SplitNum,
-    ps.PayNum,
-    ps.ProcNum,
+    ps.PatNum,
+    CONCAT(pat.LName, ', ', pat.FName) AS PatientName,
     ps.DatePay,
-    ps.ProvNum,
+    ps.DatePay AS TransactionDate,
     ps.SplitAmt,
-    ps.PatNum AS SplitPatNum,
-    ps.UnearnedType,
-    ps.SecUserNumEntry AS SplitEnteredBy,
-    
-    -- Payment Information
+    ps.PayNum,
     pay.PayType,
-    pay.PayDate,
-    pay.PayAmt,
-    pay.CheckNum,
-    pay.BankBranch AS PaymentNote,
-    
-    -- User Information who entered the split
-    u.UserName AS EnteredByUser,
-    
-    -- Payment Type Information
-    def.ItemName AS PaymentTypeName,
-    
-    -- Add a join to get UnearnedType description
-    unearnedDef.ItemName AS UnearnedTypeDesc,
-    
-    -- Recent Appointment Information
-    (SELECT MAX(apt.AptDateTime) 
-     FROM appointment apt 
-     WHERE apt.PatNum = pat.PatNum 
-     AND apt.AptDateTime <= ps.DatePay) AS LastAppointmentDate,
-    
-    -- Associated Provider (from last appointment)
-    (SELECT apt.ProvNum 
-     FROM appointment apt 
-     WHERE apt.PatNum = pat.PatNum 
-     AND apt.AptDateTime = (SELECT MAX(apt2.AptDateTime) 
-                           FROM appointment apt2 
-                           WHERE apt2.PatNum = pat.PatNum 
-                           AND apt2.AptDateTime <= ps.DatePay)) AS LastAppointmentProvNum,
-    
-    -- Associated Provider Name
-    (SELECT CONCAT(prov.FName, ' ', prov.LName) 
-     FROM provider prov
-     WHERE prov.ProvNum = (SELECT apt.ProvNum 
-                          FROM appointment apt 
-                          WHERE apt.PatNum = pat.PatNum 
-                          AND apt.AptDateTime = (SELECT MAX(apt2.AptDateTime) 
-                                                FROM appointment apt2 
-                                                WHERE apt2.PatNum = pat.PatNum 
-                                                AND apt2.AptDateTime <= ps.DatePay))) AS SuggestedProvider,
-    
-    -- Add related transactions
-    (SELECT GROUP_CONCAT(CONCAT(ps2.SplitNum, ':', ps2.ProvNum, ':', ps2.SplitAmt) SEPARATOR ', ')
-     FROM paysplit ps2
-     WHERE ps2.PayNum = ps.PayNum AND ps2.SplitNum != ps.SplitNum) AS RelatedSplits,
-    
-    -- Add most recent procedure info
-    (SELECT CONCAT(proc.ProcDate, ': ', proc.ProcFee, ' - ', prov.LName)
-     FROM procedurelog proc
-     LEFT JOIN provider prov ON proc.ProvNum = prov.ProvNum
-     WHERE proc.PatNum = pat.PatNum
-     ORDER BY proc.ProcDate DESC
-     LIMIT 1) AS RecentProcedure
-    
+    -- Using COALESCE to avoid NULL values in PayTypeName
+    COALESCE(def.ItemName, CONCAT('Type ', pay.PayType)) AS PayTypeName, 
+    pay.PayNote,
+    ps.ProcNum,
+    u.UserName AS EnteredBy,
+    pg.Description AS UserGroup
 FROM paysplit ps
-JOIN patient pat ON ps.PatNum = pat.PatNum
-JOIN payment pay ON ps.PayNum = pay.PayNum
+INNER JOIN patient pat ON ps.PatNum = pat.PatNum
+INNER JOIN payment pay ON ps.PayNum = pay.PayNum
 LEFT JOIN userod u ON ps.SecUserNumEntry = u.UserNum
-LEFT JOIN definition def ON pay.PayType = def.DefNum AND def.Category = 'PaymentTypes'
-LEFT JOIN definition unearnedDef ON ps.UnearnedType = unearnedDef.DefNum
-
-WHERE 
-    -- Filter for only unassigned payments
-    ps.ProvNum = 0
-    
-    -- Filter for only these specific patients
+LEFT JOIN usergroupattach uga ON u.UserNum = uga.UserNum
+LEFT JOIN usergroup pg ON uga.UserGroupNum = pg.UserGroupNum
+-- Modified join to use a simpler condition
+LEFT JOIN definition def ON pay.PayType = def.DefNum 
+WHERE ps.ProvNum = 0
+AND ps.PatNum IN (
+    -- List of PatNums to analyze
     -- UPDATE THIS LIST as needed for your specific analysis
-    AND pat.LName IN ('Hein', 'Herrod', 'Mauger', 'Patterson', 'Blonski', 
-                     'Ciesielski', 'Lee', 'Kramer', 'Bornstein', 'Souther', 
-                     'Mendez', 'McDonald', 'Garbison', 'Sedlak', 'Remmers')
-    
-    -- For negative amounts (modify this filter as needed)
-    AND ps.SplitAmt < 0
-    
-ORDER BY ps.DatePay DESC, ABS(ps.SplitAmt) DESC;
-
+    28775, 32743, 30358
+)
+AND ps.DatePay BETWEEN '2025-01-01' AND '2025-02-28'
+ORDER BY ps.PatNum, ps.DatePay DESC;
 
 /*
  * ===============================================================================
  * USAGE RECOMMENDATIONS
  * ===============================================================================
  * 
- * 1. INVESTIGATIVE WORKFLOW:
- *    a. Start with Query 2 (User Group Analysis) to identify which users are
- *       creating the most unassigned transactions
- *    b. Use Query 3 (Payment Source Analysis) to understand which payment types
- *       are most problematic
- *    c. For specific patients, use Query 4 (Appointment Analysis) and 
+ * Follow these guidelines to effectively utilize the queries in this file:
+ * 
+ * 1. INVESTIGATION WORKFLOW:
+ *    a. Begin with Query 3 (Payment Source Analysis) to identify which payment types
+ *       are most commonly associated with unassigned provider transactions
+ *    b. Use Query 2 (User Group Analysis) to identify which users/groups need training
+ *    c. For specific patients with unassigned transactions, use 
  *       Query 1 (Recent Procedure Analysis) to determine the correct provider
  *    d. Use Query 6 (Comprehensive Analysis) for detailed investigation of
  *       specific patient accounts
