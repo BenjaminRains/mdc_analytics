@@ -492,7 +492,7 @@ def export_to_csv(df: pd.DataFrame, output_dir: Path, query_name: str) -> Path:
     
     return filepath
 
-def extract_report_data(from_date='2024-01-01', to_date='2024-12-31', db_name='opendental_analytics_opendentalbackup_01_03_2025'):
+def extract_report_data(from_date='2024-01-01', to_date='2025-02-28', db_name='opendental_analytics_opendentalbackup_02_28_2025'):
     """
     Extract data from the unearned income report SQL into CSV files
     
@@ -623,8 +623,8 @@ def main():
         
         # Date range arguments
         parser.add_argument('--from-date', type=str, help='Start date in YYYY-MM-DD format', default='2024-01-01')
-        parser.add_argument('--to-date', type=str, help='End date in YYYY-MM-DD format', default='2024-12-31')
-        parser.add_argument('--database', type=str, help='Database name', default='opendental_analytics_opendentalbackup_01_03_2025')
+        parser.add_argument('--to-date', type=str, help='End date in YYYY-MM-DD format', default='2025-02-28')
+        parser.add_argument('--database', type=str, help='Database name', default='opendental_analytics_opendentalbackup_02_28_2025')
         
         args = parser.parse_args()
         
