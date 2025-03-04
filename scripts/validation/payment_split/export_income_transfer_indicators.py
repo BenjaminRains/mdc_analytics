@@ -20,6 +20,7 @@ Requirements:
         MARIADB_USER=your_username
         MARIADB_PASSWORD=your_password
         MARIADB_DATABASE=your_database
+        LOCAL_VALID_DATABASES=comma,separated,list,of,valid,databases
 """
 
 import os
@@ -39,7 +40,7 @@ src_path = Path(__file__).resolve().parents[3]
 sys.path.append(str(src_path))
 
 # Import the ConnectionFactory from the correct module
-from src.connections.factory import ConnectionFactory
+from src.connections.factory import ConnectionFactory, get_valid_databases
 
 # Load environment variables from src/.env
 env_path = src_path / "src" / ".env"
@@ -58,6 +59,14 @@ QUERY_PATH = SCRIPT_DIR / "queries" / "income_transfer_indicators.sql"
 # Create directories if they don't exist
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(LOGS_DIR, exist_ok=True)
+
+# Get the list of valid databases from environment
+valid_databases = get_valid_databases('LOCAL_VALID_DATABASES')
+
+# Get default database from environment
+default_database = os.getenv('MARIADB_DATABASE')
+if not default_database and valid_databases:
+    default_database = valid_databases[0]  # Use first valid database as default if available
 
 # Configure logging
 logging.basicConfig(
@@ -305,14 +314,14 @@ def export_to_csv(df: pd.DataFrame, output_dir: Path, query_name: str) -> Path:
     
     return csv_path
 
-def extract_report_data(from_date='2025-01-01', to_date='2025-02-28', db_name='opendental_analytics_opendentalbackup_02_28_2025'):
+def extract_report_data(from_date='2025-01-01', to_date='2025-02-28', db_name=None):
     """
     Extract data from the income transfer indicators SQL into CSV files
     
     Args:
         from_date (str): Start date in YYYY-MM-DD format
         to_date (str): End date in YYYY-MM-DD format
-        db_name (str): Database name to connect to
+        db_name (str, optional): Database name to connect to. If None, uses the default from .env
     """
     # Use the existing constants
     sql_file = QUERY_PATH
@@ -341,10 +350,18 @@ def extract_report_data(from_date='2025-01-01', to_date='2025-02-28', db_name='o
     logging.info(f"Using date range: {date_range.start_date} to {date_range.end_date}")
     logging.info(f"Connecting to database: {db_name}")
     
-    # Initialize connection with the database name directly
+    # Initialize connection with the database name using ConnectionFactory
     try:
+        # Let ConnectionFactory validate and handle the database name
         connection = ConnectionFactory.create_connection('local_mariadb', database=db_name)
-        logging.info(f"Successfully created database connection")
+        
+        # Get the actual database name for logging
+        actual_db = connection.config.database
+        logging.info(f"ConnectionFactory selected database: {actual_db}")
+    except ValueError as e:
+        logging.error(f"Database validation error: {e}")
+        print(f"Error: {e}")
+        return
     except Exception as e:
         logging.error(f"Failed to create database connection: {e}")
         print(f"Error: Failed to connect to database. {e}")
@@ -356,7 +373,7 @@ def extract_report_data(from_date='2025-01-01', to_date='2025-02-28', db_name='o
     # Process each query
     for query_name, query in queries.items():
         logging.info(f"Processing query: {query_name}")
-        df, csv_path = execute_query(connection, db_name, query_name, query, output_dir)
+        df, csv_path = execute_query(connection, actual_db, query_name, query, output_dir)
         query_results[query_name] = {
             'success': df is not None,
             'rows': len(df) if df is not None else 0,
@@ -430,7 +447,10 @@ def main():
         # Date range arguments
         parser.add_argument('--from-date', type=str, help='Start date in YYYY-MM-DD format', default='2025-01-01')
         parser.add_argument('--to-date', type=str, help='End date in YYYY-MM-DD format', default='2025-02-28')
-        parser.add_argument('--database', type=str, help='Database name', default='opendental_analytics_opendentalbackup_02_28_2025')
+        
+        # Show valid databases in help text
+        db_help = f"Database name. Valid options: {', '.join(valid_databases)}" if valid_databases else "Database name"
+        parser.add_argument('--database', type=str, help=db_help, default=default_database)
         
         args = parser.parse_args()
         
@@ -455,6 +475,19 @@ def main():
         if not os.path.exists(QUERY_PATH):
             logging.error(f"SQL file not found: {QUERY_PATH}")
             print(f"Error: SQL file not found: {QUERY_PATH}")
+            return
+        
+        # Validate database name
+        if not args.database:
+            logging.error("No database specified and no default found in environment")
+            print("Error: No database specified and no default found in environment")
+            print(f"Valid databases: {', '.join(valid_databases)}" if valid_databases else "No valid databases configured")
+            return
+            
+        # Validate against allowed databases
+        if valid_databases and args.database not in valid_databases:
+            logging.error(f"Invalid database name: {args.database}")
+            print(f"Error: Invalid database name. Must be one of: {', '.join(valid_databases)}")
             return
         
         # Call the function with arguments

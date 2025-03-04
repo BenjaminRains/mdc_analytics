@@ -17,13 +17,22 @@ Usage:
 
 The list of queries and the common CTE definitions are stored as separate .sql files in
 the 'queries' directory. The CTE file is prepended to each query before execution.
+
+Requirements:
+    - .env file must be set up in the project root with MariaDB configuration:
+        MARIADB_HOST=localhost
+        MARIADB_PORT=3307
+        MARIADB_USER=your_username
+        MARIADB_PASSWORD=your_password
+        MARIADB_DATABASE=your_database
+        LOCAL_VALID_DATABASES=comma,separated,list,of,valid,databases
 """
 
 import pandas as pd
 import os
 from datetime import datetime
 import logging
-from src.connections.factory import ConnectionFactory
+from src.connections.factory import ConnectionFactory, get_valid_databases
 import argparse
 from scripts.base.index_manager import IndexManager
 from pathlib import Path
@@ -31,6 +40,14 @@ from typing import Dict, Optional, List
 import concurrent.futures
 from tqdm import tqdm
 import time
+
+# Get the list of valid databases from environment
+valid_databases = get_valid_databases('LOCAL_VALID_DATABASES')
+
+# Get default database from environment
+default_database = os.getenv('MARIADB_DATABASE')
+if not default_database and valid_databases:
+    default_database = valid_databases[0]  # Use first valid database as default if available
 
 # Query descriptions to provide context on what each query analyzes
 QUERY_DESCRIPTIONS = {
@@ -152,14 +169,14 @@ def get_exports(ctes: str) -> list:
         get_query('containment', ctes),
     ]
 
-def process_single_export(export, factory, connection_type, database, output_dir):
+def process_single_export(export, connection_type, database, output_dir):
     """Process a single export query and save results to CSV."""
     fresh_connection = None
     start_time = datetime.now()
     
     try:
-        # Create a new connection for each query
-        fresh_connection = factory.create_connection(connection_type, database)
+        # Create a new connection for each query using class method
+        fresh_connection = ConnectionFactory.create_connection(connection_type, database)
         mysql_connection = fresh_connection.connect()
         
         # Execute query and fetch results
@@ -211,13 +228,12 @@ def process_single_export(export, factory, connection_type, database, output_dir
             except:
                 pass
 
-def export_validation_results(connection_factory, connection_type, database, queries=None, 
+def export_validation_results(connection_type, database, queries=None, 
                              output_dir=None, use_parallel=False, start_date=None, end_date=None):
     """
     Export payment validation query results to separate CSV files.
 
     Args:
-        connection_factory: The ConnectionFactory to create new connections.
         connection_type: Type of connection to create.
         database: Database name to connect to.
         queries: List of query names to run (None for all).
@@ -258,7 +274,7 @@ def export_validation_results(connection_factory, connection_type, database, que
             # Submit all tasks
             future_to_export = {
                 executor.submit(
-                    process_single_export, export, connection_factory, connection_type, database, output_dir
+                    process_single_export, export, connection_type, database, output_dir
                 ): export['name'] for export in exports
             }
             
@@ -280,7 +296,7 @@ def export_validation_results(connection_factory, connection_type, database, que
         # Execute each query sequentially with a progress bar
         with tqdm(total=len(exports), desc="Processing queries") as pbar:
             for export in exports:
-                result = process_single_export(export, connection_factory, connection_type, database, output_dir)
+                result = process_single_export(export, connection_type, database, output_dir)
                 results.append(result)
                 
                 if result['success']:
@@ -330,19 +346,21 @@ def parse_args():
         help='Directory where log files will be saved'
     )
     
+    # Show valid databases in help text
+    db_help = f"Database name to connect to. Valid options: {', '.join(valid_databases)}" if valid_databases else "Database name to connect to"
     parser.add_argument(
         '--database',
         type=str,
-        required=True,
-        help='Database name to connect to (REQUIRED). DO NOT use the live opendental database.'
+        default=default_database,
+        help=db_help + ". DO NOT use the live opendental database."
     )
     
     parser.add_argument(
         '--connection-type',
         type=str,
         default='local_mariadb',
-        choices=['local_mariadb'],
-        help='Type of database connection to use (only local MariaDB connections are currently supported)'
+        choices=['local_mariadb', 'local_mysql'],
+        help='Type of database connection to use'
     )
     
     parser.add_argument(
@@ -370,7 +388,7 @@ def parse_args():
     
     return parser.parse_args()
 
-def ensure_indexes(connection, database_name):
+def ensure_indexes(database_name):
     """Ensure required indexes exist for validation queries."""
     logging.info("Checking and creating required payment validation indexes...")
     
@@ -431,21 +449,35 @@ def main():
             logging.info(f"End date filter: {args.end_date}")
         logging.info(f"Parallel execution: {args.parallel}")
         
-        # Create connection factory
-        factory = ConnectionFactory()
-        
-        # Create initial connection for index check
-        connection = ConnectionFactory.create_connection('local_mariadb', args.database)
-        
-        # Ensure required indexes exist
-        ensure_indexes(connection, args.database)
-        
-        # Close initial connection
-        connection.close()
-        
-        # Export validation results with connection factory
+        # Validate database name
+        if not args.database:
+            logging.error("No database specified and no default found in environment")
+            print("Error: No database specified and no default found in environment")
+            print(f"Valid databases: {', '.join(valid_databases)}" if valid_databases else "No valid databases configured")
+            return
+            
+        # Validate against allowed databases
+        if valid_databases and args.database not in valid_databases:
+            logging.error(f"Invalid database name: {args.database}")
+            print(f"Error: Invalid database name. Must be one of: {', '.join(valid_databases)}")
+            return
+            
+        try:
+            # Create initial connection for index check
+            connection = ConnectionFactory.create_connection(args.connection_type, args.database)
+            
+            # Ensure required indexes exist
+            ensure_indexes(args.database)
+            
+            # Close initial connection
+            connection.close()
+        except ValueError as e:
+            logging.error(f"Database connection error: {e}")
+            print(f"Error: {e}")
+            return
+            
+        # Export validation results
         export_validation_results(
-            connection_factory=factory,
             connection_type=args.connection_type,
             database=args.database,
             queries=args.queries,
