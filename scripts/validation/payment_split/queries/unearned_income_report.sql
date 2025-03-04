@@ -7,7 +7,7 @@
 
 -- Set date parameters (these need to be set before running the query)
 SET @FromDate = '2024-01-01';
-SET @ToDate = '2024-12-31';
+SET @ToDate = '2025-02-28';
 
 -- Common Table Expressions for efficient data retrieval
 WITH UnearntypeDef AS (
@@ -36,12 +36,12 @@ PayTypeDef AS (
     )
 ),
 ProvDef AS (
-    -- Get Provider definitions once
+    -- Get Provider information from the provider table, not definition table
     SELECT 
-        DefNum,
-        ItemName AS ProviderName
-    FROM definition
-    WHERE DefNum IN (
+        ProvNum,
+        CONCAT(FName, ' ', LName) AS ProviderName
+    FROM provider
+    WHERE ProvNum IN (
         SELECT DISTINCT ProvNum 
         FROM paysplit
         WHERE UnearnedType != 0
@@ -105,7 +105,7 @@ JOIN payment pm ON pm.PayNum = ps.PayNum
 JOIN patient pt ON pt.PatNum = ps.PatNum
 LEFT JOIN UnearntypeDef ud ON ud.DefNum = ps.UnearnedType
 LEFT JOIN PayTypeDef pd ON pd.DefNum = pm.PayType
-LEFT JOIN ProvDef prvd ON prvd.DefNum = ps.ProvNum
+LEFT JOIN ProvDef prvd ON prvd.ProvNum = ps.ProvNum
 LEFT JOIN PatientBalances pb ON pb.PatNum = ps.PatNum
 WHERE 
     -- Filter unearned income transactions
