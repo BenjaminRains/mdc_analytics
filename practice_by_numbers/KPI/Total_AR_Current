@@ -1,0 +1,171 @@
+KPI Name: Total AR Current
+KPI Long Name: Total AR Current
+
+Description
+Total AR Current refers to the total amount of outstanding receivables that are not past due. This metric is crucial for evaluating the effectiveness of the billing and collections processes in the dental office.
+
+Purpose: To measure the efficiency in collecting payments within the expected time period.
+Importance: Understanding Total AR Current helps in maintaining a healthy cash flow and identifying any potential issues in the billing cycle.
+Calculation
+Total AR Current is calculated by summing up all the receivable amounts that are not due yet. This means you only add the amounts that patients or insurance companies owe but the payment deadline has not passed.
+
+Simple Math: If Patient A owes $100 and is not due yet, Patient B owes $200 and is not due yet, and Patient C owes $150 and is past due, your Total AR Current is $100 + $200 = $300.
+
+Keeping the Total AR Current as high as possible is an indicator that the office effectively collects payments on time, thereby improving overall financial health.
+
+KPI Name
+Total AR 30-60
+
+KPI Long Name
+Total AR 30-60
+
+KPI Description
+This KPI measures the total amount of accounts receivable (AR) that are overdue for a period of 30 to 60 days. It helps the dental office track outstanding payments and manage cash flow more effectively.
+
+Time Frame: 30 to 60 days overdue
+Purpose: To identify and manage the overdue receivables
+Importance: Ensures that overdue accounts are addressed promptly to maintain a healthy cash flow
+KPI Calculation
+To calculate Total AR 30-60, follow these steps:
+
+Identify all accounts receivable that are overdue by 30 to 60 days.
+Add up the amounts of these overdue accounts.
+The sum of these amounts will give you the Total AR 30-60.
+
+For example, if you have three overdue invoices: $200 (31 days overdue), $150 (45 days overdue), and $100 (55 days overdue), your Total AR 30-60 would be calculated as:
+
+$200 + $150 + $100 = $450
+So, the Total AR 30-60 is $450.
+
+This KPI helps maintain transparency and prioritize collection efforts, ultimately supporting the financial health of the dental office.
+
+Total AR 60-90
+Total AR 60-90
+
+KPI Description
+Total AR 60-90 is a measure of the total accounts receivable amounts that are aged between 60 and 90 days. This KPI helps dental offices track the status of payments that are overdue within this specific time frame, which can impact cash flow and financial planning.
+
+Age Range: 60-90 days
+Purpose: Monitor overdue payments to ensure timely collection and improve financial management.
+Impact: Helps in identifying patterns in payment delays and can guide strategies to improve the collection process.
+Calculation
+To calculate Total AR 60-90:
+
+Identify all outstanding invoices that are aged between 60 and 90 days.
+Add up the amounts of these invoices.
+For example, if you have three invoices aged 60-90 days with amounts of $100, $200, and $300 respectively, the Total AR 60-90 would be:
+
+$100 + $200 + $300 = $600
+
+Maintaining a low Total AR 60-90 is crucial for a dental office's financial health as it ensures that payments are being collected in a timely manner, thus improving cash flow and reducing potential bad debts.
+
+KPI Name: Total AR Over 90
+The Total AR Over 90 KPI tracks the total amount of accounts receivable that are overdue by more than 90 days.
+
+Details
+This KPI is crucial for understanding the long-term outstanding payments from patients and insurance companies. It helps the dental office gauge the effectiveness of their billing and collections processes.
+
+Importance: High
+Frequency of Measurement: Monthly
+Target Audience: Office Managers, Billing Department
+Calculation in Simple Math
+To calculate the Total AR Over 90, follow these steps:
+
+Add up all the individual invoices that are overdue by more than 90 days. For example, if there are three overdue invoices of $150, $200, and $250, you would add 150 + 200 + 250.
+The result of this addition is the Total AR Over 90.
+Formula: Total AR Over 90 = Sum of all invoices overdue by more than 90 days.
+
+Monitoring the Total AR Over 90 allows the dental office to identify persistent payment issues and take corrective actions such as following up with patients or adjusting billing practices.
+
+KPI Name
+Total AR Current %
+
+KPI Long Name
+Total AR Current %
+
+Description: The Total AR (Accounts Receivable) Current % measures the percentage of the total accounts receivable that are currently within the acceptable period for payment. This KPI helps the dental office understand how much of their receivables are being paid in a timely manner.
+Calculation
+To calculate the Total AR Current %, you can use the following simple math:
+
+Step 1: Identify the total amount of current receivables (those within the acceptable payment period).
+Step 2: Identify the total accounts receivable.
+Step 3: Divide the total current receivables by the total accounts receivable.
+Step 4: Multiply the result by 100 to get the percentage.
+For example, if the dental office has $10,000 in current receivables and $20,000 in total receivables, the calculation would be:
+
+Current Receivables: $10,000
+Total Receivables: $20,000
+Step 3: $10,000 / $20,000 = 0.5
+Step 4: 0.5 * 100 = 50%
+So, the Total AR Current % is 50%.
+
+Monitoring the Total AR Current % helps ensure that the dental office maintains a healthy cash flow by maximizing the amount of receivables collected within the acceptable period.
+
+KPI Name: Total AR 30-60 %
+KPI Long Name: Total AR 30-60 %
+
+Description
+This KPI measures the percentage of the total accounts receivable (AR) that are overdue between 30 to 60 days. In other words, it helps the dental office understand how much of the money that is expected to be received from patients or insurance companies has not been paid within 30 to 60 days after the billing date.
+
+Indicator: Financial Health
+Time Frame: 30 to 60 Days Past Due
+Importance: Medium
+Calculation
+The Total AR 30-60 % is calculated using the following formula:
+
+(Total AR 30-60 Days / Total AR) * 100
+
+Total AR 30-60 Days: Sum of all receivables that are past due between 30 and 60 days.
+Total AR: Sum of all receivables, regardless of their age.
+For a simple example, if the dental office has $10,000 in total accounts receivable, and $2,500 of that amount is overdue between 30 and 60 days, the calculation would be:
+
+(2,500 / 10,000) * 100 = 25%
+
+This means 25% of the total accounts receivable are overdue between 30 and 60 days.
+
+Monitoring the Total AR 30-60 % KPI helps the dental office manage its cash flow effectively and take timely actions to collect overdue payments, ensuring financial stability and health.
+
+KPI Name
+Total AR 60-90 %
+
+KPI Long Name
+Total AR 60-90 %
+
+KPI Description
+The KPI "Total AR 60-90 %" measures the percentage of accounts receivable (AR) that are outstanding for a period of 60 to 90 days. This KPI helps in understanding the effectiveness of the dental office’s revenue collection process over a specific time range.
+
+Component of Measurement: Accounts Receivable (AR) aged 60-90 days.
+Purpose: To monitor and manage the revenue collection timeline, ensuring timely payments, and identifying delayed collections.
+Relevance: High, as it directly impacts the office’s cash flow and financial health.
+KPI Calculation
+To calculate the Total AR 60-90 %, follow these steps:
+
+1. Identify the total amount of accounts receivable that are outstanding for 60-90 days.
+2. Identify the total accounts receivable of the office.
+3. Divide the total amount of AR in 60-90 days by the total accounts receivable.
+4. Multiply the result by 100 to get the percentage.
+Example:If the total accounts receivable for the dental office is $100,000 and the accounts receivable aged 60-90 days is $15,000, the Total AR 60-90 % is calculated as follows:
+
+Total AR 60-90 % = ($15,000 / $100,000) * 100
+Total AR 60-90 % = 0.15 * 100
+Total AR 60-90 % = 15%
+Regularly monitoring this KPI helps the dental office identify issues in the collection process and take corrective actions to improve cash flow and reduce outstanding payments.
+
+KPI Name: Total AR Over 90 %
+KPI Long Name: Total AR Over 90 %
+
+KPI Description:
+This KPI measures the percentage of Accounts Receivable (AR) that are outstanding for over 90 days. It helps assess the efficiency of the dental office's billing and collections process by indicating how much of the total outstanding amounts are long overdue.
+
+Importance: High levels of AR over 90 days can signify potential cash flow issues and inefficiencies in the billing process, impacting the financial health of the office.
+Impact: Monitoring this KPI helps identify areas of improvement for the office's billing and collections departments, ensuring a healthier revenue cycle.
+KPI Calculation:
+To calculate the Total AR Over 90 %, follow these steps:
+
+Step 1: Determine the total amount of Accounts Receivable (AR) that are outstanding for over 90 days. Let's call this amount "AR Over 90 days".
+Step 2: Determine the total amount of all Accounts Receivable. Let's call this amount "Total AR".
+Step 3: Divide the AR Over 90 days by the Total AR.
+Step 4: Multiply the result by 100 to convert it into a percentage.
+Formula: (AR Over 90 days / Total AR) × 100
+
+Monitoring this KPI regularly can provide actionable insights for improving the dental office's revenue cycle management and reducing long-term outstanding debts.
