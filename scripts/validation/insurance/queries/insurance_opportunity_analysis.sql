@@ -51,105 +51,72 @@ WITH DateRange AS (
     SELECT 
         '2024-01-01' AS start_date,
         '2024-12-31' AS end_date
-),
-
--- Get treatment planned procedures
-TreatmentPlanned AS (
-    SELECT 
-        pl.ProcNum,
-        pl.PatNum,
-        pl.ProcDate,
-        pl.ProcFee as billed_fee,
-        pl.CodeNum,
-        proctp.Priority as treatment_priority,
-        proctp.PatAmt as patient_portion,
-        tp.DateTP as treatment_plan_date,
-        tp.TPStatus as treatment_plan_status,
-        pc.ProcCode,
-        pc.Descript as procedure_description
-    FROM procedurelog pl
-    JOIN procedurecode pc ON pl.CodeNum = pc.CodeNum
-    LEFT JOIN proctp ON pl.ProcNum = proctp.ProcNumOrig
-    LEFT JOIN treatplan tp ON proctp.TreatPlanNum = tp.TreatPlanNum
-    WHERE pl.ProcStatus = 1  -- Treatment Planned
-    AND pl.ProcDate >= (SELECT start_date FROM DateRange)
-    AND pl.ProcDate < (SELECT end_date FROM DateRange)
-),
-
--- Get insurance plan performance metrics
-PlanPerformance AS (
-    SELECT 
-        ip.PlanNum,
-        c.CarrierNum,
-        c.CarrierName,
-        ip.GroupName,
-        ip.Percentage as coverage_percentage,
-        COUNT(DISTINCT cp.ClaimNum) as total_claims,
-        SUM(cp.InsPayEst) as total_estimated,
-        SUM(cp.InsPayAmt) as total_paid,
-        SUM(cp.WriteOff) as total_writeoff,
-        SUM(cp.DedApplied) as total_deductible,
-        AVG(cp.InsPayAmt / NULLIF(cp.FeeBilled, 0)) as payment_ratio
-    FROM insplan ip
-    JOIN carrier c ON ip.CarrierNum = c.CarrierNum
-    JOIN claimproc cp ON ip.PlanNum = cp.PlanNum
-    WHERE cp.DateCP >= (SELECT start_date FROM DateRange)
-    AND cp.DateCP < (SELECT end_date FROM DateRange)
-    GROUP BY ip.PlanNum, c.CarrierNum, c.CarrierName, ip.GroupName, ip.Percentage
-    HAVING total_claims >= 100  -- Only include plans with significant claims volume
 )
-
--- Combine treatment planned procedures with plan performance
+-- Get all treatment planned procedures with patient and insurance info
 SELECT 
+    -- Treatment Plan Info
+    tp.TreatPlanNum,
+    tp.DateTP,
+    tp.Heading as treatment_plan_heading,
+    tp.TPStatus,
+    
     -- Patient Info
-    tp.PatNum,
-    pat.LName as patient_last_name,
-    pat.FName as patient_first_name,
-    pat.HasIns as has_insurance,
+    p.PatNum,
+    p.LName,
+    p.FName,
+    p.Preferred,
+    p.PatStatus,
+    p.EstBalance,
+    p.BalTotal,
+    p.InsEst,
     
-    -- Procedure Info
-    tp.ProcNum,
-    tp.ProcCode,
-    tp.procedure_description,
-    tp.billed_fee,
-    tp.treatment_priority,
-    tp.patient_portion,
-    tp.treatment_plan_date,
-    tp.treatment_plan_status,
+    -- Treatment Planned Procedure Info
+    ptp.ProcTPNum,
+    ptp.ItemOrder,
+    ptp.Priority as treatment_priority,
+    ptp.ProcCode,
+    ptp.Descript as procedure_description,
+    ptp.FeeAmt as procedure_fee,
+    ptp.PriInsAmt as primary_insurance_est,
+    ptp.SecInsAmt as secondary_insurance_est,
+    ptp.PatAmt as patient_portion_est,
+    ptp.Discount,
+    ptp.DateTP as proc_treatment_date,
+    ptp.Prognosis,
     
-    -- Insurance Plan Info
-    pp.CarrierName,
-    pp.GroupName,
-    pp.coverage_percentage,
-    pp.payment_ratio,
-    pp.total_claims,
-    pp.total_estimated,
-    pp.total_paid,
-    
-    -- Calculated Fields
-    ROUND(tp.billed_fee * pp.payment_ratio, 2) as estimated_insurance_payment,
-    ROUND(tp.billed_fee * (1 - pp.payment_ratio), 2) as estimated_patient_responsibility,
-    
-    -- Prioritization Score (higher is better)
-    ROUND(
-        (pp.payment_ratio * 0.4) +  -- 40% weight on payment ratio
-        (pp.coverage_percentage/100 * 0.4) +  -- 40% weight on coverage percentage
-        (CASE 
-            WHEN tp.treatment_priority = 1 THEN 0.2
-            WHEN tp.treatment_priority = 2 THEN 0.1
-            ELSE 0
-        END)  -- 20% weight on treatment priority
-    , 3) as opportunity_score
+    -- Insurance Info
+    c.CarrierNum,
+    c.CarrierName,
+    ip.GroupName,
+    ip.GroupNum,
+    ip.PlanType,
+    ip.IsMedical,
+    ins.SubscriberID,
+    ins.DateEffective as insurance_effective_date,
+    ins.DateTerm as insurance_term_date,
+    pp.Ordinal as insurance_ordinal,
+    pp.Relationship as insurance_relationship
 
-FROM TreatmentPlanned tp
-JOIN patient pat ON tp.PatNum = pat.PatNum
-LEFT JOIN patplan pp_link ON tp.PatNum = pp_link.PatNum
-LEFT JOIN PlanPerformance pp ON pp_link.PlanNum = pp.PlanNum
+FROM treatplan tp
+JOIN patient p ON tp.PatNum = p.PatNum
+JOIN proctp ptp ON tp.TreatPlanNum = ptp.TreatPlanNum
+-- Insurance joins
+LEFT JOIN patplan pp ON p.PatNum = pp.PatNum 
+    AND pp.Ordinal = 1  -- Primary insurance
+LEFT JOIN inssub ins ON pp.InsSubNum = ins.InsSubNum
+LEFT JOIN insplan ip ON ins.PlanNum = ip.PlanNum
+LEFT JOIN carrier c ON ip.CarrierNum = c.CarrierNum
 
-WHERE pat.PatStatus = 0  -- Only active patients
-AND (pat.HasIns = 1 OR pp.PlanNum IS NULL)  -- Patients with insurance or unlinked claims
-
+WHERE tp.TPStatus = 0  -- Changed to 0 for active treatment plans
+    AND p.PatStatus = 0  -- Active patients only
+    AND ptp.FeeAmt > 0  -- Only procedures with fees
+    -- Only include current insurance (not termed)
+    AND (ins.DateTerm = '0001-01-01' OR ins.DateTerm > CURRENT_DATE())
+    AND (ins.DateEffective = '0001-01-01' OR ins.DateEffective <= CURRENT_DATE())
+    -- Add date range filter for recent treatment plans
+    AND tp.DateTP >= '2024-01-01'  -- Only look at recent treatment plans
 ORDER BY 
-    opportunity_score DESC,
-    tp.treatment_plan_date ASC,
-    tp.billed_fee DESC; 
+    tp.DateTP DESC,
+    p.PatNum,
+    tp.TreatPlanNum,
+    ptp.ItemOrder;
