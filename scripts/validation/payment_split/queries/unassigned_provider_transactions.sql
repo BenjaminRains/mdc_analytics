@@ -16,6 +16,7 @@
  * - Includes priority classification (Critical/High/Medium/Low)
  * - Displays transaction age in days
  * - Shows who entered each transaction
+ * - Shows patient account balance at time of transaction
  *
  * USAGE:
  * 1. Modify the date range parameters as needed (default: current 2-month period)
@@ -41,6 +42,7 @@
  * - income_transfer_indicators.sql: Additional analysis queries
  *
  * REVISION HISTORY:
+ * 2025-03-06: Added AccountBalance at time of transaction
  * 2025-03-05: Enhanced documentation and parameter explanations
  * 2025-03-02: Added adjustment transactions and priority classification
  * 2025-02-15: Added suggested provider logic based on appointment history
@@ -72,6 +74,9 @@
  * - SuggestedProvider: Derived from the most recent appointment before the payment date
  * - Priority: Calculated based on amount size and transaction age
  * - DaysOld: Number of days since the transaction was created
+ * - AccountBalance: Shows the patient's balance at the time of the transaction
+ * - TransactionCategory: Classifies transaction as Income Transfer, Credit Allocation, etc.
+ * - OriginalPaymentInfo: Shows source of funds for transfers/allocations
  *
  * CUSTOMIZATION:
  * - Update the date range in the WHERE clause to focus on a specific period
@@ -85,11 +90,27 @@ SELECT
     CONCAT(p.LName, ', ', p.FName) AS PatientName,
     ps.SplitAmt,
     pay.PayDate AS TransactionDate,
-    -- Map payment type using definition table
-    (SELECT d.ItemName 
-     FROM definition d 
-     WHERE d.Category = 24  -- Payment Type category
-     AND d.DefNum = pay.PayType) AS PayTypeName,
+    -- Enhanced payment type display with fallback for special cases
+    CASE
+        -- Check if payment type exists in definition
+        WHEN (SELECT d.ItemName 
+              FROM definition d 
+              WHERE d.Category = 24  -- Payment Type category
+              AND d.DefNum = pay.PayType) IS NOT NULL 
+        THEN (SELECT d.ItemName 
+              FROM definition d 
+              WHERE d.Category = 24
+              AND d.DefNum = pay.PayType)
+        -- Classify based on note text patterns
+        WHEN pay.PayNote LIKE '%income transfer%' THEN 'Income Transfer'
+        WHEN pay.PayNote LIKE '%reallocation%' THEN 'Credit Reallocation'
+        WHEN pay.PayNote LIKE '%refund%' THEN 'Refund'
+        WHEN pay.PayNote LIKE '%deposit%' THEN 'Deposit'
+        WHEN pay.PayNote LIKE '%overpayment%' THEN 'Overpayment'
+        WHEN ps.ProcNum = 0 AND ps.SplitAmt > 0 THEN 'Unallocated Payment'
+        WHEN ps.ProcNum = 0 AND ps.SplitAmt < 0 THEN 'Credit Adjustment'
+        ELSE 'Unspecified'
+    END AS PayTypeName,
     ps.ProcNum,
     pay.PayNote AS Note,
     u.UserName AS EnteredBy,
@@ -107,6 +128,69 @@ SELECT
      ORDER BY a.AptDateTime DESC
      LIMIT 1) AS SuggestedProvider,
     DATEDIFF(CURRENT_DATE, pay.PayDate) AS DaysOld,
+    -- Account balance at time of transaction (rounded to 2 decimal places to avoid floating-point artifacts)
+    ROUND(
+        (
+            -- Current EstBalance
+            p.EstBalance 
+            -- Add back any payments made after this transaction
+            + IFNULL((
+                SELECT SUM(ps2.SplitAmt)
+                FROM paysplit ps2
+                JOIN payment pay2 ON ps2.PayNum = pay2.PayNum
+                WHERE ps2.PatNum = ps.PatNum
+                AND pay2.PayDate > pay.PayDate
+            ), 0)
+            -- Subtract any adjustments made after this transaction
+            - IFNULL((
+                SELECT SUM(adj.AdjAmt)
+                FROM adjustment adj
+                WHERE adj.PatNum = ps.PatNum
+                AND adj.AdjDate > pay.PayDate
+            ), 0)
+        ),
+        2
+    ) AS AccountBalance,
+    -- Transaction category for better understanding the purpose
+    CASE
+        WHEN pay.PayNote LIKE '%income transfer%' THEN 'Income Transfer'
+        WHEN pay.PayNote LIKE '%reallocation%' THEN 'Credit Reallocation'
+        WHEN ps.SplitAmt > 0 AND ps.ProcNum = 0 AND (
+            SELECT ROUND(SUM(ps2.SplitAmt), 2) 
+            FROM paysplit ps2 
+            WHERE ps2.PayNum = ps.PayNum
+        ) = 0 THEN 'Internal Transfer'
+        WHEN ps.SplitAmt > 0 AND ps.ProcNum = 0 THEN 'Prepayment/Deposit'
+        WHEN ps.SplitAmt < 0 AND ps.ProcNum = 0 THEN 'Credit/Refund'
+        ELSE 'Standard Payment'
+    END AS TransactionCategory,
+    -- Information about the original payment (for transfers and allocations)
+    CASE
+        -- When this is likely a transfer or reallocation, find the original payment
+        WHEN pay.PayNote LIKE '%transfer%' OR pay.PayNote LIKE '%reallocation%' OR pay.PayNote LIKE '%credit%' THEN
+            (SELECT CONCAT('Original payment: ', 
+                    DATE_FORMAT(origpay.PayDate, '%Y-%m-%d'), 
+                    ' - $', ROUND(origpay.PayAmt, 2),
+                    CASE 
+                        WHEN origdef.ItemName IS NOT NULL THEN CONCAT(' (', origdef.ItemName, ')')
+                        ELSE ''
+                    END,
+                    ' - Provider: ',
+                    CASE 
+                        WHEN origprov.FName IS NOT NULL THEN CONCAT(origprov.LName, ', ', origprov.FName)
+                        ELSE 'Unassigned'
+                    END)
+            FROM payment origpay
+            LEFT JOIN paysplit origps ON origps.PayNum = origpay.PayNum
+            LEFT JOIN definition origdef ON origpay.PayType = origdef.DefNum AND origdef.Category = 24
+            LEFT JOIN provider origprov ON origps.ProvNum = origprov.ProvNum
+            WHERE origps.PatNum = ps.PatNum
+            AND origpay.PayDate < pay.PayDate
+            AND origps.SplitAmt > 0
+            ORDER BY origpay.PayDate DESC
+            LIMIT 1)
+        ELSE NULL
+    END AS OriginalPaymentInfo,
     CASE
         -- Priority calculation logic:
         -- 1. Critical: Large amounts (>$5000) or old transactions (>30 days)
@@ -158,11 +242,24 @@ SELECT
     CONCAT(p.LName, ', ', p.FName) AS PatientName,
     adj.AdjAmt AS SplitAmt,
     adj.AdjDate AS TransactionDate,
-    -- Get adjustment type name
-    (SELECT d.ItemName 
-     FROM definition d 
-     WHERE d.Category = 16  -- Adjustment Type category
-     AND d.DefNum = adj.AdjType) AS PayTypeName,
+    -- Get adjustment type name with improved fallback
+    CASE
+        WHEN (SELECT d.ItemName 
+              FROM definition d 
+              WHERE d.Category = 16  -- Adjustment Type category
+              AND d.DefNum = adj.AdjType) IS NOT NULL 
+        THEN (SELECT d.ItemName 
+              FROM definition d 
+              WHERE d.Category = 16
+              AND d.DefNum = adj.AdjType)
+        -- Classify based on note text and amount patterns
+        WHEN adj.AdjNote LIKE '%write%off%' THEN 'Write-Off'
+        WHEN adj.AdjNote LIKE '%courtesy%' THEN 'Courtesy Adjustment'
+        WHEN adj.AdjNote LIKE '%transfer%' THEN 'Transfer Adjustment'
+        WHEN adj.AdjAmt > 0 THEN 'Positive Adjustment'
+        WHEN adj.AdjAmt < 0 THEN 'Negative Adjustment'
+        ELSE 'Unspecified Adjustment'
+    END AS PayTypeName,
     adj.ProcNum,
     adj.AdjNote AS Note,
     u.UserName AS EnteredBy,
@@ -180,6 +277,48 @@ SELECT
      ORDER BY a.AptDateTime DESC
      LIMIT 1) AS SuggestedProvider,
     DATEDIFF(CURRENT_DATE, adj.AdjDate) AS DaysOld,
+    -- Account balance at time of transaction (rounded to 2 decimal places to avoid floating-point artifacts)
+    ROUND(
+        (
+            -- Current EstBalance
+            p.EstBalance 
+            -- Add back any payments made after this transaction
+            + IFNULL((
+                SELECT SUM(ps2.SplitAmt)
+                FROM paysplit ps2
+                JOIN payment pay2 ON ps2.PayNum = pay2.PayNum
+                WHERE ps2.PatNum = adj.PatNum
+                AND pay2.PayDate > adj.AdjDate
+            ), 0)
+            -- Subtract any adjustments made after this transaction
+            - IFNULL((
+                SELECT SUM(adj2.AdjAmt)
+                FROM adjustment adj2
+                WHERE adj2.PatNum = adj.PatNum
+                AND adj2.AdjDate > adj.AdjDate
+            ), 0)
+        ),
+        2
+    ) AS AccountBalance,
+    -- Transaction category for better understanding the purpose
+    CASE
+        WHEN adj.AdjNote LIKE '%write%off%' THEN 'Write-Off'
+        WHEN adj.AdjNote LIKE '%courtesy%' THEN 'Courtesy Adjustment'  
+        WHEN adj.AdjNote LIKE '%transfer%' THEN 'Transfer Adjustment'
+        WHEN adj.AdjAmt > 0 THEN 'Credit Adjustment'
+        WHEN adj.AdjAmt < 0 THEN 'Debit Adjustment'
+        ELSE 'Standard Adjustment'
+    END AS TransactionCategory,
+    -- Information about related payments for context
+    (SELECT CONCAT('Recent payment: ', 
+             DATE_FORMAT(relatedpay.PayDate, '%Y-%m-%d'), 
+             ' - $', ROUND(relatedpay.PayAmt, 2))
+     FROM payment relatedpay
+     JOIN paysplit relatedps ON relatedps.PayNum = relatedpay.PayNum
+     WHERE relatedps.PatNum = adj.PatNum
+     AND ABS(DATEDIFF(relatedpay.PayDate, adj.AdjDate)) < 7  -- Related payments within 7 days
+     ORDER BY ABS(DATEDIFF(relatedpay.PayDate, adj.AdjDate))
+     LIMIT 1) AS OriginalPaymentInfo,
     CASE
         -- Using ABS() for adjustment amounts since they can be negative
         WHEN ABS(adj.AdjAmt) > 5000 OR DATEDIFF(CURRENT_DATE, adj.AdjDate) > 30 THEN 'Critical'
@@ -227,6 +366,7 @@ ORDER BY Priority, ABS(SplitAmt) DESC;
  *    - Focus first on Critical priority items
  *    - Verify suggested providers are appropriate
  *    - Distribute to staff for resolution according to priority
+ *    - Use AccountBalance to identify unearned income (positive split with positive balance)
  * 
  * 4. TRACK RESOLUTION
  *    - Document which transactions have been resolved

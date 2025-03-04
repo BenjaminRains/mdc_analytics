@@ -56,6 +56,7 @@ PatientBalances AS (
     GROUP BY PatNum
 )
 
+-- QUERY_NAME: unearned_income_main_transactions
 -- Main query to extract all relevant data for analysis
 SELECT
     -- Transaction Info
@@ -161,6 +162,7 @@ LEFT JOIN temp_transaction_counts tc ON tc.PatNum = pb.PatNum
 WHERE pb.total_unearned_amount != 0 -- Only patients with unearned amounts
 ORDER BY pb.total_unearned_amount DESC;
 
+-- QUERY_NAME: unearned_income_unearned_type_summary
 -- Summary statistics by unearned type
 SELECT 
     COUNT(*) AS 'Total Unearned Splits',
@@ -181,6 +183,7 @@ WHERE ps.DatePay BETWEEN @FromDate AND @ToDate
 GROUP BY ps.UnearnedType
 ORDER BY COUNT(*) DESC;
 
+-- QUERY_NAME: unearned_income_payment_type_summary
 -- Summary statistics by payment type
 SELECT 
     IFNULL(
@@ -199,6 +202,7 @@ WHERE ps.DatePay BETWEEN @FromDate AND @ToDate
 GROUP BY pm.PayType
 ORDER BY SUM(ps.SplitAmt) DESC;
 
+-- QUERY_NAME: unearned_income_monthly_trend
 -- Monthly trend of unearned income
 SELECT 
     DATE_FORMAT(ps.DatePay, '%Y-%m') AS 'Month',
@@ -321,19 +325,3 @@ ORDER BY
         ELSE 6
     END;
 
--- Alternative query to include all credits on accounts (another way to look at unearned income)
-SELECT
-    pt.PatNum AS 'Patient Number',
-    CONCAT(pt.LName, ', ', pt.FName) AS 'Patient Name',
-    FORMAT(SUM(CASE WHEN ps.UnearnedType != 0 THEN ps.SplitAmt ELSE 0 END), 2) AS 'Unearned Amount',
-    FORMAT(SUM(CASE WHEN ps.UnearnedType = 0 THEN ps.SplitAmt ELSE 0 END), 2) AS 'Earned Amount',
-    FORMAT(SUM(ps.SplitAmt), 2) AS 'Total Credit',
-    MAX(ps.DatePay) AS 'Last Payment Date',
-    DATEDIFF(@ToDate, MAX(ps.DatePay)) AS 'Days Since Last Payment'
-FROM paysplit ps
-INNER JOIN patient pt ON pt.PatNum = ps.PatNum
-WHERE ps.DatePay <= @ToDate
-GROUP BY pt.PatNum, pt.LName, pt.FName
-HAVING SUM(ps.SplitAmt) > 0 -- Only patients with positive balance (credit)
-ORDER BY SUM(ps.SplitAmt) DESC
-LIMIT 100; 
