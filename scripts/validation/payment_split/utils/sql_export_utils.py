@@ -54,6 +54,9 @@ def apply_date_parameters(sql: str, date_range: DateRange) -> str:
     """
     Apply date parameters to SQL query, replacing placeholders with actual dates
     
+    This function replaces date placeholders in SQL queries with actual date values.
+    It handles various formats including @FromDate and @ToDate variables and hardcoded dates.
+    
     Args:
         sql: SQL query string
         date_range: DateRange object
@@ -72,7 +75,7 @@ def apply_date_parameters(sql: str, date_range: DateRange) -> str:
     
     # Replace specific date literals used as standard placeholders
     date_patterns = [
-        # Variables in SQL scripts
+        # Variables in SQL scripts - prioritize these replacements
         (r"SET @FromDate = '[^']+';", f"SET @FromDate = '{from_date_str}';"),
         (r"SET @ToDate = '[^']+';", f"SET @ToDate = '{to_date_str}';"),
         
