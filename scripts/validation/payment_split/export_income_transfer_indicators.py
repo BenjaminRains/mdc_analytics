@@ -2,9 +2,38 @@
 """
 Export Income Transfer Indicators
 
-This script executes all queries in the income transfer indicators SQL file and exports
-the results to separate CSV files. It focuses on analyzing provider assignment issues,
-particularly transactions where ProvNum = 0 (unassigned provider).
+This script executes all queries in the income transfer indicators SQL file and 
+the unassigned provider transactions SQL file, exporting the results to separate 
+CSV files. It focuses on analyzing provider assignment issues, particularly 
+transactions where ProvNum = 0 (unassigned provider).
+
+Output Files Generated:
+-----------------------
+All files are stored in scripts/validation/payment_split/data/income_transfer_indicators/
+and include the current date in YYYYMMDD format in the filename:
+
+From income_transfer_indicators.sql:
+1. income_transfer_recent_procedures_for_patients_with_unassigned_payments_YYYYMMDD.csv
+   - Shows recent procedures for patients with unassigned payments
+2. income_transfer_user_groups_creating_unassigned_payments_YYYYMMDD.csv
+   - Identifies users and groups creating unassigned provider transactions
+3. income_transfer_payment_sources_for_unassigned_transactions_YYYYMMDD.csv
+   - Analyzes payment types associated with unassigned transactions
+4. income_transfer_appointments_near_payment_date_YYYYMMDD.csv
+   - Identifies appointments near payment dates to determine likely providers
+5. income_transfer_time_patterns_by_hour_YYYYMMDD.csv
+   - Analyzes unassigned transactions by hour of day
+6. income_transfer_time_patterns_by_day_YYYYMMDD.csv
+   - Analyzes unassigned transactions by day of week
+7. income_transfer_time_patterns_by_month_YYYYMMDD.csv
+   - Analyzes unassigned transactions by month
+8. income_transfer_detailed_payment_information_YYYYMMDD.csv
+   - Provides detailed information about specific unassigned transactions
+
+From unassigned_provider_transactions.sql:
+9. income_transfer_unassigned_provider_transactions_YYYYMMDD.csv
+   - Comprehensive report of all unassigned provider transactions
+   - Includes priority classification and suggested provider assignments
 
 Use Case:
 ---------
@@ -25,7 +54,7 @@ Usage:
 
 Requirements:
     - .env file must be set up in the project root with MariaDB configuration
-    - SQL file should have QUERY_NAME markers for proper extraction
+    - SQL files should have QUERY_NAME markers for proper extraction
 """
 
 import os
@@ -69,24 +98,36 @@ from scripts.base.index_manager import sanitize_table_name as get_db_index_info
 
 # Constants
 SCRIPT_DIR = Path(__file__).parent
-QUERY_PATH = SCRIPT_DIR / "queries" / "income_transfer_indicators.sql"
+INDICATORS_QUERY_PATH = SCRIPT_DIR / "queries" / "income_transfer_indicators.sql"
+UNASSIGNED_QUERY_PATH = SCRIPT_DIR / "queries" / "unassigned_provider_transactions.sql"
 DATA_DIR = SCRIPT_DIR / "data" / "income_transfer_indicators"
 LOG_DIR = SCRIPT_DIR / "logs"
 
 # Use a query prefix for consistent file naming
 QUERY_PREFIX = "income_transfer"
 
-def extract_all_queries(full_sql: str, date_range: DateRange) -> Dict[str, str]:
+def extract_all_queries(full_sql: str, date_range: DateRange, is_unassigned_provider: bool = False) -> Dict[str, str]:
     """
-    Extract each query from the income transfer indicators SQL file
+    Extract each query from the SQL file
     
     Args:
         full_sql: String containing all SQL queries
         date_range: DateRange object for date parameter substitution
+        is_unassigned_provider: Whether the SQL is from the unassigned provider transactions file
         
     Returns:
         Dictionary mapping query names to query strings
     """
+    # If this is the unassigned provider transactions SQL, handle it differently
+    if is_unassigned_provider:
+        # Apply date parameters to replace placeholders in the SQL
+        sql_with_dates = apply_date_parameters(full_sql, date_range)
+        
+        # Extract the main union query as a single report
+        # The unassigned provider SQL doesn't use QUERY_NAME markers, so we handle it as a single query
+        return {"unassigned_provider_transactions": sql_with_dates}
+    
+    # Otherwise, process income transfer indicators SQL with QUERY_NAME markers
     # First try to extract using the QUERY_NAME markers
     queries = extract_queries_with_markers(full_sql, date_range)
     
@@ -122,6 +163,8 @@ def execute_query(connection, db_name, query_name, query, output_dir=None):
     try:
         # Remove comments from the query to avoid issues
         query_without_headers = re.sub(r'--.*?$', '', query, flags=re.MULTILINE)
+        # Also remove SQL comments with /* */ format, which are used in the unassigned provider SQL
+        query_without_headers = re.sub(r'/\*.*?\*/', '', query_without_headers, flags=re.DOTALL)
         
         # Connect to the database
         conn = connection.get_connection()
@@ -158,48 +201,28 @@ def execute_query(connection, db_name, query_name, query, output_dir=None):
     return df, csv_path
 
 
-def extract_report_data(from_date='2025-01-01', to_date='2025-02-28', db_name=None, query_type='income_transfer'):
+def process_sql_file(query_path, date_range, db_name, output_dir, is_unassigned_provider=False):
     """
-    Extract and export income transfer indicator data
+    Process a single SQL file, extracting and executing all queries
     
     Args:
-        from_date: Start date in YYYY-MM-DD format
-        to_date: End date in YYYY-MM-DD format
-        db_name: Database name to connect to (optional)
-        query_type: Type of query to execute (default: income_transfer)
+        query_path: Path to the SQL file
+        date_range: DateRange object for date parameter substitution
+        db_name: Database name to connect to
+        output_dir: Directory for output CSV files
+        is_unassigned_provider: Whether this is the unassigned provider transactions SQL
         
     Returns:
         Dictionary of query results
     """
-    # Read SQL file
-    sql_file = QUERY_PATH
-    output_dir = DATA_DIR
-    
-    # Create output directory if it doesn't exist
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # Convert string dates to DateRange object
-    date_range = DateRange.from_strings(from_date, to_date)
-    logging.info(f"Using date range: {from_date} to {to_date}")
-    
     # Read SQL file contents
-    full_sql = read_sql_file(sql_file)
+    full_sql = read_sql_file(query_path)
     
     # Extract all queries
-    queries = extract_all_queries(full_sql, date_range)
+    queries = extract_all_queries(full_sql, date_range, is_unassigned_provider)
     
     if not queries:
-        logging.error("No queries extracted from SQL file")
-        return {}
-    
-    # Verify database name is provided
-    if not db_name:
-        error_msg = "No database specified. Please provide a valid database name with --database parameter."
-        logging.error(error_msg)
-        print(f"Error: {error_msg}")
-        valid_dbs = get_valid_databases('LOCAL_VALID_DATABASES')
-        if valid_dbs:
-            print(f"Valid databases: {', '.join(valid_dbs)}")
+        logging.error(f"No queries extracted from SQL file: {query_path}")
         return {}
     
     # Connect to the database
@@ -225,6 +248,73 @@ def extract_report_data(from_date='2025-01-01', to_date='2025-02-28', db_name=No
         query_results[query_name] = result
     
     return query_results
+
+
+def extract_report_data(from_date='2025-01-01', to_date='2025-02-28', db_name=None):
+    """
+    Extract and export data from both SQL files
+    
+    Args:
+        from_date: Start date in YYYY-MM-DD format
+        to_date: End date in YYYY-MM-DD format
+        db_name: Database name to connect to (optional)
+        
+    Returns:
+        Dictionary of query results from both SQL files
+    """
+    output_dir = DATA_DIR
+    
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Convert string dates to DateRange object
+    date_range = DateRange.from_strings(from_date, to_date)
+    logging.info(f"Using date range: {from_date} to {to_date}")
+    
+    # Verify database name is provided
+    if not db_name:
+        error_msg = "No database specified. Please provide a valid database name with --database parameter."
+        logging.error(error_msg)
+        print(f"Error: {error_msg}")
+        valid_dbs = get_valid_databases('LOCAL_VALID_DATABASES')
+        if valid_dbs:
+            print(f"Valid databases: {', '.join(valid_dbs)}")
+        return {}
+    
+    # Process both SQL files and combine results
+    all_results = {}
+    
+    # 1. Process income transfer indicators SQL
+    logging.info("="*80)
+    logging.info("PROCESSING: INCOME TRANSFER INDICATORS")
+    logging.info(f"SQL file: {INDICATORS_QUERY_PATH.resolve()}")
+    logging.info("="*80)
+    
+    indicators_results = process_sql_file(
+        INDICATORS_QUERY_PATH,
+        date_range,
+        db_name,
+        output_dir,
+        is_unassigned_provider=False
+    )
+    all_results.update(indicators_results)
+    
+    # 2. Process unassigned provider transactions SQL
+    logging.info("="*80)
+    logging.info("PROCESSING: UNASSIGNED PROVIDER TRANSACTIONS")
+    logging.info(f"SQL file: {UNASSIGNED_QUERY_PATH.resolve()}")
+    logging.info("="*80)
+    
+    unassigned_results = process_sql_file(
+        UNASSIGNED_QUERY_PATH,
+        date_range,
+        db_name,
+        output_dir,
+        is_unassigned_provider=True
+    )
+    all_results.update(unassigned_results)
+    
+    return all_results
 
 
 def setup_logging():
@@ -259,14 +349,13 @@ def main():
     default_database = os.getenv('MARIADB_DATABASE')
     
     # Parse command-line arguments
-    parser = argparse.ArgumentParser(description='Export Income Transfer Indicators')
+    parser = argparse.ArgumentParser(description='Export Income Transfer Indicators and Unassigned Provider Transactions')
     parser.add_argument('--from-date', default='2025-01-01', help='Start date (YYYY-MM-DD)')
     parser.add_argument('--to-date', default='2025-02-28', help='End date (YYYY-MM-DD)')
     
     # Show valid databases in help text
     db_help = f"Database name (optional, default: {default_database}). Valid options: {', '.join(valid_databases)}" if valid_databases else "Database name"
     parser.add_argument('--database', help=db_help, default=default_database)
-    parser.add_argument('--query-type', default='income_transfer', help='Type of query to execute')
     
     args = parser.parse_args()
     
@@ -288,19 +377,17 @@ def main():
         return  # Exit early if database is invalid
     
     logging.info("="*80)
-    logging.info("STARTING EXPORT PROCESS: INCOME_TRANSFER QUERIES")
-    logging.info(f"SQL file: {QUERY_PATH.resolve()}")
+    logging.info("STARTING EXPORT PROCESS: INCOME TRANSFER AND UNASSIGNED PROVIDER REPORTS")
     logging.info(f"Output directory: {DATA_DIR.resolve()}")
     logging.info(f"Date range: {args.from_date} to {args.to_date}")
     logging.info(f"Database: {args.database}")
     logging.info("="*80)
     
-    # Extract and export data
+    # Extract and export data from both SQL files
     query_results = extract_report_data(
         from_date=args.from_date,
         to_date=args.to_date,
-        db_name=args.database,
-        query_type=args.query_type
+        db_name=args.database
     )
     
     # Only print summary if we have results
@@ -313,7 +400,7 @@ def main():
         logging.info("="*80)
         
         # Print detailed summary
-        print_summary(query_results, DATA_DIR, "INCOME TRANSFER INDICATORS")
+        print_summary(query_results, DATA_DIR, "INCOME TRANSFER AND UNASSIGNED PROVIDER REPORTS")
     else:
         logging.error("Export process failed or no results returned")
         print("\nExport process failed. Check the logs for details.")

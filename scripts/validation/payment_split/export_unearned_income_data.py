@@ -5,6 +5,16 @@ Export Unearned Income Data
 This script executes queries from the unearned income SQL file and exports 
 the results to CSV files for financial analysis of unearned income.
 
+Output Files Generated:
+-----------------------
+All files are stored in scripts/validation/payment_split/data/
+1. unearned_income_main_transactions.csv - Detailed transaction data
+2. unearned_income_unearned_type_summary.csv - Summary statistics by unearned type
+3. unearned_income_payment_type_summary.csv - Summary statistics by payment type
+4. unearned_income_monthly_trend.csv - Monthly trend of unearned income
+5. unearned_income_patient_balance_report.csv - Patient balance information
+6. unearned_income_aging_analysis.csv - Aging analysis of unearned income
+
 Use Case:
 ---------
 This script is specifically designed for financial accounting analysis of unearned income
