@@ -164,6 +164,7 @@ mdc_analytics_env/
 /reports/model_results/*
 !/reports/model_results/.gitkeep
 
+
 # IDE Settings
 .vscode/
 .idea/
@@ -196,6 +197,7 @@ mdc_analytics_env/
 **/*.db
 **/*.sqlite
 **/*.sqlite3
+**/*.html
 
 # But keep data flow diagram
 !docs/data_flow_diagram.txt
