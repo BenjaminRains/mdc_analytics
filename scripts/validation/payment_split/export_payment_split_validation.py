@@ -85,7 +85,7 @@ def setup_logging(log_dir='scripts/validation/payment_split/logs'):
     
     # Configure logging
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
             logging.FileHandler(log_file),
@@ -238,9 +238,6 @@ def get_query(query_name: str, ctes: str = None) -> dict:
             # Query doesn't have WITH, just append it to the CTEs
             full_query = f"{ctes}\n{query}"
             
-        # Log a preview of the combined query for debugging
-        query_preview = "\n".join(full_query.split("\n")[:20])  # First 20 lines
-        logging.debug(f"Query preview for {query_name}:\n{query_preview}\n...")
     else:
         full_query = query
         
@@ -281,10 +278,8 @@ def process_single_export(export, connection_type, database, output_dir):
         fresh_connection = ConnectionFactory.create_connection(connection_type, database)
         mysql_connection = fresh_connection.connect()
         
-        # Add debug logging for the query
-        query_first_lines = export['query'].split('\n')[:10]  # Show first 10 lines instead of 5
-        query_preview = '\n'.join(query_first_lines) + '\n...'
-        logging.debug(f"Executing query for {export['name']}:\n{query_preview}")
+        # Remove the detailed query preview debug logging
+        logging.debug(f"Executing query for {export['name']}")
         
         # Execute query and fetch results
         with mysql_connection.cursor(dictionary=True) as cursor:
@@ -389,7 +384,7 @@ def export_validation_results(connection_type, database, start_date, end_date,
         output_dir = Path(__file__).parent / 'data' / 'payment_split_validation'
     
     ensure_directory_exists(output_dir)
-    logging.info(f"Ensured directory exists: {output_dir}")
+    logging.info(f"Ensured output data directory exists: {output_dir}")
     
     # Get common table expressions
     ctes = get_ctes(start_date, end_date)
@@ -447,6 +442,15 @@ def export_validation_results(connection_type, database, start_date, end_date,
     total_rows = sum(r.get('rows', 0) for r in export_results.values())
     
     logging.info(f"Export summary: {success_count} succeeded, {failed_count} failed, {total_rows} total rows")
+    
+    # Add detailed export summary - list query names, file names, and output directory
+    logging.info(f"Output directory: {output_dir}")
+    logging.info("Successfully exported files:")
+    for name, result in export_results.items():
+        if result.get('success', False):
+            file_name = result.get('file', f"payment_split_validation_2024_{name}.csv")
+            rows = result.get('rows', 0)
+            logging.info(f"  - {name}: {file_name} ({rows} rows)")
     
     if failed_count > 0:
         logging.warning("Failed exports:")
