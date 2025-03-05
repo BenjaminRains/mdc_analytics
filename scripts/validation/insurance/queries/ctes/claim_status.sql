@@ -1,5 +1,5 @@
 -- ClaimStatus: Analyzes claim processing status and key metrics
--- Date filter: 2024-01-01 to 2025-01-01
+-- Date filter: @start_date to @end_date
 -- Dependencies: none
 
 ClaimStatus AS (
@@ -35,6 +35,6 @@ ClaimStatus AS (
     FROM claimproc cp
     LEFT JOIN claimtracking ct ON cp.ClaimNum = ct.ClaimNum
     WHERE 
-        cp.ProcDate BETWEEN '{{START_DATE}}' AND '{{END_DATE}}'
-        OR cp.DateCP BETWEEN '{{START_DATE}}' AND '{{END_DATE}}'
+        cp.ProcDate BETWEEN @start_date AND @end_date
+        OR cp.DateCP BETWEEN @start_date AND @end_date
 ) 

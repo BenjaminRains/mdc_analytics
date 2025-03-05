@@ -16,7 +16,7 @@
  * - Financial Impact: Overall effect on revenue
  * - Patient Impact: How write-offs affect patient portions
  */
-
+-- Date range: @start_date to @end_date
 -- Dependent CTEs: procedure_payment_journey.sql, patient_insurance_status.sql, insurance_fee_schedules.sql
 
 WITH ProcedurePaymentJourney, PatientInsuranceStatus, InsuranceFeeSchedules

@@ -23,7 +23,7 @@
  * - Terminated: Plans with all subscribers terminated
  * - Dormant: Plans with no activity in analysis period
  */
-
+-- Date range: @start_date to @end_date
 -- Dependent CTEs: active_plans.sql, claim_status.sql
 
 WITH ActivePlans, ClaimStatus
@@ -32,8 +32,8 @@ SELECT
     ap.CarrierName,
     CASE 
         WHEN ap.active_subscriber_count > 0 THEN 'Active'
-        WHEN ap.earliest_effective_date >= '{{START_DATE}}' THEN 'New'
-        WHEN ap.latest_term_date < '{{START_DATE}}' THEN 'Terminated'
+        WHEN ap.earliest_effective_date >= @start_date THEN 'New'
+        WHEN ap.latest_term_date < @start_date THEN 'Terminated'
         WHEN cs.ClaimNum IS NULL THEN 'Dormant'
         ELSE 'Inactive'
     END as PlanCategory,
@@ -53,8 +53,8 @@ GROUP BY
     ap.CarrierName,
     CASE 
         WHEN ap.active_subscriber_count > 0 THEN 'Active'
-        WHEN ap.earliest_effective_date >= '{{START_DATE}}' THEN 'New'
-        WHEN ap.latest_term_date < '{{START_DATE}}' THEN 'Terminated'
+        WHEN ap.earliest_effective_date >= @start_date THEN 'New'
+        WHEN ap.latest_term_date < @start_date THEN 'Terminated'
         WHEN cs.ClaimNum IS NULL THEN 'Dormant'
         ELSE 'Inactive'
     END

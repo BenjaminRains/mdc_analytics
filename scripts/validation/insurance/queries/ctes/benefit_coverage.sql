@@ -1,5 +1,5 @@
 -- BenefitCoverage: Analyzes benefit coverage details and limitations
--- Date filter: 2024-01-01 to 2025-01-01
+-- Date filter: @start_date to @end_date
 -- Dependencies: none
 
 BenefitCoverage AS (
@@ -22,8 +22,8 @@ BenefitCoverage AS (
         AVG(CASE WHEN b.MonetaryAmt != 0 THEN b.MonetaryAmt ELSE NULL END) as avg_monetary_amt,
         MAX(CASE WHEN b.MonetaryAmt != 0 THEN b.MonetaryAmt ELSE NULL END) as max_monetary_amt
     FROM benefit b
-    WHERE b.SecDateTEntry BETWEEN '{{START_DATE}}' AND '{{END_DATE}}'
-        OR b.SecDateTEdit BETWEEN '{{START_DATE}}' AND '{{END_DATE}}'
+    WHERE b.SecDateTEntry BETWEEN @start_date AND @end_date
+        OR b.SecDateTEdit BETWEEN @start_date AND @end_date
     GROUP BY 
         b.PlanNum,
         b.BenefitType,

@@ -126,7 +126,7 @@
  *   * Must be within 2024 for this analysis
  *   * Used as reference point for validation
  */
-
+-- Date range: @start_date to @end_date
 WITH 
   ActiveClaims AS (
     SELECT 
@@ -149,8 +149,8 @@ WITH
     JOIN patient p ON c.PatNum = p.PatNum
     JOIN inssub s ON c.PlanNum = s.PlanNum
     JOIN insplan i ON s.PlanNum = i.PlanNum
-    WHERE c.DateService >= '2024-01-01'
-      AND c.DateService < '2025-01-01'
+    WHERE c.DateService >= @start_date
+      AND c.DateService < @end_date
     GROUP BY 
       c.ClaimNum,
       p.PatNum,
@@ -175,8 +175,8 @@ WITH
     FROM claim c
     JOIN patient p ON c.PatNum = p.PatNum
     LEFT JOIN insverify iv ON iv.FKey = p.PatNum
-    WHERE c.DateService >= '2024-01-01'
-      AND c.DateService < '2025-01-01'
+    WHERE c.DateService >= @start_date
+      AND c.DateService < @end_date
   ),
   ClaimPaymentMatching AS (
     SELECT 
@@ -196,8 +196,8 @@ WITH
     FROM procedurelog pl
     JOIN claimproc cp ON pl.ProcNum = cp.ProcNum
     JOIN claim c ON cp.ClaimNum = c.ClaimNum
-    WHERE c.DateService >= '2024-01-01'
-      AND c.DateService < '2025-01-01'
+    WHERE c.DateService >= @start_date
+      AND c.DateService < @end_date
   ),
   PlanCarrierAnalysis AS (
     SELECT 
@@ -218,8 +218,8 @@ WITH
     LEFT JOIN claimproc cp ON cl.ClaimNum = cp.ClaimNum
     LEFT JOIN patient p ON cl.PatNum = p.PatNum
     LEFT JOIN insverify iv ON iv.FKey = p.PatNum
-    WHERE cl.DateService >= '2024-01-01'
-      AND cl.DateService < '2025-01-01'
+    WHERE cl.DateService >= @start_date
+      AND cl.DateService < @end_date
     GROUP BY c.CarrierNum, c.CarrierName
   )
 SELECT 

@@ -1,5 +1,5 @@
 -- Description: This CTE calculates usage metrics for each plan and carrier such as total claims, patients, payments, writeoffs, deductibles, average payment, and claim dates.
--- date range: 2024-01-01 to 2025-01-01
+-- Date range: @start_date to @end_date
 -- Dependent CTEs: date_range.sql
 
 PlanUsageMetrics AS (

@@ -74,13 +74,13 @@
  *    - Which carriers have the highest patient cost burden?
  *    - Are certain patient groups experiencing higher denial rates?
  */
- -- Date Range '2024-01-01' to '2024-12-31'
+ -- Date Range @start_date to @end_date
  -- Dependent CTEs: date_range.sql
 
 WITH DateRange AS (
     SELECT 
-        '2024-01-01' AS start_date,
-        '2024-12-31' AS end_date
+        @start_date AS start_date,
+        @end_date AS end_date
 )
 SELECT 
     -- Carrier Information

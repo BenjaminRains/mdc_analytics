@@ -1,4 +1,4 @@
--- Date range: 2024-01-01 to 2025-01-01
+-- Date range: @start_date to @end_date
 -- Dependent CTEs:
 -- Description: Valid carriers are those that are not hidden and have plans in the date range
 

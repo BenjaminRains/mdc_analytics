@@ -1,5 +1,5 @@
 -- PatientInsuranceStatus: Analyzes patient insurance relationships and status
--- Date filter: 2024-01-01 to 2025-01-01
+-- Date filter: @start_date to @end_date
 -- Dependencies: none
 
 PatientInsuranceStatus AS (
@@ -41,7 +41,7 @@ PatientInsuranceStatus AS (
     FROM patient p
     LEFT JOIN inssub ins ON p.PatNum = ins.Subscriber
     LEFT JOIN claimproc cp ON p.PatNum = cp.PatNum
-        AND cp.ProcDate BETWEEN '{{START_DATE}}' AND '{{END_DATE}}'
+        AND cp.ProcDate BETWEEN @start_date AND @end_date
     WHERE p.PatStatus = 1 -- Active patients only
     GROUP BY 
         p.PatNum,

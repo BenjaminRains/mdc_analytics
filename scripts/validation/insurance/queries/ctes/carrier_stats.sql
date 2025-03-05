@@ -1,5 +1,5 @@
 -- Description: Carrier-level statistics for payments, claims, and procedures
--- Date range: 2024-01-01 to 2025-01-01
+-- Date range: @start_date to @end_date
 -- Dependent CTEs: valid_carriers.sql, plan_stats.sql
 
 CarrierStats AS (

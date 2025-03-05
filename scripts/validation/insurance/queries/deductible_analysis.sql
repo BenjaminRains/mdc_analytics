@@ -16,7 +16,7 @@
  * - Seasonal Trends: When deductibles are most commonly applied
  * - Procedure Impact: Which procedures typically involve deductibles
  */
-
+-- Date range: @start_date to @end_date
 -- Dependent CTEs: procedure_payment_journey.sql, patient_insurance_status.sql
 
 WITH ProcedurePaymentJourney, PatientInsuranceStatus

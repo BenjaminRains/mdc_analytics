@@ -16,6 +16,7 @@
  * - Payment Accuracy: Balance and write-off analysis
  * - Carrier Performance: Aggregated metrics by carrier
  */
+-- Date range: @start_date to @end_date
 
 WITH 
 InsuranceVerificationStatus AS (
@@ -38,7 +39,7 @@ InsuranceVerificationStatus AS (
     LEFT JOIN insverify iv ON iv.FKey = p.PatNum
     LEFT JOIN claim c ON i.PlanNum = c.PlanNum
     LEFT JOIN claimproc cp ON c.ClaimNum = cp.ClaimNum
-    WHERE c.DateService BETWEEN '2024-01-01' AND '2024-12-31'
+    WHERE c.DateService BETWEEN @start_date AND @end_date
     GROUP BY 
         p.PatNum,
         i.PlanNum,
@@ -69,7 +70,7 @@ ActiveInsuranceValidation AS (
     JOIN inssub s ON c.PlanNum = s.PlanNum
     JOIN insplan i ON s.PlanNum = i.PlanNum
     LEFT JOIN claimproc cp ON c.ClaimNum = cp.ClaimNum
-    WHERE c.DateService BETWEEN '2024-01-01' AND '2024-12-31'
+    WHERE c.DateService BETWEEN @start_date AND @end_date
 ),
 PaymentAccuracyAnalysis AS (
     SELECT 
@@ -89,7 +90,7 @@ PaymentAccuracyAnalysis AS (
     FROM claim c
     JOIN claimproc cp ON c.ClaimNum = cp.ClaimNum
     JOIN procedurelog pl ON cp.ProcNum = pl.ProcNum
-    WHERE c.DateService BETWEEN '2024-01-01' AND '2024-12-31'
+    WHERE c.DateService BETWEEN @start_date AND @end_date
 )
 
 SELECT 

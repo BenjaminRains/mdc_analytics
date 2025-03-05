@@ -10,7 +10,7 @@
  * - Procedure-specific Payment Accuracy
  * - Time-based Payment Patterns
  */
-
+-- Date range: @start_date to @end_date
 WITH 
 PaymentAccuracyByProc AS (
     SELECT 
@@ -37,7 +37,7 @@ PaymentAccuracyByProc AS (
     JOIN procedurelog pl ON cp.ProcNum = pl.ProcNum
     JOIN paysplit ps ON pl.ProcNum = ps.ProcNum
         AND ps.IsDiscount = 0  -- Exclude discounts
-    WHERE pl.ProcDate BETWEEN '2024-01-01' AND '2024-12-31'
+    WHERE pl.ProcDate BETWEEN @start_date AND @end_date
         AND cp.InsPayEst > 0  -- Only include procedures with estimates
     GROUP BY 
         i.CarrierNum,

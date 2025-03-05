@@ -1,5 +1,5 @@
 -- Get procedures with claims in date range
--- Date range: 2024-01-01 to 2025-01-01
+-- Date range: @start_date to @end_date
 -- Dependencies:
 
 ValidProcedures AS (

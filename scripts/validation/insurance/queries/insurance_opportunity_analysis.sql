@@ -44,13 +44,13 @@
  * Note: Complex calculations and formatting will be handled in pandas notebooks
  * for more flexibility and easier maintenance
  */
- -- Date range: 2024-01-01 to 2025-01-01
+ -- Date range: @start_date to @end_date
  -- Dependent CTEs:
 
 WITH DateRange AS (
     SELECT 
-        '2024-01-01' AS start_date,
-        '2024-12-31' AS end_date
+        @start_date AS start_date,
+        @end_date AS end_date
 )
 -- Get all treatment planned procedures with patient and insurance info
 SELECT 
@@ -114,7 +114,7 @@ WHERE tp.TPStatus = 0  -- Changed to 0 for active treatment plans
     AND (ins.DateTerm = '0001-01-01' OR ins.DateTerm > CURRENT_DATE())
     AND (ins.DateEffective = '0001-01-01' OR ins.DateEffective <= CURRENT_DATE())
     -- Add date range filter for recent treatment plans
-    AND tp.DateTP >= '2024-01-01'  -- Only look at recent treatment plans
+    AND tp.DateTP >= @start_date  -- Only look at recent treatment plans
 ORDER BY 
     tp.DateTP DESC,
     p.PatNum,

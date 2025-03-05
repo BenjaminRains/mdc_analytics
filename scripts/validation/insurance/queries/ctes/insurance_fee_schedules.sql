@@ -1,5 +1,5 @@
 -- InsuranceFeeSchedules: Links insurance plans with their fee schedules and actual fees
--- Date filter: 2024-01-01 to 2025-01-01
+-- Date filter: @start_date to @end_date
 -- Dependencies: none
 
 InsuranceFeeSchedules AS (
@@ -36,7 +36,7 @@ InsuranceFeeSchedules AS (
     LEFT JOIN claimproc cp ON ip.PlanNum = cp.PlanNum
     LEFT JOIN procedurelog pl ON cp.ProcNum = pl.ProcNum 
         AND f.CodeNum = pl.CodeNum
-        AND pl.ProcDate BETWEEN '{{START_DATE}}' AND '{{END_DATE}}'
+        AND pl.ProcDate BETWEEN @start_date AND @end_date
     GROUP BY 
         ip.PlanNum,
         ip.CarrierNum,

@@ -21,12 +21,12 @@
  * - Claim Processing: Success rate of claim submissions
  * - Financial Impact: Overall financial performance with the carrier
  */
--- Date range: 2024-01-01 to 2025-01-01
+-- Date range: @start_date to @end_date
 -- Dependencies: date_range.sql, procedure_payment_journey.sql, insurance_fee_schedules.sql, payment_timing_stats.sql
 WITH DateRange AS (
     SELECT 
-        '2024-01-01' as start_date,
-        '2025-01-01' as end_date
+        @start_date as start_date,
+        @end_date as end_date
 ),
 ProcedurePaymentJourney AS (
     SELECT 

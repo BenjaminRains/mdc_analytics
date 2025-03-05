@@ -1,5 +1,5 @@
 -- Pre-aggregate by plan
--- Date range: 2024-01-01 to 2025-01-01
+-- Date range: @start_date to @end_date
 -- Dependencies: valid_procedures.sql
 
 PlanStats AS (

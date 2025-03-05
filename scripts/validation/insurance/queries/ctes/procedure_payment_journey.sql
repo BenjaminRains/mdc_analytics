@@ -1,5 +1,5 @@
 -- ProcedurePaymentJourney: Tracks the complete journey of procedures through insurance payment
--- Date filter: 2024-01-01 to 2025-01-01
+-- Date filter: @start_date to @end_date
 -- Dependencies: none
 
 ProcedurePaymentJourney AS (
@@ -52,7 +52,7 @@ ProcedurePaymentJourney AS (
     LEFT JOIN payment p ON ps.PayNum = p.PayNum
     LEFT JOIN insbluebook ibb ON pl.ProcNum = ibb.ProcNum
     LEFT JOIN insbluebooklog ibbl ON cp.ClaimProcNum = ibbl.ClaimProcNum
-    WHERE pl.ProcDate BETWEEN '{{START_DATE}}' AND '{{END_DATE}}'
+    WHERE pl.ProcDate BETWEEN @start_date AND @end_date
         AND pl.ProcStatus = 2 -- Complete
         AND (cp.ClaimNum IS NULL OR cp.Status != 7) -- Exclude reversed claims
 ) 

@@ -1,6 +1,6 @@
 -- Description: This query retrieves all treatment plans that are pending and have insurance information.
 -- It includes details about the treatment plan, patient, procedure, and insurance information.
--- date range: 2024-01-01 to 2024-12-31
+-- Date range: @start_date to @end_date
 -- dependent CTEs: date_range.sql
 
 SELECT 
@@ -64,7 +64,7 @@ WHERE tp.TPStatus = 0  -- Changed to 0 for active treatment plans
     AND (ins.DateTerm = '0001-01-01' OR ins.DateTerm > CURRENT_DATE())
     AND (ins.DateEffective = '0001-01-01' OR ins.DateEffective <= CURRENT_DATE())
     -- Add date range filter for recent treatment plans
-    AND tp.DateTP >= '2024-01-01'  -- Only look at recent treatment plans
+    AND tp.DateTP >= @start_date  -- Only look at recent treatment plans
 ORDER BY 
     tp.DateTP DESC,
     p.PatNum,

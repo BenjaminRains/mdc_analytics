@@ -18,7 +18,7 @@
  * - Carrier Variations: How different carriers handle the same fee schedule
  * - BlueBook Alignment: How fee schedules align with BlueBook rates
  */
-
+-- Date range: @start_date to @end_date
 -- Dependent CTEs: insurance_fee_schedules.sql, procedure_payment_journey.sql
 
 WITH InsuranceFeeSchedules, ProcedurePaymentJourney

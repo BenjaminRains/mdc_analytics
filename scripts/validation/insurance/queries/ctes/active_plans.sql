@@ -1,5 +1,5 @@
 -- ActivePlans: Identifies currently active insurance plans and their key relationships
--- Date filter: 2024-01-01 to 2025-01-01
+-- Date filter: @start_date to @end_date
 -- Dependent CTEs: none
 
 ActivePlans AS (
@@ -15,7 +15,7 @@ ActivePlans AS (
         COUNT(DISTINCT ins.InsSubNum) as subscriber_count,
         COUNT(DISTINCT CASE 
             WHEN ins.DateTerm = '0001-01-01' 
-                OR ins.DateTerm >= '{{START_DATE}}'
+                OR ins.DateTerm >= @start_date
             THEN ins.InsSubNum 
         END) as active_subscriber_count,
         MIN(ins.DateEffective) as earliest_effective_date,
@@ -27,8 +27,8 @@ ActivePlans AS (
     JOIN carrier c ON ip.CarrierNum = c.CarrierNum
     LEFT JOIN inssub ins ON ip.PlanNum = ins.PlanNum
     WHERE 
-        (ins.DateEffective <= '{{END_DATE}}'
-        AND (ins.DateTerm = '0001-01-01' OR ins.DateTerm >= '{{START_DATE}}'))
+        (ins.DateEffective <= @end_date
+        AND (ins.DateTerm = '0001-01-01' OR ins.DateTerm >= @start_date))
         OR ins.InsSubNum IS NULL -- Include plans with no subscribers for analysis
     GROUP BY 
         ip.PlanNum,

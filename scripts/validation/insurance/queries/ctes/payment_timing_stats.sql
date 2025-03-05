@@ -1,5 +1,5 @@
 -- Description: Calculates the median days to payment for each plan
--- Date range: 2024-01-01 to 2025-01-01
+-- Date range: @start_date to @end_date
 -- Dependencies: procedure_payment_journey.sql
 
 PaymentTimingStats AS (
