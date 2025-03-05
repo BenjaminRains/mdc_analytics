@@ -41,6 +41,12 @@ import concurrent.futures
 from tqdm import tqdm
 import time
 
+# Import shared utilities from sql_export_utils
+from scripts.validation.payment_split.utils.sql_export_utils import (
+    DateRange, read_sql_file, apply_date_parameters, 
+    export_to_csv, print_summary
+)
+
 # Get the list of valid databases from environment
 valid_databases = get_valid_databases('LOCAL_VALID_DATABASES')
 
@@ -96,12 +102,7 @@ def ensure_directory_exists(directory):
 def load_query_file(query_name: str) -> str:
     """Load a query from the queries directory using pathlib."""
     query_path = Path(__file__).parent / 'queries' / f'{query_name}.sql'
-    try:
-        with query_path.open('r') as f:
-            return f.read()
-    except Exception as e:
-        logging.error(f"Error loading query file {query_name}: {str(e)}")
-        raise
+    return read_sql_file(query_path)
 
 def get_ctes(start_date: Optional[str] = None, end_date: Optional[str] = None) -> str:
     """
@@ -114,22 +115,21 @@ def get_ctes(start_date: Optional[str] = None, end_date: Optional[str] = None) -
     Returns:
         CTE SQL with optional date filters applied
     """
-    ctes = load_query_file('ctes')
+    # Load the CTEs file
+    ctes_path = Path(__file__).parent / 'queries' / 'ctes.sql'
+    ctes = read_sql_file(ctes_path)
     
-    # If date filters are provided, modify the CTE to include them
+    # If date filters are provided, apply them using the date parameter utility
     if start_date or end_date:
-        date_filters = []
-        if start_date:
-            date_filters.append(f"p.PayDate >= '{start_date}'")
-        if end_date:
-            date_filters.append(f"p.PayDate <= '{end_date}'")
-            
-        # Insert date filters into the base CTE
-        if date_filters:
-            filter_clause = " AND " + " AND ".join(date_filters)
-            # This assumes a specific structure in the CTE - adjust as needed
-            # Look for "base_payments" CTE and add date filter before the first closing parenthesis
-            ctes = ctes.replace("FROM payment p", f"FROM payment p WHERE 1=1 {filter_clause}")
+        # Set default values if only one date is provided
+        from_date = start_date if start_date else '2000-01-01'  # Default distant past date
+        to_date = end_date if end_date else datetime.now().strftime('%Y-%m-%d')  # Default to today
+        
+        # Create a DateRange object
+        date_range = DateRange.from_strings(from_date, to_date)
+        
+        # Apply date parameters, which will replace date placeholders in the SQL
+        ctes = apply_date_parameters(ctes, date_range)
             
     return ctes
 
@@ -197,9 +197,17 @@ def process_single_export(export, connection_type, database, output_dir):
                     'file': export['file']  # Add file key even for empty results
                 }
             
-            # Write to CSV (overwrite if file exists)
-            output_path = os.path.join(output_dir, export['file'])
-            df.to_csv(output_path, index=False, mode='w')
+            # Use export_to_csv utility from sql_export_utils
+            output_file = Path(output_dir)
+            file_name = export['file'].replace('.csv', '')  # Remove .csv extension as export_to_csv adds it
+            
+            # Export to CSV using the shared utility
+            csv_path = export_to_csv(
+                df=df,
+                output_dir=output_file,
+                query_name=file_name,
+                include_date=False  # Date is already in the filename format
+            )
         
         duration = (datetime.now() - start_time).total_seconds()
         return {
@@ -207,7 +215,7 @@ def process_single_export(export, connection_type, database, output_dir):
             'success': True,
             'rows': len(df),
             'duration': duration,
-            'file': export['file']
+            'file': csv_path.name
         }
         
     except Exception as e:
@@ -238,92 +246,103 @@ def export_validation_results(connection_type, database, queries=None,
         database: Database name to connect to.
         queries: List of query names to run (None for all).
         output_dir: Directory to store output files (None for default).
-        use_parallel: Whether to execute queries in parallel (default: False)
-        start_date: Start date for filtering data (YYYY-MM-DD format)
-        end_date: End date for filtering data (YYYY-MM-DD format)
+        use_parallel: Whether to use parallel execution.
+        start_date: Optional start date for filtering.
+        end_date: Optional end date for filtering.
     """
-    # Set default output directory if none provided
-    if output_dir is None:
-        output_dir = r"C:\Users\rains\mdc_analytics\scripts\validation\payment_split\data"
+    if not output_dir:
+        output_dir = os.path.join(os.path.dirname(__file__), 'data')
     
-    logging.info(f"Starting export to {output_dir}")
+    # Create output directory if it doesn't exist
     ensure_directory_exists(output_dir)
     
-    # Load common CTEs once
-    logging.info("Loading CTEs")
+    # Load CTEs
     ctes = get_ctes(start_date, end_date)
     
-    # Get export configurations, passing in the loaded CTEs
+    # Get export configurations
     exports = get_exports(ctes)
     
-    # Filter exports if specific queries requested
+    # Filter exports based on query list
     if queries:
-        exports = [e for e in exports if e['name'] in queries]
-        logging.info(f"Running selected queries: {', '.join(queries)}")
-
-    # Log query descriptions
-    logging.info("Query descriptions:")
-    for export in exports:
-        logging.info(f"  {export['name']}: {export['description']}")
+        logging.info(f"Filtering exports to: {', '.join(queries)}")
+        exports = [export for export in exports if export['name'] in queries]
     
-    results = []
+    export_results = {}
     
     if use_parallel:
-        logging.info(f"Executing {len(exports)} queries in parallel...")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=min(4, len(exports))) as executor:
+        logging.info(f"Using parallel execution for {len(exports)} exports")
+        
+        # Using ThreadPoolExecutor for parallel processing
+        with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
             # Submit all tasks
             future_to_export = {
                 executor.submit(
-                    process_single_export, export, connection_type, database, output_dir
+                    process_single_export, 
+                    export, 
+                    connection_type, 
+                    database, 
+                    output_dir
                 ): export['name'] for export in exports
             }
             
-            # Create a progress bar
-            with tqdm(total=len(exports), desc="Processing queries") as pbar:
-                for future in concurrent.futures.as_completed(future_to_export):
-                    query_name = future_to_export[future]
-                    try:
-                        result = future.result()
-                        results.append(result)
-                        if result['success']:
-                            logging.info(f"Exported {result['rows']:,} rows to {result['file']} in {result['duration']:.2f} seconds")
-                        else:
-                            logging.error(f"Error exporting {query_name}: {result['error']}")
-                    except Exception as exc:
-                        logging.error(f"Query {query_name} generated an exception: {exc}")
-                    pbar.update(1)
+            # Process as they complete with progress bar
+            for future in tqdm(
+                concurrent.futures.as_completed(future_to_export), 
+                total=len(exports),
+                desc="Exporting queries"
+            ):
+                export_name = future_to_export[future]
+                try:
+                    result = future.result()
+                    export_results[export_name] = result
+                except Exception as exc:
+                    logging.error(f"Export {export_name} generated an exception: {exc}")
+                    export_results[export_name] = {
+                        'name': export_name,
+                        'success': False,
+                        'error': str(exc)
+                    }
     else:
-        # Execute each query sequentially with a progress bar
-        with tqdm(total=len(exports), desc="Processing queries") as pbar:
-            for export in exports:
-                result = process_single_export(export, connection_type, database, output_dir)
-                results.append(result)
-                
-                if result['success']:
-                    logging.info(f"Exported {result['rows']:,} rows to {result['file']} in {result['duration']:.2f} seconds")
-                else:
-                    logging.error(f"Error exporting {export['name']}: {result['error']}")
-                    
-                pbar.update(1)
+        logging.info(f"Processing {len(exports)} exports sequentially")
+        
+        # Process sequentially with progress bar
+        for export in tqdm(exports, desc="Exporting queries"):
+            logging.info(f"Processing export: {export['name']}")
+            result = process_single_export(export, connection_type, database, output_dir)
+            export_results[export['name']] = result
     
-    # Summary of results
-    successful = sum(1 for r in results if r['success'])
-    failed = len(results) - successful
-    total_rows = sum(r['rows'] for r in results if r['success'])
-    total_duration = sum(r['duration'] for r in results)
+    # Print summary of results
+    success_count = sum(1 for r in export_results.values() if r.get('success', False))
+    failed_count = len(export_results) - success_count
+    total_rows = sum(r.get('rows', 0) for r in export_results.values())
     
-    logging.info(f"Export summary: {successful} queries successful, {failed} failed")
-    logging.info(f"Total rows exported: {total_rows:,}")
-    logging.info(f"Total processing time: {total_duration:.2f} seconds")
+    logging.info(f"Export summary: {success_count} succeeded, {failed_count} failed, {total_rows} total rows")
     
-    # Sort and display query performance
-    if results:
-        logging.info("Query performance (slowest to fastest):")
-        sorted_results = sorted(results, key=lambda x: x['duration'], reverse=True)
-        for r in sorted_results:
-            # Use ASCII characters instead of Unicode checkmarks
-            status = "+" if r['success'] else "X"
-            logging.info(f"  {status} {r['name']}: {r['duration']:.2f}s - {r.get('rows', 0):,} rows")
+    # Print details of failures
+    if failed_count > 0:
+        logging.warning("Failed exports:")
+        for name, result in export_results.items():
+            if not result.get('success', False):
+                logging.warning(f"  - {name}: {result.get('error', 'Unknown error')}")
+
+    # Convert export_results to the format expected by print_summary
+    formatted_results = {
+        name: {
+            'status': 'SUCCESS' if result.get('success', False) else 'FAILURE',
+            'rows': result.get('rows', 0),
+            'output_file': Path(output_dir) / result.get('file', f"{name}.csv")
+        }
+        for name, result in export_results.items()
+    }
+    
+    # Use print_summary utility to display a consistent summary
+    print_summary(
+        query_results=formatted_results,
+        output_dir=Path(output_dir),
+        script_name="Payment Split Validation"
+    )
+    
+    return export_results
 
 def parse_args():
     """Parse command line arguments."""
@@ -443,11 +462,17 @@ def main():
         logging.info(f"Output directory: {args.output_dir}")
         logging.info(f"Database: {args.database}")
         logging.info(f"Connection type: {args.connection_type}")
-        if args.start_date:
-            logging.info(f"Start date filter: {args.start_date}")
-        if args.end_date:
-            logging.info(f"End date filter: {args.end_date}")
-        logging.info(f"Parallel execution: {args.parallel}")
+        
+        # Create a DateRange object if date filters are provided
+        date_range = None
+        if args.start_date or args.end_date:
+            # Set default values if only one date is provided
+            from_date = args.start_date if args.start_date else '2000-01-01'  # Default distant past date
+            to_date = args.end_date if args.end_date else datetime.now().strftime('%Y-%m-%d')  # Default to today
+            
+            # Create the DateRange object
+            date_range = DateRange.from_strings(from_date, to_date)
+            logging.info(f"Using date range: {from_date} to {to_date}")
         
         # Validate database name
         if not args.database:
