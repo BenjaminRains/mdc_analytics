@@ -27,6 +27,8 @@
 /src/opendental/*
 !/src/opendental/
 
+# Ignore configuration docs
+/src/PATH_CONFIG_README.md
 
 # Ignore OS-generated files
 .DS_Store
@@ -211,5 +213,8 @@ mdc_analytics_env/
 # Keep template notebooks
 !templates/**/*.ipynb
 !examples/**/*.ipynb
+
+# Keep specific demo notebooks
+!/src/path_config_demo.ipynb
 
 
