@@ -5,9 +5,10 @@
 -- Type 288: Prepayments (10.9% of splits) - Payment received before procedure
 -- Type 439: Treatment Plan Prepayments (0.2% of splits) - Specific to treatment plan deposits
 
--- Set date parameters (these need to be set before running the query)
-SET @FromDate = '2024-01-01';
-SET @ToDate = '2025-02-28';
+-- Date parameters: These values will be automatically replaced by the Python script
+-- DO NOT MODIFY THESE VALUES DIRECTLY - Use the --from-date and --to-date parameters when running the script
+SET @FromDate = '2024-01-01'; -- Will be replaced with command line parameter
+SET @ToDate = '2025-02-28';   -- Will be replaced with command line parameter
 
 -- Common Table Expressions for efficient data retrieval
 WITH UnearntypeDef AS (
@@ -115,6 +116,7 @@ WHERE
     AND ps.DatePay BETWEEN @FromDate AND @ToDate
 ORDER BY ps.DatePay;
 
+-- QUERY_NAME: unearned_income_patient_balance_report
 -- Optimized Patient Balance Report using temporary tables for better performance
 -- Step 1: Create a temporary table with patient balances
 DROP TEMPORARY TABLE IF EXISTS temp_patient_balances;
@@ -217,6 +219,7 @@ WHERE ps.DatePay BETWEEN @FromDate AND @ToDate
 GROUP BY DATE_FORMAT(ps.DatePay, '%Y-%m')
 ORDER BY DATE_FORMAT(ps.DatePay, '%Y-%m');
 
+-- QUERY_NAME: unearned_income_negative_prepayments
 -- Negative prepayments (potential refunds or adjustments)
 SELECT
     DATE_FORMAT(ps.DatePay, '%m/%d/%Y') AS 'Payment Date',
@@ -255,6 +258,7 @@ GROUP BY ps.PatNum, pt.LName, pt.FName
 ORDER BY SUM(ps.SplitAmt) DESC
 LIMIT 20;
 
+-- QUERY_NAME: unearned_income_aging_analysis
 -- Aging analysis of unearned income
 SELECT
     CASE
