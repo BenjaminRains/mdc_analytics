@@ -194,16 +194,19 @@ def get_ctes(start_date: str, end_date: str) -> str:
             
         cte_parts.append(cte_part)
     
-    # Combine all CTEs with or without WITH keyword
-    if needs_with_keyword:
-        ctes = "WITH\n" + "\n\n".join(cte_parts)
-    else:
-        ctes = "\n\n".join(cte_parts)
-    
     # Create a DateRange object from the required dates
     date_range = DateRange.from_strings(start_date, end_date)
     
-    # Apply date parameters, which will replace date placeholders in the SQL
+    # Define date variables at the beginning of the query
+    date_variables = f"-- Set date parameters from CLI args\nSET @start_date = '{date_range.start_date.strftime('%Y-%m-%d')}';\nSET @end_date = '{date_range.end_date.strftime('%Y-%m-%d')}';\n\n"
+    
+    # Combine all CTEs with date variables and WITH keyword
+    if needs_with_keyword:
+        ctes = date_variables + "WITH\n" + "\n\n".join(cte_parts)
+    else:
+        ctes = date_variables + "\n\n".join(cte_parts)
+    
+    # Apply date parameters for any remaining hardcoded dates
     ctes = apply_date_parameters(ctes, date_range)
             
     return ctes
