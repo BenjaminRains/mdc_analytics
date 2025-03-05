@@ -128,7 +128,8 @@ def get_ctes(start_date: str, end_date: str) -> str:
     # Define dependency order - put base CTEs first, then derived ones
     # This ensures CTEs that depend on other CTEs are defined after their dependencies
     preferred_order = [
-        "date_range.sql",             # First, define the date range
+        # Note: We'll handle date parameters directly via SQL variables instead of a separate CTE
+        # "date_range.sql" is removed from the preferred order if it's only used to define date ranges
         "base_payments.sql",          # Base payments table
         "base_splits.sql",            # Base splits table
         "payment_summary.sql",        # Payment summary metrics
@@ -156,6 +157,9 @@ def get_ctes(start_date: str, end_date: str) -> str:
     # Get all SQL files in the directory
     all_files = list(ctes_dir.glob('*.sql'))
     
+    # Filter out date_range.sql if we're handling dates via variables
+    all_files = [f for f in all_files if f.name != 'date_range.sql']
+    
     # Sort files based on preferred order, then alphabetically for the rest
     def sort_key(file):
         filename = file.name
@@ -171,18 +175,26 @@ def get_ctes(start_date: str, end_date: str) -> str:
     # Log the files being used
     logging.info(f"Found {len(sql_files)} CTE SQL files: {', '.join(f.name for f in sql_files)}")
     
+    # Create a DateRange object from the required dates
+    date_range = DateRange.from_strings(start_date, end_date)
+    
+    # Define date variables to be placed BEFORE the WITH clause
+    # These will be used directly by the CTEs for all date filtering
+    date_variables = (
+        f"-- Set date parameters from CLI args\n"
+        f"SET @start_date = '{date_range.start_date.strftime('%Y-%m-%d')}';\n"
+        f"SET @end_date = '{date_range.end_date.strftime('%Y-%m-%d')}';\n\n"
+    )
+    
     # Start building the CTE parts
     cte_parts = []
-    needs_with_keyword = True
     
     for i, sql_file in enumerate(sql_files):
         # Read the file content
         file_content = read_sql_file(sql_file).strip()
         
-        # Check if the first CTE already has a WITH clause
+        # If this is the first file and it has a WITH clause, remove it
         if i == 0 and file_content.upper().startswith('WITH'):
-            needs_with_keyword = False
-            # Remove the WITH keyword from the file content since we'll add it later or not at all
             file_content = file_content[4:].strip()
         
         # Add a comment indicating the source file
@@ -194,17 +206,8 @@ def get_ctes(start_date: str, end_date: str) -> str:
             
         cte_parts.append(cte_part)
     
-    # Create a DateRange object from the required dates
-    date_range = DateRange.from_strings(start_date, end_date)
-    
-    # Define date variables at the beginning of the query
-    date_variables = f"-- Set date parameters from CLI args\nSET @start_date = '{date_range.start_date.strftime('%Y-%m-%d')}';\nSET @end_date = '{date_range.end_date.strftime('%Y-%m-%d')}';\n\n"
-    
-    # Combine all CTEs with date variables and WITH keyword
-    if needs_with_keyword:
-        ctes = date_variables + "WITH\n" + "\n\n".join(cte_parts)
-    else:
-        ctes = date_variables + "\n\n".join(cte_parts)
+    # Combine all CTEs with a single WITH keyword (after date variables)
+    ctes = date_variables + "WITH\n" + "\n\n".join(cte_parts)
     
     # Apply date parameters for any remaining hardcoded dates
     ctes = apply_date_parameters(ctes, date_range)
@@ -216,32 +219,24 @@ def get_query(query_name: str, ctes: str = None) -> dict:
     query = load_query_file(query_name)
     
     if ctes:
-        # Check if the CTEs already has a WITH clause
-        ctes_has_with = ctes.strip().upper().startswith('WITH')
-        # Check if the query already has a WITH clause
+        # The ctes string should already have SET statements at the beginning,
+        # followed by a single WITH clause with all CTEs
+        
+        # Check if the query has a WITH clause
         query_has_with = query.strip().upper().startswith('WITH')
         
         if query_has_with:
-            if ctes_has_with:
-                # Both have WITH - need to merge them properly
-                # Remove WITH from query and combine with CTEs
-                query_without_with = query.strip()[4:].strip()
-                # Add a comma to connect the CTEs
-                if not ctes.rstrip().endswith(','):
-                    full_query = f"{ctes},\n{query_without_with}"
-                else:
-                    full_query = f"{ctes}\n{query_without_with}"
+            # Remove the WITH from the query and append it to the CTEs
+            query_without_with = query.strip()[4:].strip()
+            
+            # Add a comma to connect the CTEs if needed
+            if not ctes.rstrip().endswith(','):
+                full_query = f"{ctes},\n{query_without_with}"
             else:
-                # Only query has WITH - use query as-is
-                logging.warning(f"Query {query_name} has WITH clause but CTEs don't; using query as-is")
-                full_query = query
+                full_query = f"{ctes}\n{query_without_with}"
         else:
-            if ctes_has_with:
-                # Only CTEs have WITH - just append the query
-                full_query = f"{ctes}\n{query}"
-            else:
-                # Neither has WITH - need to add one
-                full_query = f"WITH\n{ctes}\n{query}"
+            # Query doesn't have WITH, just append it to the CTEs
+            full_query = f"{ctes}\n{query}"
             
         # Log a preview of the combined query for debugging
         query_preview = "\n".join(full_query.split("\n")[:20])  # First 20 lines
