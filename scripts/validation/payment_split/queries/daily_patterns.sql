@@ -1,5 +1,6 @@
 -- Investigate daily patterns of the payment process. 
 -- Uses PaymentDailyDetails CTE
+-- Date filter: Uses @start_date to @end_date
 
 -- Daily payment pattern analysis
 -- This query looks at payment patterns by day to identify abnormal activity

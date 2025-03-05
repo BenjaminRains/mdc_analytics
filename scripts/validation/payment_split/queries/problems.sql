@@ -2,7 +2,7 @@
 -- Detailed problem payment records
 -- All issues ordered by priority and amount
 -- uses PaymentFilterDiagnostics CTE from ctes.sql
-
+-- Date filter: Uses @start_date to @end_date
 
 SELECT 
     'problem_details' as report_type,

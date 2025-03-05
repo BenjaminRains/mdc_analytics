@@ -1,7 +1,7 @@
 -- Payment and split base counts
 -- This query is used to validate the payment and split base counts
 -- CTEs used: PaymentBaseCounts
--- Date range: 2024-01-01 to 2025-01-01
+-- Date range: Uses @start_date to @end_date
 
 SELECT 
     pbc.metric,
@@ -13,7 +13,7 @@ SELECT
     pbc.min_date,
     pbc.max_date
 FROM PaymentBaseCounts pbc
-JOIN payment p ON p.PayDate >= '{{START_DATE}}' AND p.PayDate < '{{END_DATE}}'
+JOIN payment p ON p.PayDate >= @start_date AND p.PayDate < @end_date
 LEFT JOIN paysplit ps ON p.PayNum = ps.PayNum
 GROUP BY 
     pbc.metric,

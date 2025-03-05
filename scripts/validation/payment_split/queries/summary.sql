@@ -11,7 +11,7 @@ Output Branches:
 1. Summary Branch: Aggregated metrics and patterns
 2. Problem Detail Branch: Individual problematic payments
 
-Date Range: 2024-01-01 to 2024-12-31
+Date Range: @start_date to @end_date
 */
 -- Include/reference CTEs from ctes.sql
 -- uses BasePayments
@@ -24,6 +24,7 @@ Date Range: 2024-01-01 to 2024-12-31
 -- uses PaymentBaseCounts
 -- uses PaymentFilterDiagnostics
 -- uses ProblemPayments
+-- Date filter: Uses @start_date to @end_date
 
 -- Final output: union of summary and problem detail branches
 SELECT * FROM (

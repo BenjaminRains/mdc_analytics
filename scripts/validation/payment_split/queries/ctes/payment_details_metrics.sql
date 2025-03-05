@@ -1,6 +1,6 @@
 -- PaymentDetailsMetrics: Compute detailed metrics per payment.
 -- depends on: PaymentDetailsBase
--- Date filter: 2024-01-01 to 2025-01-01
+-- Date filter: Uses @start_date to @end_date
 PaymentDetailsMetrics AS (
     SELECT 
         PayNum,

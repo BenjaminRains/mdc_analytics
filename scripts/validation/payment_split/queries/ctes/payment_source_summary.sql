@@ -1,6 +1,6 @@
 -- PaymentSourceSummary: Summarize payment counts and amounts by payment source.
 -- depends on: PaymentSourceCategories
--- Date filter: 2024-01-01 to 2025-01-01
+-- Date filter: Uses @start_date to @end_date
 PaymentSourceSummary AS (
     SELECT 
         pc.payment_source,

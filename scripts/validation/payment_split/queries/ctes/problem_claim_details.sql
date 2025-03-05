@@ -1,6 +1,6 @@
 -- ProblemClaimDetails: Detailed analysis of known problematic claims.
 -- depends on: none
--- Date filter: 2024-10-30 to 2024-11-05
+-- Date filter: Uses @start_date to @end_date
 ProblemClaimDetails AS (
     SELECT 
         cp.ClaimNum,
@@ -14,6 +14,6 @@ ProblemClaimDetails AS (
     JOIN paysplit ps ON cp.ProcNum = ps.ProcNum
     JOIN payment p ON ps.PayNum = p.PayNum
     WHERE cp.ClaimNum IN (2536, 2542, 6519)
-        AND p.PayDate BETWEEN '2024-10-30' AND '2024-11-05'
+        AND p.PayDate BETWEEN @start_date AND @end_date
     GROUP BY cp.ClaimNum, cp.ClaimProcNum
 )

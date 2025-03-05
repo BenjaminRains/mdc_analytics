@@ -6,9 +6,9 @@
 -- Type 439: Treatment Plan Prepayments (0.2% of splits) - Specific to treatment plan deposits
 
 -- Date parameters: These values will be automatically replaced by the Python script
--- DO NOT MODIFY THESE VALUES DIRECTLY - Use the --from-date and --to-date parameters when running the script
-SET @FromDate = '2024-01-01'; -- Will be replaced with command line parameter
-SET @ToDate = '2025-02-28';   -- Will be replaced with command line parameter
+-- DO NOT MODIFY THESE VALUES DIRECTLY - Use the --start-date and --end-date parameters when running the script
+SET @start_date = '2024-01-01'; -- Will be replaced with command line parameter
+SET @end_date = '2025-02-28';   -- Will be replaced with command line parameter
 
 -- Common Table Expressions for efficient data retrieval
 WITH UnearntypeDef AS (
@@ -101,7 +101,7 @@ SELECT
     ps.ProcNum,
     
     -- Dates for aging analysis
-    DATEDIFF(@ToDate, ps.DatePay) AS DaysSincePayment
+    DATEDIFF(@end_date, ps.DatePay) AS DaysSincePayment
 FROM paysplit ps
 JOIN payment pm ON pm.PayNum = ps.PayNum
 JOIN patient pt ON pt.PatNum = ps.PatNum
@@ -113,7 +113,7 @@ WHERE
     -- Filter unearned income transactions
     ps.UnearnedType != 0
     -- Date filter can be adjusted as needed
-    AND ps.DatePay BETWEEN @FromDate AND @ToDate
+    AND ps.DatePay BETWEEN @start_date AND @end_date
 ORDER BY ps.DatePay;
 
 -- QUERY_NAME: unearned_income_patient_balance_report
@@ -131,7 +131,7 @@ SELECT
     SUM(ps.SplitAmt) AS total_balance,
     MAX(ps.DatePay) AS last_payment_date
 FROM paysplit ps
-WHERE ps.DatePay <= @ToDate
+WHERE ps.DatePay <= @end_date
 GROUP BY ps.PatNum;
 
 -- Step 2: Create a temporary table with transaction counts
@@ -141,7 +141,7 @@ SELECT
     PatNum,
     COUNT(*) AS transaction_count
 FROM paysplit
-WHERE DatePay BETWEEN @FromDate AND @ToDate
+WHERE DatePay BETWEEN @start_date AND @end_date
     AND UnearnedType != 0
 GROUP BY PatNum;
 
@@ -156,7 +156,7 @@ SELECT
     FORMAT(pb.earned_amount, 2) AS 'Earned Amount',
     FORMAT(pb.total_balance, 2) AS 'Total Balance',
     pb.last_payment_date AS 'Last Payment Date',
-    DATEDIFF(@ToDate, pb.last_payment_date) AS 'Days Since Last Payment',
+    DATEDIFF(@end_date, pb.last_payment_date) AS 'Days Since Last Payment',
     IFNULL(tc.transaction_count, 0) AS 'Unearned Transactions Count'
 FROM temp_patient_balances pb
 INNER JOIN patient pt ON pt.PatNum = pb.PatNum
@@ -180,7 +180,7 @@ SELECT
     MAX(ps.SplitAmt) AS 'Max Amount',
     AVG(ps.SplitAmt) AS 'Avg Amount'
 FROM paysplit ps
-WHERE ps.DatePay BETWEEN @FromDate AND @ToDate
+WHERE ps.DatePay BETWEEN @start_date AND @end_date
     AND ps.UnearnedType != 0
 GROUP BY ps.UnearnedType
 ORDER BY COUNT(*) DESC;
@@ -199,7 +199,7 @@ SELECT
     COUNT(DISTINCT ps.PatNum) AS 'Unique Patients'
 FROM paysplit ps
 INNER JOIN payment pm ON pm.PayNum = ps.PayNum
-WHERE ps.DatePay BETWEEN @FromDate AND @ToDate
+WHERE ps.DatePay BETWEEN @start_date AND @end_date
     AND ps.UnearnedType != 0
 GROUP BY pm.PayType
 ORDER BY SUM(ps.SplitAmt) DESC;
@@ -214,7 +214,7 @@ SELECT
     SUM(CASE WHEN ps.UnearnedType NOT IN (0, 288, 439) THEN ps.SplitAmt ELSE 0 END) AS 'Other Unearned Amount',
     SUM(ps.SplitAmt) AS 'Total Unearned Amount'
 FROM paysplit ps
-WHERE ps.DatePay BETWEEN @FromDate AND @ToDate
+WHERE ps.DatePay BETWEEN @start_date AND @end_date
     AND ps.UnearnedType != 0
 GROUP BY DATE_FORMAT(ps.DatePay, '%Y-%m')
 ORDER BY DATE_FORMAT(ps.DatePay, '%Y-%m');
@@ -236,7 +236,7 @@ SELECT
 FROM paysplit ps
 INNER JOIN payment pm ON pm.PayNum = ps.PayNum
 INNER JOIN patient pt ON pt.PatNum = ps.PatNum
-WHERE ps.DatePay BETWEEN @FromDate AND @ToDate
+WHERE ps.DatePay BETWEEN @start_date AND @end_date
     AND ps.UnearnedType != 0
     AND ps.SplitAmt < 0
 ORDER BY ps.SplitAmt;
@@ -252,7 +252,7 @@ SELECT
     DATEDIFF(MAX(ps.DatePay), MIN(ps.DatePay)) AS 'Days Between First and Last'
 FROM paysplit ps
 INNER JOIN patient pt ON pt.PatNum = ps.PatNum
-WHERE ps.DatePay BETWEEN @FromDate AND @ToDate
+WHERE ps.DatePay BETWEEN @start_date AND @end_date
     AND ps.UnearnedType != 0
 GROUP BY ps.PatNum, pt.LName, pt.FName
 ORDER BY SUM(ps.SplitAmt) DESC
@@ -262,68 +262,68 @@ LIMIT 20;
 -- Aging analysis of unearned income
 SELECT
     CASE
-        WHEN DATEDIFF(@ToDate, ps.DatePay) <= 30 THEN '0-30 days'
-        WHEN DATEDIFF(@ToDate, ps.DatePay) <= 60 THEN '31-60 days'
-        WHEN DATEDIFF(@ToDate, ps.DatePay) <= 90 THEN '61-90 days'
-        WHEN DATEDIFF(@ToDate, ps.DatePay) <= 180 THEN '91-180 days'
-        WHEN DATEDIFF(@ToDate, ps.DatePay) <= 365 THEN '181-365 days'
+        WHEN DATEDIFF(@end_date, ps.DatePay) <= 30 THEN '0-30 days'
+        WHEN DATEDIFF(@end_date, ps.DatePay) <= 60 THEN '31-60 days'
+        WHEN DATEDIFF(@end_date, ps.DatePay) <= 90 THEN '61-90 days'
+        WHEN DATEDIFF(@end_date, ps.DatePay) <= 180 THEN '91-180 days'
+        WHEN DATEDIFF(@end_date, ps.DatePay) <= 365 THEN '181-365 days'
         ELSE 'Over 365 days'
     END AS 'Age Bucket',
     COUNT(*) AS 'Transaction Count',
     SUM(ps.SplitAmt) AS 'Total Amount',
     COUNT(DISTINCT ps.PatNum) AS 'Unique Patients'
 FROM paysplit ps
-WHERE ps.DatePay <= @ToDate
+WHERE ps.DatePay <= @end_date
     AND ps.UnearnedType != 0
 GROUP BY 
     CASE
-        WHEN DATEDIFF(@ToDate, ps.DatePay) <= 30 THEN '0-30 days'
-        WHEN DATEDIFF(@ToDate, ps.DatePay) <= 60 THEN '31-60 days'
-        WHEN DATEDIFF(@ToDate, ps.DatePay) <= 90 THEN '61-90 days'
-        WHEN DATEDIFF(@ToDate, ps.DatePay) <= 180 THEN '91-180 days'
-        WHEN DATEDIFF(@ToDate, ps.DatePay) <= 365 THEN '181-365 days'
+        WHEN DATEDIFF(@end_date, ps.DatePay) <= 30 THEN '0-30 days'
+        WHEN DATEDIFF(@end_date, ps.DatePay) <= 60 THEN '31-60 days'
+        WHEN DATEDIFF(@end_date, ps.DatePay) <= 90 THEN '61-90 days'
+        WHEN DATEDIFF(@end_date, ps.DatePay) <= 180 THEN '91-180 days'
+        WHEN DATEDIFF(@end_date, ps.DatePay) <= 365 THEN '181-365 days'
         ELSE 'Over 365 days'
     END
 ORDER BY 
     CASE
         WHEN CASE
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 30 THEN '0-30 days'
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 60 THEN '31-60 days'
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 90 THEN '61-90 days'
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 180 THEN '91-180 days'
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 365 THEN '181-365 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 30 THEN '0-30 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 60 THEN '31-60 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 90 THEN '61-90 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 180 THEN '91-180 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 365 THEN '181-365 days'
             ELSE 'Over 365 days'
         END = '0-30 days' THEN 1
         WHEN CASE
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 30 THEN '0-30 days'
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 60 THEN '31-60 days'
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 90 THEN '61-90 days'
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 180 THEN '91-180 days'
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 365 THEN '181-365 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 30 THEN '0-30 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 60 THEN '31-60 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 90 THEN '61-90 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 180 THEN '91-180 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 365 THEN '181-365 days'
             ELSE 'Over 365 days'
         END = '31-60 days' THEN 2
         WHEN CASE
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 30 THEN '0-30 days'
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 60 THEN '31-60 days'
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 90 THEN '61-90 days'
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 180 THEN '91-180 days'
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 365 THEN '181-365 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 30 THEN '0-30 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 60 THEN '31-60 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 90 THEN '61-90 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 180 THEN '91-180 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 365 THEN '181-365 days'
             ELSE 'Over 365 days'
         END = '61-90 days' THEN 3
         WHEN CASE
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 30 THEN '0-30 days'
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 60 THEN '31-60 days'
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 90 THEN '61-90 days'
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 180 THEN '91-180 days'
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 365 THEN '181-365 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 30 THEN '0-30 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 60 THEN '31-60 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 90 THEN '61-90 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 180 THEN '91-180 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 365 THEN '181-365 days'
             ELSE 'Over 365 days'
         END = '91-180 days' THEN 4
         WHEN CASE
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 30 THEN '0-30 days'
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 60 THEN '31-60 days'
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 90 THEN '61-90 days'
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 180 THEN '91-180 days'
-            WHEN DATEDIFF(@ToDate, ps.DatePay) <= 365 THEN '181-365 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 30 THEN '0-30 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 60 THEN '31-60 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 90 THEN '61-90 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 180 THEN '91-180 days'
+            WHEN DATEDIFF(@end_date, ps.DatePay) <= 365 THEN '181-365 days'
             ELSE 'Over 365 days'
         END = '181-365 days' THEN 5
         ELSE 6

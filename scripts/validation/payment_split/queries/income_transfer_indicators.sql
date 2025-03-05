@@ -12,8 +12,7 @@
  * USAGE:
  * - Run these queries separately as needed to investigate different aspects of
  *   unassigned provider transactions
- * - Dates are parameterized using '2025-01-01' for start_date and '2025-02-28' or 
- *   '2025-03-15' for end_date, which will be dynamically replaced by the export script
+ * - Dates are parameterized using @start_date and @end_date, which will be dynamically replaced by the export script
  * - For weekly monitoring, refer to the comprehensive unassigned provider report
  *   documented in income_transfer_workflow.md
  *
@@ -62,6 +61,7 @@
  * The provider listed for completed procedures is often the correct provider
  * for unassigned payment transactions from the same patient.
  */
+-- Date filter: Uses @start_date to @end_date
 SELECT
     proc.ProcNum,
     proc.ProcDate,
@@ -115,7 +115,7 @@ LEFT JOIN userod u ON ps.SecUserNumEntry = u.UserNum
 LEFT JOIN usergroupattach uga ON u.UserNum = uga.UserNum
 LEFT JOIN usergroup ug ON uga.UserGroupNum = ug.UserGroupNum
 WHERE ps.ProvNum = 0
-AND ps.DatePay BETWEEN '2025-01-01' AND '2025-02-28'
+AND ps.DatePay BETWEEN @start_date AND @end_date
 GROUP BY u.UserName, ug.Description
 ORDER BY COUNT(*) DESC;
 
@@ -145,7 +145,7 @@ FROM paysplit ps
 INNER JOIN payment pay ON ps.PayNum = pay.PayNum
 LEFT JOIN definition def ON pay.PayType = def.DefNum
 WHERE ps.ProvNum = 0
-AND ps.DatePay BETWEEN '2025-01-01' AND '2025-02-28'
+AND ps.DatePay BETWEEN @start_date AND @end_date
 GROUP BY pay.PayType, def.ItemName
 ORDER BY COUNT(*) DESC;
 
@@ -178,7 +178,7 @@ SELECT
      FROM paysplit ps 
      WHERE ps.PatNum = pat.PatNum 
      AND ps.ProvNum = 0
-     AND ps.DatePay BETWEEN '2025-01-01' AND '2025-02-28') AS LastUnassignedPayment,
+     AND ps.DatePay BETWEEN @start_date AND @end_date) AS LastUnassignedPayment,
     -- Calculate days between appointment and payment
     ABS(DATEDIFF(
         apt.AptDateTime, 
@@ -186,7 +186,7 @@ SELECT
          FROM paysplit ps 
          WHERE ps.PatNum = pat.PatNum 
          AND ps.ProvNum = 0
-         AND ps.DatePay BETWEEN '2025-01-01' AND '2025-02-28')
+         AND ps.DatePay BETWEEN @start_date AND @end_date)
     )) AS DaysBetweenAptAndPayment
 FROM patient pat
 INNER JOIN appointment apt ON pat.PatNum = apt.PatNum
@@ -196,7 +196,7 @@ WHERE pat.PatNum IN (
     -- UPDATE THIS LIST as needed for your specific analysis
     28775, 32743, 30358, 31310, 237, 32908, 32984, 15143
 )
-AND apt.AptDateTime BETWEEN '2025-01-01' AND '2025-03-15'
+AND apt.AptDateTime BETWEEN @start_date AND @end_date
 AND apt.AptStatus = 2  -- Completed appointments only
 ORDER BY pat.PatNum, DaysBetweenAptAndPayment;
 
@@ -221,7 +221,7 @@ SELECT
     FORMAT(AVG(SplitAmt), 2) AS AverageAmount
 FROM paysplit
 WHERE ProvNum = 0
-AND DatePay BETWEEN '2025-01-01' AND '2025-02-28'
+AND DatePay BETWEEN @start_date AND @end_date
 GROUP BY HOUR(DatePay)
 ORDER BY HOUR(DatePay);
 
@@ -246,7 +246,7 @@ SELECT
     FORMAT(AVG(SplitAmt), 2) AS AverageAmount
 FROM paysplit
 WHERE ProvNum = 0
-AND DatePay BETWEEN '2025-01-01' AND '2025-02-28'
+AND DatePay BETWEEN @start_date AND @end_date
 GROUP BY DAYNAME(DatePay)
 ORDER BY FIELD(DAYNAME(DatePay), 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday');
 
@@ -272,7 +272,7 @@ SELECT
     FORMAT(AVG(SplitAmt), 2) AS AverageAmount
 FROM paysplit
 WHERE ProvNum = 0
-AND DatePay BETWEEN '2025-01-01' AND '2025-02-28'
+AND DatePay BETWEEN @start_date AND @end_date
 GROUP BY MONTH(DatePay), MONTHNAME(DatePay)
 ORDER BY MONTH(DatePay);
 
@@ -324,7 +324,7 @@ AND ps.PatNum IN (
     -- UPDATE THIS LIST as needed for your specific analysis
     28775, 32743, 30358
 )
-AND ps.DatePay BETWEEN '2025-01-01' AND '2025-02-28'
+AND ps.DatePay BETWEEN @start_date AND @end_date
 ORDER BY ps.PatNum, ps.DatePay DESC;
 
 /*

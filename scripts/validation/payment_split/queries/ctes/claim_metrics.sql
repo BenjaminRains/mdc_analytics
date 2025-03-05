@@ -1,6 +1,6 @@
 -- ClaimMetrics: Analyze claim relationships for payment split analysis.
 -- depends on: none
--- Date filter: 2024-01-01 to 2025-01-01
+-- Date filter: Uses @start_date to @end_date
 ClaimMetrics AS (
     SELECT 
         ps.PayNum,
@@ -13,7 +13,7 @@ ClaimMetrics AS (
     JOIN claimproc cp ON ps.ProcNum = cp.ProcNum
         AND cp.Status IN (1, 4, 5)
         AND cp.InsPayAmt > 0
-    WHERE p.PayDate >= '2024-01-01'
-      AND p.PayDate < '2025-01-01'
+    WHERE p.PayDate >= @start_date
+      AND p.PayDate < @end_date
     GROUP BY ps.PayNum
 )

@@ -1,6 +1,6 @@
 -- JoinStageCounts: Analyze payment progression through join stages and related metrics.
 -- depends on: PaymentBaseCounts, PaymentJoinDiagnostics, PaymentSummary
--- Date filter: 2024-01-01 to 2025-01-01
+-- Date filter: Uses @start_date to @end_date
 JoinStageCounts AS (
     SELECT 
         pbc.total_payments as base_count,

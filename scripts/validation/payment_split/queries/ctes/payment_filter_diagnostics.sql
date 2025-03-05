@@ -1,6 +1,6 @@
 -- PaymentFilterDiagnostics: Categorize and filter payments based on diagnostics.
 -- depends on: PaymentJoinDiagnostics
--- Date filter: 2024-01-01 to 2025-01-01
+-- Date filter: Uses @start_date to @end_date
 PaymentFilterDiagnostics AS (
     SELECT 
         pd.PayNum,

@@ -1,6 +1,6 @@
 -- InsurancePaymentAnalysis: Compute metrics specific to insurance payments.
 -- depends on: PaymentSourceCategories, PaymentSourceSummary
--- Date filter: 2024-01-01 to 2025-01-01
+-- Date filter: Uses @start_date to @end_date
 InsurancePaymentAnalysis AS (
     SELECT 
         pss.payment_source,

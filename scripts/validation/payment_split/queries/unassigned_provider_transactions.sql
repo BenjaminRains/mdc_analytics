@@ -82,6 +82,7 @@
  * - Update the date range in the WHERE clause to focus on a specific period
  * - Modify the CASE statement thresholds to adjust priority classification
  */
+-- Date filter: Uses @start_date to @end_date
 SELECT 
     'PaySplit' AS TransactionType,
     ps.SplitNum AS TransactionNum,
@@ -210,7 +211,7 @@ LEFT JOIN userod u ON ps.SecUserNumEntry = u.UserNum
 WHERE ps.ProvNum = 0  -- Unassigned provider
 -- DATE RANGE PARAMETER: Modify these dates to focus on a specific period
 -- Default: Current year-to-date or most recent 2-month period
-AND pay.PayDate BETWEEN '2025-01-01' AND '2025-02-29'
+AND pay.PayDate BETWEEN @start_date AND @end_date
 AND ps.PayPlanNum = 0  -- Not attached to payment plan
 
 UNION ALL
@@ -332,7 +333,7 @@ LEFT JOIN provider prov ON adj.ProvNum = prov.ProvNum
 LEFT JOIN userod u ON adj.SecUserNumEntry = u.UserNum
 WHERE adj.ProvNum = 0  -- Unassigned provider
 -- DATE RANGE PARAMETER: Keep in sync with the date range in Section 1
-AND adj.AdjDate BETWEEN '2025-01-01' AND '2025-02-29'
+AND adj.AdjDate BETWEEN @start_date AND @end_date
 
 /*
  * RESULT ORDERING

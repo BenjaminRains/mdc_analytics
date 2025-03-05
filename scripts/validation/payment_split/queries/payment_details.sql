@@ -1,8 +1,9 @@
 -- Analyze individual payment details and their split patterns
 -- This query helps identify unusual payment behaviors and split patterns
--- Override default CTE date range to analyze full year 2024 data
+-- Override default CTE date range to analyze @start_date to @end_date
+-- Date filter: Uses @start_date to @end_date
 
--- Override the PaymentDetailsBase CTE to use a specific date range covering all of 2024
+-- Override the PaymentDetailsBase CTE to use a specific date range
 , PaymentDetailsBaseOverride AS (
     SELECT 
         p.PayNum,
@@ -18,7 +19,7 @@
     JOIN paysplit ps ON p.PayNum = ps.PayNum
     JOIN claimproc cp ON ps.ProcNum = cp.ProcNum
     JOIN claim c ON cp.ClaimNum = c.ClaimNum
-    WHERE p.PayDate BETWEEN '2024-01-01' AND '2024-12-31'  -- Full year 2024 date range
+    WHERE p.PayDate BETWEEN @start_date AND @end_date
 ),
 
 -- Since we overrode PaymentDetailsBase, we also need to redefine PaymentDetailsMetrics

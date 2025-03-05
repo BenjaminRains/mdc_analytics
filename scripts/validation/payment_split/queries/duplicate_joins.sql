@@ -14,6 +14,7 @@ Key metrics:
 */
 
 -- Note: CTEs from ctes.sql are automatically prepended by the export script
+-- Date filter: Uses @start_date to @end_date
 
 , PaymentSplitAnalysis AS (
     -- Base payment split analysis

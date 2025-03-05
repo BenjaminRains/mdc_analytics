@@ -1,6 +1,6 @@
 -- PaymentJoinDiagnostics: Validate relationships between payments, splits, and procedures.
 -- depends on: none
--- Date filter: 2024-01-01 to 2025-01-01
+-- Date filter: Uses @start_date to @end_date
 PaymentJoinDiagnostics AS (
     SELECT 
         p.PayNum,
@@ -25,7 +25,7 @@ PaymentJoinDiagnostics AS (
     FROM payment p
     LEFT JOIN paysplit ps ON p.PayNum = ps.PayNum
     LEFT JOIN procedurelog pl ON ps.ProcNum = pl.ProcNum
-    WHERE p.PayDate >= '2024-01-01'
-      AND p.PayDate < '2025-01-01'
+    WHERE p.PayDate >= @start_date
+      AND p.PayDate < @end_date
     GROUP BY p.PayNum, p.PayDate, p.PayAmt, p.PayType
 )

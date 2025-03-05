@@ -1,6 +1,6 @@
 -- FilterStats: Compute summary statistics for each payment filter category.
 -- depends on: PaymentFilterDiagnostics
--- Date filter: 2024-01-01 to 2025-01-01
+-- Date filter: Uses @start_date to @end_date
 FilterStats AS (
     SELECT 
         filter_reason,

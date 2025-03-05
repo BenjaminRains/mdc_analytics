@@ -1,5 +1,5 @@
 -- PaymentSummary: Compute basic payment metrics and categorize payments.
--- Date filter: 2024-01-01 to 2025-01-01
+-- Date filter: Uses @start_date to @end_date
 -- depends on: none
 PaymentSummary AS (
     SELECT 
@@ -26,7 +26,7 @@ PaymentSummary AS (
         END AS payment_category
     FROM payment p
     LEFT JOIN paysplit ps ON p.PayNum = ps.PayNum
-    WHERE p.PayDate >= '2024-01-01'
-      AND p.PayDate < '2025-01-01'
+    WHERE p.PayDate >= @start_date
+      AND p.PayDate < @end_date
     GROUP BY p.PayNum, p.PayAmt, p.PayDate, p.PayType, p.PayNote
 )

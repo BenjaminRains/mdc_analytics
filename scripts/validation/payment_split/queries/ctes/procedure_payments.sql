@@ -1,6 +1,6 @@
 -- ProcedurePayments: Extract procedure-level payment details.
 -- depends on: none
--- Date filter: 2024-01-01 to 2025-01-01
+-- Date filter: Uses @start_date to @end_date
 ProcedurePayments AS (
     SELECT 
         pl.ProcNum,
@@ -31,6 +31,6 @@ ProcedurePayments AS (
     FROM procedurelog pl
     JOIN paysplit ps ON pl.ProcNum = ps.ProcNum
     JOIN payment p ON ps.PayNum = p.PayNum
-    WHERE p.PayDate >= '2024-01-01'
-      AND p.PayDate < '2025-01-01'
+    WHERE p.PayDate >= @start_date
+      AND p.PayDate < @end_date
 )

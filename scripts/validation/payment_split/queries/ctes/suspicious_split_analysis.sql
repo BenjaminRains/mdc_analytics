@@ -1,6 +1,6 @@
 -- SuspiciousSplitAnalysis: Identify suspicious or abnormal split patterns.
 -- depends on: none
--- Date filter: 2024-01-01 to 2025-01-01
+-- Date filter: Uses @start_date to @end_date
 SuspiciousSplitAnalysis AS (
     SELECT 
         ps.SplitNum as PaySplitNum,
@@ -25,5 +25,5 @@ SuspiciousSplitAnalysis AS (
     JOIN claimproc cp ON ps.ProcNum = cp.ProcNum
     JOIN payment p ON ps.PayNum = p.PayNum
     WHERE cp.ClaimNum IN (2536, 2542, 6519)
-        AND p.PayDate BETWEEN '2024-10-30' AND '2024-11-05'
+        AND p.PayDate BETWEEN @start_date AND @end_date
 )

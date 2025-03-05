@@ -1,6 +1,6 @@
 -- PaymentMethodAnalysis: Detailed analysis by payment type.
 -- depends on: PaymentSummary
--- Date filter: 2024-01-01 to 2025-01-01
+-- Date filter: Uses @start_date to @end_date
 PaymentMethodAnalysis AS (
     SELECT 
         p.PayType,
@@ -14,7 +14,7 @@ PaymentMethodAnalysis AS (
         ps.payment_category
     FROM payment p
     JOIN PaymentSummary ps ON p.PayNum = ps.PayNum
-    WHERE p.PayDate >= '2024-01-01'
-      AND p.PayDate < '2025-01-01'
+    WHERE p.PayDate >= @start_date
+      AND p.PayDate < @end_date
     GROUP BY p.PayType, ps.payment_category
 )

@@ -1,6 +1,6 @@
 -- SplitPatternAnalysis: Analyze and categorize payment split patterns.
 -- depends on: ProcedurePayments
--- Date filter: 2024-01-01 to 2025-01-01
+-- Date filter: Uses @start_date to @end_date
 SplitPatternAnalysis AS (
     SELECT 
         ProcNum,
