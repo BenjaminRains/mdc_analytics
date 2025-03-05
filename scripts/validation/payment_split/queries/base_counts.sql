@@ -1,7 +1,7 @@
 -- Payment and split base counts
 -- This query is used to validate the payment and split base counts
 -- CTEs used: PaymentBaseCounts
--- Date range: Uses @start_date to @end_date
+-- Date range: Use @start_date to @end_date variables
 
 SELECT 
     pbc.metric,

@@ -1,7 +1,7 @@
 -- Analyze individual payment details and their split patterns
 -- This query helps identify unusual payment behaviors and split patterns
 -- Override default CTE date range to analyze @start_date to @end_date
--- Date filter: Uses @start_date to @end_date
+-- Date filter: Use @start_date to @end_date variables
 
 -- Override the PaymentDetailsBase CTE to use a specific date range
 , PaymentDetailsBaseOverride AS (

@@ -5,10 +5,7 @@
 -- Type 288: Prepayments (10.9% of splits) - Payment received before procedure
 -- Type 439: Treatment Plan Prepayments (0.2% of splits) - Specific to treatment plan deposits
 
--- Date parameters: These values will be automatically replaced by the Python script
--- DO NOT MODIFY THESE VALUES DIRECTLY - Use the --start-date and --end-date parameters when running the script
-SET @start_date = '2024-01-01'; -- Will be replaced with command line parameter
-SET @end_date = '2025-02-28';   -- Will be replaced with command line parameter
+-- Date filter: Use @start_date to @end_date variables
 
 -- Common Table Expressions for efficient data retrieval
 WITH UnearntypeDef AS (

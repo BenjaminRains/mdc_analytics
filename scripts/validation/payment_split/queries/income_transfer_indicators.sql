@@ -61,7 +61,7 @@
  * The provider listed for completed procedures is often the correct provider
  * for unassigned payment transactions from the same patient.
  */
--- Date filter: Uses @start_date to @end_date
+-- Date filter: Use @start_date to @end_date variables
 SELECT
     proc.ProcNum,
     proc.ProcDate,

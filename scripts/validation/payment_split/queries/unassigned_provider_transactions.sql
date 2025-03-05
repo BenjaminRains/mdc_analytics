@@ -82,7 +82,7 @@
  * - Update the date range in the WHERE clause to focus on a specific period
  * - Modify the CASE statement thresholds to adjust priority classification
  */
--- Date filter: Uses @start_date to @end_date
+-- Date filter: Use @start_date to @end_date variables
 SELECT 
     'PaySplit' AS TransactionType,
     ps.SplitNum AS TransactionNum,

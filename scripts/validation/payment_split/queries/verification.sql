@@ -19,7 +19,7 @@ Key Metrics:
 -- uses PaymentJoinDiagnostics
 -- uses PaymentSummary
 -- uses PaymentFilterDiagnostics
--- Date filter: Uses @start_date to @end_date
+-- Date filter: Use @start_date to @end_date variables
 -- Verification metrics queries
 SELECT * FROM (
     -- Base Payment Counts

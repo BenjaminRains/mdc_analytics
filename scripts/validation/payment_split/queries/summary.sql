@@ -14,17 +14,8 @@ Output Branches:
 Date Range: @start_date to @end_date
 */
 -- Include/reference CTEs from ctes.sql
--- uses BasePayments
--- uses BaseSplits
--- uses PaymentSummary
--- uses PaymentMethodAnalysis
--- uses InsurancePaymentAnalysis
--- uses ProcedurePayments
--- uses SplitPatternAnalysis
--- uses PaymentBaseCounts
--- uses PaymentFilterDiagnostics
--- uses ProblemPayments
--- Date filter: Uses @start_date to @end_date
+-- uses BasePayments, BaseSplits, PaymentSummary, PaymentMethodAnalysis, InsurancePaymentAnalysis, ProcedurePayments, SplitPatternAnalysis, PaymentBaseCounts, PaymentFilterDiagnostics, ProblemPayments
+-- Date filter: Use @start_date to @end_date variables
 
 -- Final output: union of summary and problem detail branches
 SELECT * FROM (

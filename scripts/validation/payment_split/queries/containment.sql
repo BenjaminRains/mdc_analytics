@@ -1,5 +1,5 @@
 -- Analyze suspicious split patterns using SuspiciousSplitAnalysis CTE
--- Date filter: Uses @start_date to @end_date
+-- Date filter: Use @start_date to @end_date variables
 SELECT 
     PayDate,
     ClaimNum,

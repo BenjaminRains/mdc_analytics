@@ -3,7 +3,7 @@
 -- payment counts, amounts and diagnostic metrics by category
 -- uses FilterStats CTE from ctes.sql
 -- uses PaymentFilterDiagnostics CTE from ctes.sql
--- Date filter: Uses @start_date to @end_date
+-- Date filter: Use @start_date to @end_date variables
 
 -- Create a filter diagnostic metrics table without WITH clause
 SELECT 
