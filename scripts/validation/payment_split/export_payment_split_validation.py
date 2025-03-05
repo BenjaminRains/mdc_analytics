@@ -8,12 +8,14 @@ are exported to separate CSV files. The files are then analyzed in notebooks to
 identify and diagnose issues.
 
 Usage:
-    python export_payment_split_validation.py [--output-dir <path>] [--log-dir <path>]
+    python export_payment_split_validation.py --start-date <YYYY-MM-DD> --end-date <YYYY-MM-DD>
+                                                [--output-dir <path>] [--log-dir <path>]
                                                 [--database <dbname>] [--queries <names>]
                                                 [--connection-type <type>]
-                                                [--start-date <YYYY-MM-DD>]
-                                                [--end-date <YYYY-MM-DD>]
                                                 [--parallel]
+
+NOTE: The --start-date and --end-date parameters are REQUIRED. All data will be filtered 
+to this date range, ensuring consistent results across all validation queries.
 
 The list of queries and the common CTE definitions are stored as separate .sql files in
 the 'queries' directory. The CTE file is prepended to each query before execution.
@@ -32,11 +34,12 @@ import pandas as pd
 import os
 from datetime import datetime
 import logging
+import re  # Add missing import for regular expressions
 from src.connections.factory import ConnectionFactory, get_valid_databases
 import argparse
 from scripts.base.index_manager import IndexManager
 from pathlib import Path
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Union, Any
 import concurrent.futures
 from tqdm import tqdm
 import time
@@ -82,7 +85,7 @@ def setup_logging(log_dir='scripts/validation/payment_split/logs'):
     
     # Configure logging
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
             logging.FileHandler(log_file),
@@ -104,41 +107,142 @@ def load_query_file(query_name: str) -> str:
     query_path = Path(__file__).parent / 'queries' / f'{query_name}.sql'
     return read_sql_file(query_path)
 
-def get_ctes(start_date: Optional[str] = None, end_date: Optional[str] = None) -> str:
+def get_ctes(start_date: str, end_date: str) -> str:
     """
-    Get common table expressions from the 'ctes.sql' file.
+    Get common table expressions from the 'ctes' directory.
     
     Args:
-        start_date: Optional start date filter in YYYY-MM-DD format
-        end_date: Optional end date filter in YYYY-MM-DD format
+        start_date: Required start date filter in YYYY-MM-DD format
+        end_date: Required end date filter in YYYY-MM-DD format
     
     Returns:
-        CTE SQL with optional date filters applied
+        CTE SQL with date filters applied
     """
-    # Load the CTEs file
-    ctes_path = Path(__file__).parent / 'queries' / 'ctes.sql'
-    ctes = read_sql_file(ctes_path)
+    # Load all SQL files from the CTEs directory
+    ctes_dir = Path(__file__).parent / 'queries' / 'ctes'
     
-    # If date filters are provided, apply them using the date parameter utility
-    if start_date or end_date:
-        # Set default values if only one date is provided
-        from_date = start_date if start_date else '2000-01-01'  # Default distant past date
-        to_date = end_date if end_date else datetime.now().strftime('%Y-%m-%d')  # Default to today
+    # Check if the directory exists
+    if not ctes_dir.exists() or not ctes_dir.is_dir():
+        raise FileNotFoundError(f"CTEs directory not found at: {ctes_dir}")
+    
+    # Define dependency order - put base CTEs first, then derived ones
+    # This ensures CTEs that depend on other CTEs are defined after their dependencies
+    preferred_order = [
+        "date_range.sql",             # First, define the date range
+        "base_payments.sql",          # Base payments table
+        "base_splits.sql",            # Base splits table
+        "payment_summary.sql",        # Payment summary metrics
+        "payment_method_analysis.sql", # Payment method analysis
+        "payment_source_categories.sql", # Payment source categories
+        "payment_source_summary.sql",  # Payment source summary
+        "total_payments.sql",         # Total payment metrics
+        "insurance_payment_analysis.sql", # Insurance payment analysis
+        "procedure_payments.sql",     # Procedure payment analysis
+        "split_pattern_analysis.sql", # Split pattern analysis
+        "payment_base_counts.sql",    # Payment base counts
+        "payment_join_diagnostics.sql", # Payment join diagnostics
+        "payment_filter_diagnostics.sql", # Payment filter diagnostics
+        "join_stage_counts.sql",      # Join stage counts
+        "suspicious_split_analysis.sql", # Suspicious split analysis
+        "payment_details_base.sql",   # Payment details base
+        "payment_details_metrics.sql", # Payment details metrics
+        "payment_daily_details.sql",  # Payment daily details
+        "filter_stats.sql",           # Filter statistics
+        "problem_payments.sql",       # Problem payments
+        "claim_metrics.sql",          # Claim metrics
+        "problem_claim_details.sql"   # Problem claim details
+    ]
+    
+    # Get all SQL files in the directory
+    all_files = list(ctes_dir.glob('*.sql'))
+    
+    # Sort files based on preferred order, then alphabetically for the rest
+    def sort_key(file):
+        filename = file.name
+        if filename in preferred_order:
+            return preferred_order.index(filename)
+        return len(preferred_order) + file.name.lower()
         
-        # Create a DateRange object
-        date_range = DateRange.from_strings(from_date, to_date)
+    sql_files = sorted(all_files, key=sort_key)
+    
+    if not sql_files:
+        raise FileNotFoundError(f"No SQL files found in CTEs directory: {ctes_dir}")
+    
+    # Log the files being used
+    logging.info(f"Found {len(sql_files)} CTE SQL files: {', '.join(f.name for f in sql_files)}")
+    
+    # Start building the CTE parts
+    cte_parts = []
+    needs_with_keyword = True
+    
+    for i, sql_file in enumerate(sql_files):
+        # Read the file content
+        file_content = read_sql_file(sql_file).strip()
         
-        # Apply date parameters, which will replace date placeholders in the SQL
-        ctes = apply_date_parameters(ctes, date_range)
+        # Check if the first CTE already has a WITH clause
+        if i == 0 and file_content.upper().startswith('WITH'):
+            needs_with_keyword = False
+            # Remove the WITH keyword from the file content since we'll add it later or not at all
+            file_content = file_content[4:].strip()
+        
+        # Add a comment indicating the source file
+        cte_part = f"-- From {sql_file.name}\n{file_content}"
+        
+        # Each CTE except the last one needs a comma at the end
+        if i < len(sql_files) - 1 and not cte_part.rstrip().endswith(','):
+            cte_part += ','
+            
+        cte_parts.append(cte_part)
+    
+    # Combine all CTEs with or without WITH keyword
+    if needs_with_keyword:
+        ctes = "WITH\n" + "\n\n".join(cte_parts)
+    else:
+        ctes = "\n\n".join(cte_parts)
+    
+    # Create a DateRange object from the required dates
+    date_range = DateRange.from_strings(start_date, end_date)
+    
+    # Apply date parameters, which will replace date placeholders in the SQL
+    ctes = apply_date_parameters(ctes, date_range)
             
     return ctes
 
 def get_query(query_name: str, ctes: str = None) -> dict:
     """Combine CTEs with a query and create export configuration."""
     query = load_query_file(query_name)
+    
     if ctes:
-        # Prepend CTE definitions to the query.
-        full_query = f"{ctes}\n{query}"
+        # Check if the CTEs already has a WITH clause
+        ctes_has_with = ctes.strip().upper().startswith('WITH')
+        # Check if the query already has a WITH clause
+        query_has_with = query.strip().upper().startswith('WITH')
+        
+        if query_has_with:
+            if ctes_has_with:
+                # Both have WITH - need to merge them properly
+                # Remove WITH from query and combine with CTEs
+                query_without_with = query.strip()[4:].strip()
+                # Add a comma to connect the CTEs
+                if not ctes.rstrip().endswith(','):
+                    full_query = f"{ctes},\n{query_without_with}"
+                else:
+                    full_query = f"{ctes}\n{query_without_with}"
+            else:
+                # Only query has WITH - use query as-is
+                logging.warning(f"Query {query_name} has WITH clause but CTEs don't; using query as-is")
+                full_query = query
+        else:
+            if ctes_has_with:
+                # Only CTEs have WITH - just append the query
+                full_query = f"{ctes}\n{query}"
+            else:
+                # Neither has WITH - need to add one
+                full_query = f"WITH\n{ctes}\n{query}"
+            
+        # Log a preview of the combined query for debugging
+        query_preview = "\n".join(full_query.split("\n")[:20])  # First 20 lines
+        logging.debug(f"Query preview for {query_name}:\n{query_preview}\n...")
     else:
         full_query = query
         
@@ -179,47 +283,72 @@ def process_single_export(export, connection_type, database, output_dir):
         fresh_connection = ConnectionFactory.create_connection(connection_type, database)
         mysql_connection = fresh_connection.connect()
         
+        # Add debug logging for the query
+        query_first_lines = export['query'].split('\n')[:10]  # Show first 10 lines instead of 5
+        query_preview = '\n'.join(query_first_lines) + '\n...'
+        logging.debug(f"Executing query for {export['name']}:\n{query_preview}")
+        
         # Execute query and fetch results
         with mysql_connection.cursor(dictionary=True) as cursor:
-            cursor.execute(export['query'])
-            results = cursor.fetchall()
-            
-            # Convert to DataFrame
-            df = pd.DataFrame(results)
-            
-            if len(df) == 0:
+            try:
+                cursor.execute(export['query'])
+                results = cursor.fetchall()
+                
+                # Convert to DataFrame
+                df = pd.DataFrame(results)
+                
+                if len(df) == 0:
+                    return {
+                        'name': export['name'],
+                        'success': True,
+                        'rows': 0,
+                        'duration': (datetime.now() - start_time).total_seconds(),
+                        'message': "No results returned",
+                        'file': export['file']  # Add file key for consistency
+                    }
+                
+                # Save to CSV
+                output_path = os.path.join(output_dir, export['file'])
+                df.to_csv(output_path, index=False)
+                
                 return {
                     'name': export['name'],
                     'success': True,
+                    'rows': len(df),
+                    'duration': (datetime.now() - start_time).total_seconds(),
+                    'message': f"Saved to {output_path}",
+                    'file': export['file']  # Add file key for consistency
+                }
+            except Exception as e:
+                error_message = str(e)
+                # Log more details about SQL errors
+                if hasattr(e, 'errno') and hasattr(e, 'sqlstate'):
+                    error_message = f"{e.errno} ({e.sqlstate}): {e.msg}"
+                    # Log the problematic part of the query if we can identify it
+                    if "line" in error_message:
+                        try:
+                            line_match = re.search(r'line (\d+)', error_message)
+                            if line_match:
+                                line_num = int(line_match.group(1))
+                                query_lines = export['query'].split('\n')
+                                if 1 <= line_num <= len(query_lines):
+                                    error_context = '\n'.join(query_lines[max(0, line_num-3):min(len(query_lines), line_num+2)])
+                                    logging.error(f"Error context around line {line_num}:\n{error_context}")
+                        except Exception as context_error:
+                            logging.error(f"Error getting context: {context_error}")
+                
+                return {
+                    'name': export['name'],
+                    'success': False,
                     'rows': 0,
                     'duration': (datetime.now() - start_time).total_seconds(),
-                    'message': "No results returned",
-                    'file': export['file']  # Add file key even for empty results
+                    'error': error_message,  # Use 'error' key as expected by caller
+                    'file': export['file']  # Add file key for consistency
                 }
-            
-            # Use export_to_csv utility from sql_export_utils
-            output_file = Path(output_dir)
-            file_name = export['file'].replace('.csv', '')  # Remove .csv extension as export_to_csv adds it
-            
-            # Export to CSV using the shared utility
-            csv_path = export_to_csv(
-                df=df,
-                output_dir=output_file,
-                query_name=file_name,
-                include_date=False  # Date is already in the filename format
-            )
-        
-        duration = (datetime.now() - start_time).total_seconds()
-        return {
-            'name': export['name'],
-            'success': True,
-            'rows': len(df),
-            'duration': duration,
-            'file': csv_path.name
-        }
-        
+                
     except Exception as e:
         duration = (datetime.now() - start_time).total_seconds()
+        logging.exception(f"Error in process_single_export for {export['name']}: {str(e)}")
         return {
             'name': export['name'],
             'success': False,
@@ -235,63 +364,67 @@ def process_single_export(export, connection_type, database, output_dir):
                 fresh_connection.close()
             except:
                 pass
+        
+        end_time = datetime.now()
+        elapsed = (end_time - start_time).total_seconds()
+        logging.debug(f"Export {export['name']} completed in {elapsed:.2f} seconds")
 
-def export_validation_results(connection_type, database, queries=None, 
-                             output_dir=None, use_parallel=False, start_date=None, end_date=None):
+def export_validation_results(connection_type, database, start_date, end_date,
+                         queries=None, output_dir=None, use_parallel=False):
     """
-    Export payment validation query results to separate CSV files.
-
+    Execute all validation queries and export results to CSV.
+    
     Args:
-        connection_type: Type of connection to create.
-        database: Database name to connect to.
-        queries: List of query names to run (None for all).
-        output_dir: Directory to store output files (None for default).
-        use_parallel: Whether to use parallel execution.
-        start_date: Optional start date for filtering.
-        end_date: Optional end date for filtering.
+        connection_type: Type of connection (e.g., 'local_mariadb')
+        database: Database name
+        queries: List of query names to run (if None, run all)
+        output_dir: Output directory for CSV files
+        use_parallel: Whether to use parallel processing
+        start_date: Required start date filter in YYYY-MM-DD format
+        end_date: Required end date filter in YYYY-MM-DD format
+        
+    Returns:
+        Dictionary of export results
     """
-    if not output_dir:
-        output_dir = os.path.join(os.path.dirname(__file__), 'data')
+    # Create the output directory if it doesn't exist
+    if output_dir is None:
+        output_dir = Path(__file__).parent / 'data' / 'payment_split_validation'
     
-    # Create output directory if it doesn't exist
     ensure_directory_exists(output_dir)
+    logging.info(f"Ensured directory exists: {output_dir}")
     
-    # Load CTEs
+    # Get common table expressions
     ctes = get_ctes(start_date, end_date)
     
-    # Get export configurations
-    exports = get_exports(ctes)
-    
-    # Filter exports based on query list
+    # Get exports for the specified queries or all if none specified
     if queries:
-        logging.info(f"Filtering exports to: {', '.join(queries)}")
-        exports = [export for export in exports if export['name'] in queries]
+        exports = [get_query(q, ctes) for q in queries]
+        logging.info(f"Processing {len(exports)} specified exports: {', '.join(queries)}")
+    else:
+        exports = get_exports(ctes)
+        logging.info(f"Processing {len(exports)} exports sequentially")
     
+    # Execute exports
     export_results = {}
     
     if use_parallel:
-        logging.info(f"Using parallel execution for {len(exports)} exports")
-        
-        # Using ThreadPoolExecutor for parallel processing
-        with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
-            # Submit all tasks
-            future_to_export = {
-                executor.submit(
+        # Parallel processing
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = {}
+            for export in exports:
+                export_name = export['name']
+                future = executor.submit(
                     process_single_export, 
                     export, 
                     connection_type, 
                     database, 
                     output_dir
-                ): export['name'] for export in exports
-            }
+                )
+                futures[future] = export_name
             
-            # Process as they complete with progress bar
-            for future in tqdm(
-                concurrent.futures.as_completed(future_to_export), 
-                total=len(exports),
-                desc="Exporting queries"
-            ):
-                export_name = future_to_export[future]
+            for future in tqdm(futures, desc="Processing exports"):
+                export_name = futures[future]
                 try:
                     result = future.result()
                     export_results[export_name] = result
@@ -303,13 +436,12 @@ def export_validation_results(connection_type, database, queries=None,
                         'error': str(exc)
                     }
     else:
-        logging.info(f"Processing {len(exports)} exports sequentially")
-        
-        # Process sequentially with progress bar
-        for export in tqdm(exports, desc="Exporting queries"):
-            logging.info(f"Processing export: {export['name']}")
+        # Sequential processing
+        for export in tqdm(exports, desc="Processing exports"):
+            export_name = export['name']
+            logging.info(f"Processing export: {export_name}")
             result = process_single_export(export, connection_type, database, output_dir)
-            export_results[export['name']] = result
+            export_results[export_name] = result
     
     # Print summary of results
     success_count = sum(1 for r in export_results.values() if r.get('success', False))
@@ -318,29 +450,11 @@ def export_validation_results(connection_type, database, queries=None,
     
     logging.info(f"Export summary: {success_count} succeeded, {failed_count} failed, {total_rows} total rows")
     
-    # Print details of failures
     if failed_count > 0:
         logging.warning("Failed exports:")
         for name, result in export_results.items():
             if not result.get('success', False):
                 logging.warning(f"  - {name}: {result.get('error', 'Unknown error')}")
-
-    # Convert export_results to the format expected by print_summary
-    formatted_results = {
-        name: {
-            'status': 'SUCCESS' if result.get('success', False) else 'FAILURE',
-            'rows': result.get('rows', 0),
-            'output_file': Path(output_dir) / result.get('file', f"{name}.csv")
-        }
-        for name, result in export_results.items()
-    }
-    
-    # Use print_summary utility to display a consistent summary
-    print_summary(
-        query_results=formatted_results,
-        output_dir=Path(output_dir),
-        script_name="Payment Split Validation"
-    )
     
     return export_results
 
@@ -354,7 +468,7 @@ def parse_args():
     parser.add_argument(
         '--output-dir',
         type=str,
-        default=r"C:\Users\rains\mdc_analytics\scripts\validation\payment_split\data",
+        default=r"C:\Users\rains\mdc_analytics\scripts\validation\payment_split\data\payment_split_validation",
         help='Directory where CSV files will be saved'
     )
     
@@ -391,12 +505,14 @@ def parse_args():
     
     parser.add_argument(
         '--start-date',
-        help='Start date for filtering data (YYYY-MM-DD format)'
+        required=True,
+        help='Start date for filtering data (YYYY-MM-DD format) - REQUIRED'
     )
     
     parser.add_argument(
         '--end-date',
-        help='End date for filtering data (YYYY-MM-DD format)'
+        required=True,
+        help='End date for filtering data (YYYY-MM-DD format) - REQUIRED'
     )
     
     parser.add_argument(
@@ -463,16 +579,9 @@ def main():
         logging.info(f"Database: {args.database}")
         logging.info(f"Connection type: {args.connection_type}")
         
-        # Create a DateRange object if date filters are provided
-        date_range = None
-        if args.start_date or args.end_date:
-            # Set default values if only one date is provided
-            from_date = args.start_date if args.start_date else '2000-01-01'  # Default distant past date
-            to_date = args.end_date if args.end_date else datetime.now().strftime('%Y-%m-%d')  # Default to today
-            
-            # Create the DateRange object
-            date_range = DateRange.from_strings(from_date, to_date)
-            logging.info(f"Using date range: {from_date} to {to_date}")
+        # Create a DateRange object from the required date parameters
+        date_range = DateRange.from_strings(args.start_date, args.end_date)
+        logging.info(f"Using date range: {args.start_date} to {args.end_date}")
         
         # Validate database name
         if not args.database:
@@ -505,11 +614,11 @@ def main():
         export_validation_results(
             connection_type=args.connection_type,
             database=args.database,
+            start_date=args.start_date,
+            end_date=args.end_date,
             queries=args.queries,
             output_dir=args.output_dir,
-            use_parallel=args.parallel,
-            start_date=args.start_date,
-            end_date=args.end_date
+            use_parallel=args.parallel
         )
         
         logging.info("Payment validation export completed successfully")
