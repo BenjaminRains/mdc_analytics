@@ -14,6 +14,7 @@ All files are stored in scripts/validation/payment_split/data/
 4. unearned_income_monthly_trend.csv - Monthly trend of unearned income
 5. unearned_income_patient_balance_report.csv - Patient balance information
 6. unearned_income_aging_analysis.csv - Aging analysis of unearned income
+7. unearned_income_negative_prepayments.csv - Negative prepayment transactions (potential refunds or adjustments)
 
 Use Case:
 ---------
@@ -93,7 +94,7 @@ logging.info(f"Loading environment from: {env_path}")
 # Constants
 SCRIPT_DIR = Path(__file__).parent
 QUERY_PATH = SCRIPT_DIR / "queries" / "unearned_income_report.sql"
-DATA_DIR = SCRIPT_DIR / "data"
+DATA_DIR = SCRIPT_DIR / "data" / "unearned_income"
 LOG_DIR = SCRIPT_DIR / "logs"
 
 # Use a query prefix for consistent file naming
@@ -107,7 +108,7 @@ def extract_all_queries(full_sql: str, date_range: DateRange) -> Dict[str, str]:
     which may contain multiple queries with Common Table Expressions (CTEs).
     
     Args:
-        full_sql: String containing all SQL queries
+        full_sql: String containing all SQL queries (with date parameters already applied)
         date_range: DateRange object for date parameter substitution
         
     Returns:
@@ -115,8 +116,8 @@ def extract_all_queries(full_sql: str, date_range: DateRange) -> Dict[str, str]:
     """
     queries = {}
     
-    # Apply date parameters to the entire SQL file first
-    full_sql = apply_date_parameters(full_sql, date_range)
+    # Note: Date parameters should already be applied to the entire SQL file before calling this function
+    # We no longer apply date parameters here to avoid duplicate replacements
     
     # Extract CTE preamble - from the beginning of the file to the first query marker
     # This includes SET statements and WITH clauses that need to be included with each query
@@ -255,6 +256,11 @@ def extract_report_data(from_date='2025-01-01', to_date='2025-02-28', db_name=No
     # Read SQL file contents
     full_sql = read_sql_file(sql_file)
     
+    # Apply date parameters to the SQL file
+    # This replaces the @FromDate and @ToDate variables in the SQL with the actual date values
+    logging.info(f"Replacing SQL date parameters with from_date={from_date}, to_date={to_date}")
+    full_sql = apply_date_parameters(full_sql, date_range)
+    
     # Extract all queries
     queries = extract_all_queries(full_sql, date_range)
     
@@ -340,8 +346,10 @@ def main():
     
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description='Export Unearned Income Data')
-    parser.add_argument('--from-date', default='2025-01-01', help='Start date (YYYY-MM-DD)')
-    parser.add_argument('--to-date', default='2025-02-28', help='End date (YYYY-MM-DD)')
+    parser.add_argument('--from-date', default='2025-01-01', 
+                        help='Start date (YYYY-MM-DD) - Will replace @FromDate in SQL')
+    parser.add_argument('--to-date', default='2025-02-28', 
+                        help='End date (YYYY-MM-DD) - Will replace @ToDate in SQL')
     
     # Show valid databases in help text
     db_help = f"Database name (optional, default: {default_database}). Valid options: {', '.join(valid_databases)}" if valid_databases else "Database name"
