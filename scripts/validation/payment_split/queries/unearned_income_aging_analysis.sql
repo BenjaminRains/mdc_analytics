@@ -8,10 +8,8 @@ Purpose:
 - Uses both transaction-based aging and patient table's built-in aging columns
 - Important for financial risk assessment and accounting compliance
 
-Dependencies:
-- None
-
-Date Filter: Uses @end_date as reference point for aging calculation
+- Dependencies: None
+- Date Filter: Uses @end_date as reference point for aging calculation
 */
 
 -- Part 1: Transaction-based aging analysis of all payment types 
