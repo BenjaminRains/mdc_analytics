@@ -50,7 +50,7 @@ Key Differences from Unearned Income Export:
 - Outputs are specifically for operational decision-making about provider assignment
 
 Usage:
-    python export_income_transfer_indicators.py [--from-date YYYY-MM-DD] [--to-date YYYY-MM-DD] [--database DB_NAME]
+    python export_income_transfer_indicators.py [--start-date YYYY-MM-DD] [--end-date YYYY-MM-DD] [--database DB_NAME]
 
 Requirements:
     - .env file must be set up in the project root with MariaDB configuration
@@ -69,12 +69,11 @@ from pathlib import Path
 from typing import Optional, Tuple, List, Dict, NamedTuple, Any
 from dotenv import load_dotenv
 
-# Configure basic logging first
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()]
-)
+# Configure basic logging first (will be properly configured in setup_logging)
+logging.getLogger().setLevel(logging.INFO)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logging.getLogger().addHandler(handler)
 
 # Add the src directory to the path to import project modules
 src_path = Path(__file__).resolve().parents[3]
@@ -325,6 +324,10 @@ def setup_logging():
     # Set up logging with timestamp in filename
     log_file = LOG_DIR / f"income_transfer_indicators_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
     
+    # Reset logging configuration
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+    
     # Configure logging
     logging.basicConfig(
         level=logging.INFO,
@@ -350,8 +353,8 @@ def main():
     
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description='Export Income Transfer Indicators and Unassigned Provider Transactions')
-    parser.add_argument('--from-date', default='2025-01-01', help='Start date (YYYY-MM-DD)')
-    parser.add_argument('--to-date', default='2025-02-28', help='End date (YYYY-MM-DD)')
+    parser.add_argument('--start-date', default='2025-01-01', help='Start date (YYYY-MM-DD)')
+    parser.add_argument('--end-date', default='2025-02-28', help='End date (YYYY-MM-DD)')
     
     # Show valid databases in help text
     db_help = f"Database name (optional, default: {default_database}). Valid options: {', '.join(valid_databases)}" if valid_databases else "Database name"
@@ -379,14 +382,14 @@ def main():
     logging.info("="*80)
     logging.info("STARTING EXPORT PROCESS: INCOME TRANSFER AND UNASSIGNED PROVIDER REPORTS")
     logging.info(f"Output directory: {DATA_DIR.resolve()}")
-    logging.info(f"Date range: {args.from_date} to {args.to_date}")
+    logging.info(f"Date range: {args.start_date} to {args.end_date}")
     logging.info(f"Database: {args.database}")
     logging.info("="*80)
     
     # Extract and export data from both SQL files
     query_results = extract_report_data(
-        from_date=args.from_date,
-        to_date=args.to_date,
+        from_date=args.start_date,
+        to_date=args.end_date,
         db_name=args.database
     )
     
