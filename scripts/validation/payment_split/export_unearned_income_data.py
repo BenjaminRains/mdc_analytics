@@ -184,7 +184,7 @@ def get_ctes(date_range: DateRange = None) -> str:
     base_ctes = [
         "unearned_income_unearntype_def.sql",  # UnearnedType definitions first
         "unearned_income_paytype_def.sql",     # PayType definitions next
-        "unearned_income_provider_def.sql",    # Provider definitions
+        "unearned_income_provider_defs.sql",   # Provider definitions (note: plural "defs")
         "unearned_income_patient_balances.sql" # Patient balances last as they may use the other CTEs
     ]
     
