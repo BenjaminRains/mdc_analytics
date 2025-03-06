@@ -31,7 +31,7 @@ Key Differences from Income Transfer Export:
 - Outputs are primarily for financial reporting and balance verification
 
 Usage:
-    python export_unearned_income_data.py [--start-date YYYY-MM-DD] [--end-date YYYY-MM-DD] [--database DB_NAME]
+    python export_unearned_income_data.py --start-date YYYY-MM-DD --end-date YYYY-MM-DD [--database DB_NAME]
 
 Requirements:
     - .env file must be set up in the project root with MariaDB configuration
@@ -615,7 +615,7 @@ def test_cte_query(connection, db_name, date_range):
     
     return False
 
-def extract_report_data(start_date='2025-01-01', end_date='2025-02-28', db_name=None):
+def extract_report_data(start_date, end_date, db_name=None):
     """
     Extract and export unearned income data
     
@@ -735,16 +735,21 @@ def main():
     
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description='Export Unearned Income Data')
-    parser.add_argument('--start-date', default='2025-01-01', 
-                        help='Start date (YYYY-MM-DD) - Will replace @start_date in SQL')
-    parser.add_argument('--end-date', default='2025-02-28', 
-                        help='End date (YYYY-MM-DD) - Will replace @end_date in SQL')
+    parser.add_argument('--start-date', required=True,
+                        help='Start date (YYYY-MM-DD) - Required parameter that will replace @start_date in SQL')
+    parser.add_argument('--end-date', required=True,
+                        help='End date (YYYY-MM-DD) - Required parameter that will replace @end_date in SQL')
     
     # Show valid databases in help text
     db_help = f"Database name (optional, default: {default_database}). Valid options: {', '.join(valid_databases)}" if valid_databases else "Database name"
     parser.add_argument('--database', help=db_help, default=None)
     
-    args = parser.parse_args()
+    try:
+        args = parser.parse_args()
+    except SystemExit:
+        print("\nError: Both --start-date and --end-date are required arguments.")
+        print("Example usage: python export_unearned_income_data.py --start-date 2025-01-01 --end-date 2025-02-28 [--database DB_NAME]")
+        sys.exit(1)
     
     # Use default database if none is specified
     if not args.database:
