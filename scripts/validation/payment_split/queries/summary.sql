@@ -14,7 +14,7 @@ Output Branches:
 Date Range: @start_date to @end_date
 */
 -- Include/reference CTEs from ctes.sql
--- uses BasePayments, BaseSplits, PaymentSummary, PaymentMethodAnalysis, InsurancePaymentAnalysis, ProcedurePayments, SplitPatternAnalysis, PaymentBaseCounts, PaymentFilterDiagnostics, ProblemPayments
+-- uses BasePayments, BaseSplits, PaymentLevelMetrics, PaymentMethodAnalysis, InsurancePaymentAnalysis, ProcedurePayments, SplitPatternAnalysis, PaymentBaseCounts, PaymentFilterDiagnostics, ProblemPayments
 -- Date filter: Use @start_date to @end_date variables
 
 -- Final output: union of summary and problem detail branches
@@ -47,7 +47,7 @@ SELECT * FROM (
     FROM PaymentBaseCounts pbc
     JOIN (SELECT DISTINCT 1 as join_key FROM PaymentFilterDiagnostics) pfd_key ON 1=1
     LEFT JOIN PaymentFilterDiagnostics pfd ON 1=1
-    LEFT JOIN PaymentSummary ps ON pfd.PayNum = ps.PayNum
+    LEFT JOIN PaymentLevelMetrics ps ON pfd.PayNum = ps.PayNum
     LEFT JOIN ProcedurePayments pp ON pfd.PayNum = pp.PayNum
     LEFT JOIN SplitPatternAnalysis spa ON pp.ProcNum = spa.ProcNum
     LEFT JOIN PaymentMethodAnalysis pma ON ps.PayType = pma.PayType
