@@ -14,10 +14,8 @@ NOTE FOR PANDAS ANALYSIS:
 - Example: df_pivot = pd.pivot_table(df, index='Month', columns='Payment Category', values=['Total Amount', 'Transaction Count'])
 - Investigate negative values in Prepayment/Treatment Plan columns which represent application of previously collected prepayments
 
-Dependencies:
-- None
-
-Date Filter: @start_date to @end_date
+- Dependencies: None
+- Date Filter: @start_date to @end_date
 */
 
 -- Monthly trend of all payment types
