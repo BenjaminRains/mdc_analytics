@@ -176,7 +176,7 @@ IMPORTANT CONSIDERATIONS:
 =====================================================================
 
 Dependencies:
-- None (performs all lookups directly)
+- CTEs: unearned_income_split_summary_by_type, unearned_income_payment_unearned_type_summary  
 
 Date Filter: @start_date to @end_date
 */
@@ -185,46 +185,26 @@ Date Filter: @start_date to @end_date
 -- SET @start_date = '2024-01-01';
 -- SET @end_date = '2025-02-28';
 
--- Combined query using UNION ALL for export script compatibility
--- First row shows overall summary, followed by breakdown by payment type
-SELECT
-    'All Payment Types' AS 'Payment Category',
-    COUNT(*) AS 'Total Splits',
-    SUM(ps.SplitAmt) AS 'Total Amount',
-    AVG(ps.SplitAmt) AS 'Avg Amount',
-    COUNT(DISTINCT ps.PatNum) AS 'Unique Patients',
-    COUNT(DISTINCT CASE WHEN ps.UnearnedType = 0 THEN ps.SplitNum ELSE NULL END) AS 'Regular Payment Splits',
-    COUNT(DISTINCT CASE WHEN ps.UnearnedType != 0 THEN ps.SplitNum ELSE NULL END) AS 'Unearned Income Splits',
-    SUM(CASE WHEN ps.UnearnedType = 0 THEN ps.SplitAmt ELSE 0 END) AS 'Regular Payment Amount',
-    SUM(CASE WHEN ps.UnearnedType != 0 THEN ps.SplitAmt ELSE 0 END) AS 'Unearned Income Amount',
-    FORMAT((COUNT(DISTINCT CASE WHEN ps.UnearnedType = 0 THEN ps.SplitNum ELSE NULL END) / COUNT(*)) * 100, 1) AS '% Regular Payments',
-    FORMAT((COUNT(DISTINCT CASE WHEN ps.UnearnedType != 0 THEN ps.SplitNum ELSE NULL END) / COUNT(*)) * 100, 1) AS '% Unearned Income'
-FROM paysplit ps
-WHERE ps.DatePay BETWEEN @start_date AND @end_date
+-- Include external CTE files
+<<include:ctes/unearned_income_split_summary_by_type.sql>>
+<<include:ctes/unearned_income_payment_unearned_type_summary.sql>>
 
-UNION ALL
-
+-- Now combine the results and sort by the explicit sort_order column and then by Total Splits
 SELECT 
-    CONCAT(
-        IFNULL(
-            (SELECT def.ItemName 
-             FROM definition def 
-             WHERE def.DefNum = ps.UnearnedType), 
-            CASE WHEN ps.UnearnedType = 0 THEN 'Regular Payment' ELSE 'Unknown' END
-        ),
-        ' (Type ', CAST(ps.UnearnedType AS CHAR), ')'
-    ) AS 'Payment Category',
-    COUNT(*) AS 'Total Splits',
-    SUM(ps.SplitAmt) AS 'Total Amount',
-    AVG(ps.SplitAmt) AS 'Avg Amount',
-    COUNT(DISTINCT ps.PatNum) AS 'Unique Patients',
-    CASE WHEN ps.UnearnedType = 0 THEN COUNT(*) ELSE 0 END AS 'Regular Payment Splits',
-    CASE WHEN ps.UnearnedType != 0 THEN COUNT(*) ELSE 0 END AS 'Unearned Income Splits',
-    CASE WHEN ps.UnearnedType = 0 THEN SUM(ps.SplitAmt) ELSE 0 END AS 'Regular Payment Amount',
-    CASE WHEN ps.UnearnedType != 0 THEN SUM(ps.SplitAmt) ELSE 0 END AS 'Unearned Income Amount',
-    CASE WHEN ps.UnearnedType = 0 THEN '100.0' ELSE '0.0' END AS '% Regular Payments',
-    CASE WHEN ps.UnearnedType != 0 THEN '100.0' ELSE '0.0' END AS '% Unearned Income'
-FROM paysplit ps
-WHERE ps.DatePay BETWEEN @start_date AND @end_date
-GROUP BY ps.UnearnedType
-ORDER BY COUNT(*) DESC; 
+    `Payment Category`,
+    `Total Splits`,
+    `Total Amount`,
+    `Avg Amount`,
+    `Unique Patients`,
+    `Regular Payment Splits`,
+    `Unearned Income Splits`,
+    `Regular Payment Amount`,
+    `Unearned Income Amount`,
+    `% Regular Payments`,
+    `% Unearned Income`
+FROM (
+    SELECT * FROM unearned_income_split_summary_by_type
+    UNION ALL
+    SELECT * FROM unearned_income_payment_unearned_type_summary
+) combined
+ORDER BY sort_order, `Total Splits` DESC; 
