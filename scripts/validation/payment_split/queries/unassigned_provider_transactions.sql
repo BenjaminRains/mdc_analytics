@@ -82,6 +82,8 @@
  * - Update the date range in the WHERE clause to focus on a specific period
  * - Modify the CASE statement thresholds to adjust priority classification
  */
+-- Include dependent CTEs: None
+
 -- Date filter: Use @start_date to @end_date variables
 SELECT 
     'PaySplit' AS TransactionType,
