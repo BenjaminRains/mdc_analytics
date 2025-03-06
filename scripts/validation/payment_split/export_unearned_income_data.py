@@ -138,7 +138,6 @@ def get_ctes(date_range: DateRange = None) -> str:
     
     # List of main query files to check for CTEs
     main_query_files = [
-        "unassigned_provider_transactions.sql",
         "unearned_income_aging_analysis.sql",
         "unearned_income_main_transactions.sql",
         "unearned_income_monthly_trend.sql",
@@ -461,7 +460,6 @@ def get_exports(ctes: str, date_range: DateRange = None) -> list:
     
     # List of query files to process (same as in get_ctes)
     query_names = [
-        'unassigned_provider_transactions',
         'unearned_income_aging_analysis',
         'unearned_income_main_transactions',
         'unearned_income_monthly_trend',
