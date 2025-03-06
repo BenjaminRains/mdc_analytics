@@ -1,5 +1,5 @@
 -- PaymentMethodAnalysis: Detailed analysis by payment type.
--- depends on: PaymentSummary
+-- depends on: PaymentLevelMetrics
 -- Date filter: Uses @start_date to @end_date
 PaymentMethodAnalysis AS (
     SELECT 
@@ -13,7 +13,7 @@ PaymentMethodAnalysis AS (
         COUNT(CASE WHEN p.PayAmt = 0 THEN 1 END) AS zero_count,
         ps.payment_category
     FROM payment p
-    JOIN PaymentSummary ps ON p.PayNum = ps.PayNum
+    JOIN PaymentLevelMetrics ps ON p.PayNum = ps.PayNum
     WHERE p.PayDate >= @start_date
       AND p.PayDate < @end_date
     GROUP BY p.PayType, ps.payment_category
