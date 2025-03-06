@@ -165,19 +165,18 @@ complete analysis, you may want to modify the query to return all patients or a 
 subset.
 =====================================================================
 
-Dependencies:
-- CTEs: unearned_income_patient_all_payments, unearned_income_patient_regular_payments, unearned_income_patient_unearned_income
-- Date Filter: @start_date to @end_date
+- Date Filter: @start_date to @end_date variables
 */
 
--- Set date parameters - uncomment and modify as needed
--- SET @start_date = '2024-01-01';
--- SET @end_date = '2025-02-28';
+-- Include dependent CTEs
+<<include:unearned_income_patient_all_payments.sql>>
+<<include:unearned_income_patient_regular_payments.sql>>
+<<include:unearned_income_patient_unearned_income.sql>>
 
 -- Main query using external CTEs
 -- Combine all results and then apply the ORDER BY and LIMIT
-(SELECT * FROM all_payments ORDER BY `Total Amount` DESC LIMIT 100)
+(SELECT * FROM unearned_income_patient_all_payments ORDER BY `Total Amount` DESC LIMIT 100)
 UNION ALL
-(SELECT * FROM regular_payments ORDER BY `Total Amount` DESC LIMIT 100)
+(SELECT * FROM unearned_income_patient_regular_payments ORDER BY `Total Amount` DESC LIMIT 100)
 UNION ALL
-(SELECT * FROM unearned_income ORDER BY `Total Amount` DESC LIMIT 100) 
+(SELECT * FROM unearned_income_patient_unearned_income ORDER BY `Total Amount` DESC LIMIT 100) 

@@ -45,19 +45,17 @@ Notes:
 - Income Transfer transactions typically net to zero but show money movement
 - Watch for negative values in refunds that may impact analysis
 
-Dependencies: CTEs: unearned_income_all_payment_types, unearned_income_regular_payments, unearned_income_unearned_payments
-Date Filter: @start_date to @end_date
+Date Filter: @start_date to @end_date variables
 */
 
--- Set date parameters - uncomment and modify as needed for dbeaver
--- SET @start_date = '2024-01-01';
--- SET @end_date = '2025-02-28';
+-- Include dependent CTEs
+<<include:unearned_income_all_payment_types.sql>>
+<<include:unearned_income_regular_payments.sql>>
+<<include:unearned_income_unearned_payments.sql>>
 
--- Main query combining results from all CTEs
--- Combine all CTEs into a single result set
-SELECT * FROM all_payment_types
+SELECT * FROM unearned_income_all_payment_types
 UNION ALL
-SELECT * FROM regular_payments
+SELECT * FROM unearned_income_regular_payments
 UNION ALL
-SELECT * FROM unearned_income
+SELECT * FROM unearned_income_unearned_payments
 ORDER BY `Section`, `Payment Month`, `Total Amount` DESC 

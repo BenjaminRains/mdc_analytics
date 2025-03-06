@@ -1,11 +1,11 @@
 -- Filter summary (consolidated with diagnostic)
 -- filter reason breakdown with validation
 -- payment counts, amounts and diagnostic metrics by category
--- uses FilterStats CTE from ctes.sql
--- uses PaymentFilterDiagnostics CTE from ctes.sql
 -- Date filter: Use @start_date to @end_date variables
+-- Include dependent CTEs
+<<include:payment_filter_diagnostics.sql>>
+<<include:filter_stats.sql>>
 
--- Create a filter diagnostic metrics table without WITH clause
 SELECT 
     fs.filter_reason,
     fs.payment_count,

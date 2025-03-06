@@ -9,14 +9,13 @@ Purpose:
 - Classifies income by type and category
 - Includes detailed aging information from patient table
 
-Dependencies:
-- UnearntypeDef
-- PayTypeDef
-- ProviderDef
-- PatientBalances
-
 Date Filter: @start_date to @end_date
 */
+-- Include dependent CTEs
+<<include:unearned_income_unearned_type_defs.sql>>
+<<include:unearned_income_pay_type_defs.sql>>
+<<include:unearned_income_provider_defs.sql>>
+<<include:unearned_income_patient_balances.sql>>
 
 -- Main query to extract all relevant data for analysis
 SELECT

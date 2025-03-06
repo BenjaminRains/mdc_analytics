@@ -1,6 +1,9 @@
 -- InsurancePaymentAnalysis: Compute metrics specific to insurance payments.
--- depends on: PaymentSourceCategories, PaymentSourceSummary
 -- Date filter: Uses @start_date to @end_date
+-- Include dependent CTEs (in order of dependencies)
+<<include:payment_source_categories.sql>>
+<<include:payment_source_summary.sql>>
+
 InsurancePaymentAnalysis AS (
     SELECT 
         pss.payment_source,

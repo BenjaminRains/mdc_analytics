@@ -21,21 +21,12 @@ NOTE FOR PANDAS ANALYSIS:
   4. Investigate negative balances with large prepayments (potential credit situations)
   5. Analyze recency of payments with 'Days Since Last Payment'
 - Watch for "-0.00" values which indicate small negative values that were rounded
-
-NOTE FOR EXECUTION:
-- This query has been refactored to use CTEs (Common Table Expressions) instead of temporary tables
-- It can now be executed in a single statement within a scripts
-
-Dependencies:
-- CTEs: unearned_income_patient_payment_summary, unearned_income_transaction_counts
-- Requires only @start_date and @end_date variables
-
-Date Filter: Uses @end_date as cutoff date for balances
 */
 
--- Set date parameters for testing (comment out when using in a script)
--- SET @start_date = '2023-01-01';
--- SET @end_date = '2024-12-31';
+-- Date Filter: Uses @end_date as cutoff date for balances
+-- Include dependent CTEs
+<<include:unearned_income_patient_payment_summary.sql>>
+<<include:unearned_income_transaction_counts.sql>>
 
 SELECT
     pb.PatNum AS 'Patient Number',

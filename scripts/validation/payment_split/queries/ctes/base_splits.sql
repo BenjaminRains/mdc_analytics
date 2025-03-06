@@ -1,6 +1,10 @@
 -- BaseSplits: Pre-aggregate split details for base payments.
--- depends on: BasePayments
+-- dependent CTE: BasePayments
 -- Date filter: Uses @start_date to @end_date
+
+-- Include dependent CTE
+<<include:base_payments.sql>>
+
 BaseSplits AS (
     SELECT 
         ps.PayNum,

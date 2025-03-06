@@ -1,8 +1,7 @@
--- Diagnostic summary
--- advanced diagnostic metrics by filter category
--- split patterns, correlation between filter types and issues
--- uses PaymentFilterDiagnostics CTE from ctes.sql
+-- Diagnostic summary: advanced diagnostic metrics by filter category. Split patterns, correlation between filter types and issues
 -- Date filter: Use @start_date to @end_date variables
+-- Include dependent CTE
+<<include:payment_filter_diagnostics.sql>>
 
 SELECT 
     'diagnostic_correlation' as report_type,

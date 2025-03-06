@@ -13,13 +13,17 @@ Key Metrics:
 - Payment type and filter distributions
 - Join relationship verification
 - Data consistency checks
+
+-- Date filter: Use @start_date to @end_date variables
 */
 
--- uses PaymentBaseCounts
--- uses PaymentJoinDiagnostics
--- uses PaymentLevelMetrics
--- uses PaymentFilterDiagnostics
--- Date filter: Use @start_date to @end_date variables
+-- Include dependent CTEs
+<<include:payment_base_counts.sql>>
+<<include:payment_join_diagnostics.sql>>
+<<include:payment_level_metrics.sql>>
+<<include:payment_filter_diagnostics.sql>>
+
+
 -- Verification metrics queries
 SELECT * FROM (
     -- Base Payment Counts

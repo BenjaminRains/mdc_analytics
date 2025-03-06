@@ -2,8 +2,10 @@
 -- Tracks payment progression through join stages
 -- Validates data relationships and identifies expected patterns
 -- Note: "missing" payments are often valid (patient payments, transfers, etc.)
--- uses JoinStageCounts CTE from ctes.sql
 -- Date filter: Use @start_date to @end_date variables
+-- Include dependent CTE
+<<include:join_stage_counts.sql>>
+
 
 SELECT 
     base_count,

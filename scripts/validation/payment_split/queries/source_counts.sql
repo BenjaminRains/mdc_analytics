@@ -1,7 +1,8 @@
 -- Insurance vs Patient payment counts
--- Uses PaymentSourceSummary CTE for consistent source categorization
--- uses TotalPayments CTE from ctes.sql
 -- Date filter: Use @start_date to @end_date variables
+-- Include dependent CTE
+<<include:payment_source_summary.sql>>
+<<include:total_payments.sql>>
 
 SELECT 
     ps.payment_source,
