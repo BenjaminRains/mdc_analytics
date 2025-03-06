@@ -7,12 +7,25 @@ PayTypeDef AS (
     -- Get PayType definitions once
     SELECT 
         DefNum,
-        ItemName AS PayTypeName
+        ItemName AS PayTypeName,
+        ItemValue
     FROM definition
-    WHERE DefNum IN (
+    WHERE Category = 8 -- Payment Type category in OpenDental
+    AND DefNum IN (
         SELECT DISTINCT p.PayType 
         FROM payment p
         JOIN paysplit ps ON p.PayNum = ps.PayNum
-        WHERE ps.UnearnedType != 0
+        -- Include ALL payment types, not just unearned income types
+    )
+    
+    UNION
+    
+    -- Include a fallback for any payment types not in definition table
+    SELECT 
+        0 AS DefNum,
+        'Unknown' AS PayTypeName,
+        '' AS ItemValue
+    WHERE NOT EXISTS (
+        SELECT 1 FROM definition WHERE DefNum = 0 AND Category = 8
     )
 ) 
