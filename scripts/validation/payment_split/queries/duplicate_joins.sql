@@ -44,7 +44,7 @@ Key metrics:
         NULL as min_split_amt,
         NULL as max_split_amt,
         NULL as active_days
-    FROM PaymentSummary ps
+    FROM PaymentLevelMetrics ps
     JOIN ClaimMetrics cm ON ps.PayNum = cm.PayNum
     WHERE ps.split_count > 10
 ),
