@@ -22,13 +22,13 @@ NOTE FOR PANDAS ANALYSIS:
   5. Analyze recency of payments with 'Days Since Last Payment'
 - Watch for "-0.00" values which indicate small negative values that were rounded
 
-NOTE FOR EXECUTION IN DBEAVER:
-- This query uses multiple statements with temporary tables
-- In DBeaver, make sure to execute each statement separately or use "Execute Script" (F5) not "Execute Statement" (F9)
-- Alternatively, break this query into three separate queries for execution
+NOTE FOR EXECUTION:
+- This query has been refactored to use CTEs (Common Table Expressions) instead of temporary tables
+- It can now be executed in a single statement within a scripts
 
 Dependencies:
-- Requires only @start_date and @end_date variables, not CTEs
+- CTEs: unearned_income_patient_payment_summary, unearned_income_transaction_counts
+- Requires only @start_date and @end_date variables
 
 Date Filter: Uses @end_date as cutoff date for balances
 */
@@ -37,43 +37,6 @@ Date Filter: Uses @end_date as cutoff date for balances
 -- SET @start_date = '2023-01-01';
 -- SET @end_date = '2024-12-31';
 
--- Step 1: Create a temporary table with payment balances by type
-DROP TEMPORARY TABLE IF EXISTS temp_patient_balances;
-
-CREATE TEMPORARY TABLE temp_patient_balances AS
-SELECT
-    ps.PatNum,
-    -- Regular payments
-    SUM(CASE WHEN ps.UnearnedType = 0 THEN ps.SplitAmt ELSE 0 END) AS regular_payment_amount,
-    -- Unearned income types
-    SUM(CASE WHEN ps.UnearnedType = 288 THEN ps.SplitAmt ELSE 0 END) AS prepayment_amount,
-    SUM(CASE WHEN ps.UnearnedType = 439 THEN ps.SplitAmt ELSE 0 END) AS tp_prepayment_amount,
-    SUM(CASE WHEN ps.UnearnedType NOT IN (0, 288, 439) AND ps.UnearnedType != 0 THEN ps.SplitAmt ELSE 0 END) AS other_unearned_amount,
-    -- Subtotals
-    SUM(CASE WHEN ps.UnearnedType != 0 THEN ps.SplitAmt ELSE 0 END) AS total_unearned_amount,
-    SUM(CASE WHEN ps.UnearnedType = 0 THEN ps.SplitAmt ELSE 0 END) AS total_earned_amount,
-    -- Total of all payments
-    SUM(ps.SplitAmt) AS total_payment_amount,
-    -- Last payment date
-    MAX(ps.DatePay) AS last_payment_date
-FROM paysplit ps
-WHERE ps.DatePay <= @end_date
-GROUP BY ps.PatNum;
-
--- Step 2: Create a temporary table with transaction counts
-DROP TEMPORARY TABLE IF EXISTS temp_transaction_counts;
-
-CREATE TEMPORARY TABLE temp_transaction_counts AS
-SELECT
-    PatNum,
-    COUNT(*) AS total_transaction_count,
-    SUM(CASE WHEN UnearnedType = 0 THEN 1 ELSE 0 END) AS regular_transaction_count,
-    SUM(CASE WHEN UnearnedType != 0 THEN 1 ELSE 0 END) AS unearned_transaction_count
-FROM paysplit
-WHERE DatePay BETWEEN @start_date AND @end_date
-GROUP BY PatNum;
-
--- Step 3: Join the temporary tables with patient information and aging data for the final report
 SELECT
     pb.PatNum AS 'Patient Number',
     CONCAT(pt.LName, ', ', pt.FName) AS 'Patient Name',
@@ -114,7 +77,7 @@ SELECT
     -- Additional metrics
     pb.last_payment_date AS 'Last Payment Date',
     DATEDIFF(@end_date, pb.last_payment_date) AS 'Days Since Last Payment'
-FROM temp_patient_balances pb
+FROM PatientPaymentSummary pb
 INNER JOIN patient pt ON pt.PatNum = pb.PatNum
-LEFT JOIN temp_transaction_counts tc ON tc.PatNum = pb.PatNum
-ORDER BY pb.total_payment_amount DESC; 
+LEFT JOIN TransactionCounts tc ON tc.PatNum = pb.PatNum
+ORDER BY pb.total_payment_amount DESC 
