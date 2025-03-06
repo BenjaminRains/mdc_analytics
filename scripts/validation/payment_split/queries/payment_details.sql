@@ -1,9 +1,7 @@
 -- Analyze individual payment details and their split patterns
--- This query helps identify unusual payment behaviors and split patterns
--- Override default CTE date range to analyze @start_date to @end_date
+-- This query helps identify unusual payment behaviors and split patterns. Note the configurable thresholds for split volume and split difference.
 -- Date filter: Use @start_date to @end_date variables
 
--- Override the PaymentDetailsBase CTE to use a specific date range
 , PaymentDetailsBaseOverride AS (
     SELECT 
         p.PayNum,
@@ -22,7 +20,6 @@
     WHERE p.PayDate BETWEEN @start_date AND @end_date
 ),
 
--- Since we overrode PaymentDetailsBase, we also need to redefine PaymentDetailsMetrics
 PaymentDetailsMetricsOverride AS (
     SELECT 
         PayNum,
