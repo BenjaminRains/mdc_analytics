@@ -16,145 +16,33 @@ EXECUTION NOTE:
 
 PANDAS ANALYSIS GUIDE:
 =====================================================================
-This payment type distribution data requires specific handling in pandas
-to extract meaningful insights about payment patterns.
+This query outputs payment type distribution data that requires specific handling
+in pandas for meaningful insights about payment patterns.
 
-DATA LOADING & TRANSFORMATIONS:
+DATA TRANSFORMATIONS:
 ---------------------------------------------------------------------
-```python
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-# Load the unified query results
-df_combined = pd.read_csv('payment_distribution.csv')
-
-# Split into summary and detail dataframes
-df_summary = df_combined[df_combined['Payment Category'] == 'All Payment Types']
-df_by_type = df_combined[df_combined['Payment Category'] != 'All Payment Types']
-
-# Data Type Transformations
-for df in [df_combined, df_summary, df_by_type]:
-    # Convert monetary columns to numeric, handling potential formatting issues
-    for col in ['Total Amount', 'Avg Amount', 'Regular Payment Amount', 'Unearned Income Amount']:
-        df[col] = pd.to_numeric(df[col], errors='coerce')
-    
-    # Convert percentage strings to numeric values
-    for col in ['% Regular Payments', '% Unearned Income']:
-        if col in df.columns:
-            # Remove % symbol if present and convert to numeric
-            df[col] = df[col].astype(str).str.replace('%', '').astype(float)
-    
-    # Ensure count columns are integers
-    for col in ['Total Splits', 'Regular Payment Splits', 'Unearned Income Splits', 'Unique Patients']:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
-
-# Create clean category labels for plotting
-if 'Payment Category' in df_by_type.columns:
-    df_by_type['Category Label'] = df_by_type['Payment Category'].str.replace(r' \(Type \d+\)', '', regex=True)
-```
+- Split data into summary (rows with 'All Payment Types') and detail dataframes
+- Convert monetary columns to numeric, handling formatting issues
+- Convert percentage strings to numeric values
+- Clean category labels to remove type numbers for better visualization
+- Ensure count columns are properly formatted as integers
 
 KEY ANALYSIS APPROACHES:
 ---------------------------------------------------------------------
 1. Payment Distribution Analysis
-```python
-# Calculate actual monetary percentages (different from transaction count percentages)
-total_amount = df_summary['Total Amount'].iloc[0]
-df_by_type['Amount Percentage'] = (df_by_type['Total Amount'] / total_amount * 100).round(1)
+   - Calculate monetary percentages alongside transaction count percentages
+   - Create summary tables showing both transaction and amount distributions
+   - Compare distributions to identify high-volume but low-value payment types
 
-# Create a summary table with both transaction and amount percentages
-payment_distribution = pd.DataFrame({
-    'Payment Type': df_by_type['Category Label'],
-    'Transaction Count': df_by_type['Total Splits'],
-    'Transaction %': (df_by_type['Total Splits'] / df_by_type['Total Splits'].sum() * 100).round(1),
-    'Amount': df_by_type['Total Amount'],
-    'Amount %': df_by_type['Amount Percentage']
-})
-```
-
-2. Prepayment Analysis (Critical for Understanding Negative Values)
-```python
-# Isolate prepayment types and analyze their patterns
-prepayment_df = df_by_type[df_by_type['Total Amount'] < 0]
-
-# Calculate per-patient metrics
-if len(prepayment_df) > 0:
-    prepayment_df['Avg Per Patient'] = prepayment_df['Total Amount'] / prepayment_df['Unique Patients']
-    
-    # Estimate average prepayment application size
-    prepayment_df['Avg Transaction Size'] = prepayment_df['Total Amount'] / prepayment_df['Total Splits']
-```
+2. Prepayment Analysis
+   - Isolate payment types with negative amounts (typically prepayments)
+   - Calculate per-patient metrics and average transaction sizes
+   - Analyze how prepayments affect overall payment flow
 
 3. Patient Engagement Analysis
-```python
-# Calculate transactions per patient by payment type
-df_by_type['Transactions per Patient'] = df_by_type['Total Splits'] / df_by_type['Unique Patients']
-
-# Estimate overlap between patient groups
-total_patients = df_summary['Unique Patients'].iloc[0]
-sum_of_patients_by_type = df_by_type['Unique Patients'].sum()
-patient_overlap = sum_of_patients_by_type - total_patients
-overlap_percentage = (patient_overlap / total_patients * 100).round(1)
-
-print(f"Estimated patients with multiple payment types: {overlap_percentage}%")
-```
-
-VISUALIZATION RECOMMENDATIONS:
----------------------------------------------------------------------
-```python
-# 1. Payment Type Distribution - Transaction Count vs Amount
-fig, ax = plt.subplots(1, 2, figsize=(15, 6))
-
-# Transaction count distribution
-df_by_type.plot(
-    kind='pie', 
-    y='Total Splits',
-    labels=df_by_type['Category Label'],
-    autopct='%1.1f%%',
-    ax=ax[0]
-)
-ax[0].set_title('Transaction Count Distribution')
-ax[0].set_ylabel('')
-
-# Amount distribution (with special handling for negative values)
-colors = ['green' if x >= 0 else 'red' for x in df_by_type['Total Amount']]
-df_by_type.plot(
-    kind='bar',
-    x='Category Label',
-    y='Total Amount',
-    ax=ax[1],
-    color=colors
-)
-ax[1].set_title('Total Amount by Payment Type')
-ax[1].axhline(y=0, color='black', linestyle='-', alpha=0.3)
-
-plt.tight_layout()
-
-# 2. Average Transaction Size Analysis
-plt.figure(figsize=(10, 6))
-sns.barplot(
-    data=df_by_type,
-    x='Category Label',
-    y='Avg Amount'
-)
-plt.title('Average Amount per Transaction by Payment Type')
-plt.axhline(y=0, color='black', linestyle='-', alpha=0.3)
-plt.xticks(rotation=45)
-plt.tight_layout()
-
-# 3. Patient Engagement by Payment Type
-plt.figure(figsize=(10, 6))
-sns.barplot(
-    data=df_by_type,
-    x='Category Label',
-    y='Transactions per Patient'
-)
-plt.title('Average Transactions per Patient by Payment Type')
-plt.xticks(rotation=45)
-plt.tight_layout()
-```
+   - Calculate transactions per patient by payment type
+   - Estimate patient overlap between different payment categories
+   - Identify payment types with high patient engagement
 
 IMPORTANT CONSIDERATIONS:
 ---------------------------------------------------------------------
@@ -175,15 +63,8 @@ IMPORTANT CONSIDERATIONS:
    one period and used in another, which can impact cash flow reporting.
 =====================================================================
 
-Dependencies:
-- CTEs: unearned_income_split_summary_by_type, unearned_income_payment_unearned_type_summary  
-
 Date Filter: @start_date to @end_date
 */
-
--- Set date parameters - uncomment and modify as needed
--- SET @start_date = '2024-01-01';
--- SET @end_date = '2025-02-28';
 
 -- Include external CTE files
 <<include:ctes/unearned_income_split_summary_by_type.sql>>
