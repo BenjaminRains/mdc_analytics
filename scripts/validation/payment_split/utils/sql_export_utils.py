@@ -55,7 +55,7 @@ def apply_date_parameters(sql: str, date_range: DateRange) -> str:
     Apply date parameters to SQL query, replacing placeholders with actual dates
     
     This function replaces date placeholders in SQL queries with actual date values.
-    It handles various formats including standardized @start_date and @end_date variables.
+    It handles standardized @start_date and @end_date variables.
     
     Args:
         sql: SQL query string
@@ -73,43 +73,19 @@ def apply_date_parameters(sql: str, date_range: DateRange) -> str:
     # Replace date placeholders in the SQL
     modified_sql = sql
     
-    # First, handle template-style placeholders (these take priority)
+    # Handle template-style placeholders
     modified_sql = modified_sql.replace('{{START_DATE}}', from_date_str)
     modified_sql = modified_sql.replace('{{END_DATE}}', to_date_str)
     
-    # Replace specific date literals used as standard placeholders
+    # Replace only standardized patterns
     date_patterns = [
-        # Standard variables in SQL scripts - prioritize these replacements
+        # Standard variables in SQL scripts
         (r"SET @start_date = '[^']+';", f"SET @start_date = '{from_date_str}';"),
         (r"SET @end_date = '[^']+';", f"SET @end_date = '{to_date_str}';"),
         
-        # Support legacy variable formats for backward compatibility
-        (r"SET @FromDate = '[^']+';", f"SET @FromDate = '{from_date_str}';"),
-        (r"SET @ToDate = '[^']+';", f"SET @ToDate = '{to_date_str}';"),
-        (r"SET @@start_date = '[^']+';", f"SET @start_date = '{from_date_str}';"),
-        (r"SET @@end_date = '[^']+';", f"SET @end_date = '{to_date_str}';"),
-        
-        # Standard hardcoded date replacements for backward compatibility
-        (r"'2024-01-01'", f"'{from_date_str}'"),
-        (r"'2025-01-01'", f"'{from_date_str}'"),
-        (r"'2025-02-28'", f"'{to_date_str}'"),
-        (r"'2025-03-15'", f"'{to_date_str}'"),
-        
-        # Date function replacements
-        (r"DATE_SUB\(CURDATE\(\), INTERVAL \d+ DAY\)", f"'{from_date_str}'"),
-        (r"DATE_SUB\(NOW\(\), INTERVAL \d+ DAY\)", f"'{from_date_str}'"),
-        (r"CURDATE\(\)", f"'{to_date_str}'"),
-        (r"NOW\(\)", f"'{to_date_str}'"),
-        
-        # Date range with year filter
-        (r"YEAR\(DatePay\) = 2025", f"DatePay BETWEEN '{from_date_str}' AND '{to_date_str}'"),
-        
-        # Generic date range replacements
-        (r"BETWEEN '2025-01-01' AND '2025-02-28'", 
-         f"BETWEEN '{from_date_str}' AND '{to_date_str}'"),
-        
-        # Handle specific start date only conditions
-        (r"DatePay > '2025-01-01'", f"DatePay > '{from_date_str}'")
+        # Handle direct variable references in queries
+        (r"@start_date", f"'{from_date_str}'"),
+        (r"@end_date", f"'{to_date_str}'")
     ]
     
     # Apply all date replacements
