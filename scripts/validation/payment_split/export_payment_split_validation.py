@@ -160,7 +160,7 @@ def get_ctes(date_range: DateRange = None) -> str:
     preferred_order = [
         "base_payments.sql",              # Base payments table
         "base_splits.sql",                # Base splits table
-        "payment_summary.sql",            # Payment summary metrics
+        "payment_level_metrics.sql",      # Payment level metrics
         "payment_method_analysis.sql",    # Payment method analysis
         "payment_source_categories.sql",  # Payment source categories
         "payment_source_summary.sql",     # Payment source summary
