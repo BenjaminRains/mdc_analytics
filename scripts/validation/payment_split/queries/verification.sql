@@ -17,7 +17,7 @@ Key Metrics:
 
 -- uses PaymentBaseCounts
 -- uses PaymentJoinDiagnostics
--- uses PaymentSummary
+-- uses PaymentLevelMetrics
 -- uses PaymentFilterDiagnostics
 -- Date filter: Use @start_date to @end_date variables
 -- Verification metrics queries
@@ -60,7 +60,7 @@ SELECT * FROM (
         COUNT(*) as payment_count,
         MIN(PayDate) as min_date,
         MAX(PayDate) as max_date
-    FROM PaymentSummary
+    FROM PaymentLevelMetrics
     GROUP BY PayType
 
     UNION ALL
@@ -96,7 +96,7 @@ SELECT * FROM (
         COUNT(*) as payment_count,
         MIN(PayDate) as min_date,
         MAX(PayDate) as max_date
-    FROM PaymentSummary
+    FROM PaymentLevelMetrics
     WHERE split_difference > 0.01
 ) verification_metrics
 ORDER BY 
