@@ -3,7 +3,7 @@
 -- Dependencies: None
 -- Date filter: None
 
-provider_defs AS (
+ProviderDef AS (
     SELECT 
         ProvNum,
         FName,
