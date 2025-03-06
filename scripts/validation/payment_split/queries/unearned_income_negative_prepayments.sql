@@ -21,10 +21,8 @@ NOTE FOR PANDAS ANALYSIS:
   3. Pattern of sequential applications on the same day for the same patient
   4. Correlation between Payment Notes and amount patterns
 
-Dependencies:
-- None (performs definition lookup directly)
-
-Date Filter: @start_date to @end_date
+- Dependencies: None (performs definition lookup directly)
+- Date Filter: @start_date to @end_date
 */
 
 -- Negative prepayments (potential refunds or adjustments)
