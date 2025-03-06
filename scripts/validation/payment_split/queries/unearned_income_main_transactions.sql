@@ -12,8 +12,8 @@ Purpose:
 Date Filter: @start_date to @end_date
 */
 -- Include dependent CTEs
-<<include:unearned_income_unearned_type_defs.sql>>
-<<include:unearned_income_pay_type_defs.sql>>
+<<include:unearned_income_unearntype_def.sql>>
+<<include:unearned_income_paytype_def.sql>>
 <<include:unearned_income_provider_defs.sql>>
 <<include:unearned_income_patient_balances.sql>>
 
