@@ -8,12 +8,6 @@ Purpose:
 - Shows transaction count, total amount, and date range for each patient
 - Useful for auditing large payments or unusual patient balances
 
-EXECUTION NOTE:
-- This version uses UNION ALL to combine three result sets into a single query
-- Each section is identified by its 'Payment Type' field
-- The combined query returns a single result set optimized for export scripts
-- Results can be filtered by 'Payment Type' in pandas for separate analysis
-
 PANDAS ANALYSIS GUIDE:
 =====================================================================
 The SQL query focuses on basic aggregation, while deeper analysis should happen in pandas.
@@ -172,79 +166,18 @@ subset.
 =====================================================================
 
 Dependencies:
-- None
-
-Date Filter: @start_date to @end_date
+- CTEs: unearned_income_patient_all_payments, unearned_income_patient_regular_payments, unearned_income_patient_unearned_income
+- Date Filter: @start_date to @end_date
 */
 
 -- Set date parameters - uncomment and modify as needed
 -- SET @start_date = '2024-01-01';
 -- SET @end_date = '2025-02-28';
 
--- Combined query using UNION ALL for export script compatibility
--- Top patients by all payment types, regular payments, and unearned income
-SELECT
-    'All Payment Types' AS 'Payment Type',
-    ps.PatNum AS 'Patient Number',
-    CONCAT(pt.LName, ', ', pt.FName) AS 'Patient Name',
-    COUNT(*) AS 'Transaction Count',
-    SUM(ps.SplitAmt) AS 'Total Amount',
-    SUM(CASE WHEN ps.UnearnedType = 0 THEN ps.SplitAmt ELSE 0 END) AS 'Regular Payment Amount',
-    SUM(CASE WHEN ps.UnearnedType != 0 THEN ps.SplitAmt ELSE 0 END) AS 'Unearned Income Amount',
-    CASE 
-        WHEN SUM(ps.SplitAmt) = 0 THEN 0
-        ELSE (SUM(CASE WHEN ps.UnearnedType = 0 THEN ps.SplitAmt ELSE 0 END) / SUM(ps.SplitAmt)) * 100
-    END AS 'Regular Payment %',
-    MIN(ps.DatePay) AS 'First Payment Date',
-    MAX(ps.DatePay) AS 'Last Payment Date',
-    DATEDIFF(MAX(ps.DatePay), MIN(ps.DatePay)) AS 'Days Between First and Last'
-FROM paysplit ps
-INNER JOIN patient pt ON pt.PatNum = ps.PatNum
-WHERE ps.DatePay BETWEEN @start_date AND @end_date
-GROUP BY ps.PatNum, pt.LName, pt.FName
-ORDER BY SUM(ps.SplitAmt) DESC
-LIMIT 100
-
+-- Main query using external CTEs
+-- Combine all results and then apply the ORDER BY and LIMIT
+(SELECT * FROM all_payments ORDER BY `Total Amount` DESC LIMIT 100)
 UNION ALL
-
-SELECT
-    'Regular Payments (Type 0)' AS 'Payment Type',
-    ps.PatNum AS 'Patient Number',
-    CONCAT(pt.LName, ', ', pt.FName) AS 'Patient Name',
-    COUNT(*) AS 'Transaction Count',
-    SUM(ps.SplitAmt) AS 'Total Amount',
-    SUM(ps.SplitAmt) AS 'Regular Payment Amount',
-    0 AS 'Unearned Income Amount',
-    100 AS 'Regular Payment %',
-    MIN(ps.DatePay) AS 'First Payment Date',
-    MAX(ps.DatePay) AS 'Last Payment Date',
-    DATEDIFF(MAX(ps.DatePay), MIN(ps.DatePay)) AS 'Days Between First and Last'
-FROM paysplit ps
-INNER JOIN patient pt ON pt.PatNum = ps.PatNum
-WHERE ps.DatePay BETWEEN @start_date AND @end_date
-    AND ps.UnearnedType = 0
-GROUP BY ps.PatNum, pt.LName, pt.FName
-ORDER BY SUM(ps.SplitAmt) DESC
-LIMIT 100
-
+(SELECT * FROM regular_payments ORDER BY `Total Amount` DESC LIMIT 100)
 UNION ALL
-
-SELECT
-    'Unearned Income (Type != 0)' AS 'Payment Type',
-    ps.PatNum AS 'Patient Number',
-    CONCAT(pt.LName, ', ', pt.FName) AS 'Patient Name',
-    COUNT(*) AS 'Transaction Count',
-    SUM(ps.SplitAmt) AS 'Total Amount',
-    0 AS 'Regular Payment Amount',
-    SUM(ps.SplitAmt) AS 'Unearned Income Amount',
-    0 AS 'Regular Payment %',
-    MIN(ps.DatePay) AS 'First Payment Date',
-    MAX(ps.DatePay) AS 'Last Payment Date',
-    DATEDIFF(MAX(ps.DatePay), MIN(ps.DatePay)) AS 'Days Between First and Last'
-FROM paysplit ps
-INNER JOIN patient pt ON pt.PatNum = ps.PatNum
-WHERE ps.DatePay BETWEEN @start_date AND @end_date
-    AND ps.UnearnedType != 0
-GROUP BY ps.PatNum, pt.LName, pt.FName
-ORDER BY SUM(ps.SplitAmt) DESC
-LIMIT 100; 
+(SELECT * FROM unearned_income ORDER BY `Total Amount` DESC LIMIT 100) 
