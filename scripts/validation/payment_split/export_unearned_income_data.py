@@ -136,53 +136,155 @@ def get_ctes(date_range: DateRange = None) -> str:
         logging.warning(f"CTE directory not found: {CTE_PATH}")
         return ""
     
-    # Define specific unearned income CTEs to use
-    unearned_income_ctes = [
+    # List of main query files to check for CTEs
+    main_query_files = [
+        "unassigned_provider_transactions.sql",
+        "unearned_income_aging_analysis.sql",
+        "unearned_income_main_transactions.sql",
+        "unearned_income_monthly_trend.sql",
+        "unearned_income_negative_prepayments.sql",
+        "unearned_income_patient_balance_report.sql",
+        "unearned_income_payment_type_date_summary.sql",
+        "unearned_income_top_patients.sql",
+        "unearned_income_unearned_type_summary.sql"
+    ]
+    
+    # Set of required CTEs (will be populated by scanning query files)
+    required_ctes = set()
+    
+    # Scan main query files for include directives to identify required CTEs
+    for query_file in main_query_files:
+        query_path = QUERY_PATH / query_file
+        if query_path.exists():
+            try:
+                query_content = read_sql_file(str(query_path))
+                include_pattern = r'<<include:([^>]+)>>'
+                includes = re.findall(include_pattern, query_content)
+                
+                for include_path in includes:
+                    if include_path.startswith('ctes/'):
+                        # Remove the ctes/ prefix
+                        cte_name = include_path.replace('ctes/', '')
+                        required_ctes.add(cte_name)
+                    elif 'unearned_income_' in include_path:
+                        required_ctes.add(include_path)
+            except Exception as e:
+                logging.error(f"Error scanning query file {query_file}: {str(e)}")
+    
+    # Get all SQL files in the CTE directory
+    all_cte_files = list(CTE_PATH.glob('*.sql'))
+    logging.info(f"Found {len(all_cte_files)} CTE files in {CTE_PATH}")
+    
+    # Add all unearned_income_ CTEs to the required set
+    for cte_file in all_cte_files:
+        if cte_file.name.startswith('unearned_income_'):
+            required_ctes.add(cte_file.name)
+    
+    # Ensure the primary CTEs are included (these are fundamental building blocks)
+    base_ctes = [
         "unearned_income_unearntype_def.sql",  # UnearnedType definitions first
         "unearned_income_paytype_def.sql",     # PayType definitions next
         "unearned_income_provider_def.sql",    # Provider definitions
         "unearned_income_patient_balances.sql" # Patient balances last as they may use the other CTEs
     ]
     
-    # Get all SQL files in the directory
-    all_files = list(CTE_PATH.glob('*.sql'))
-    logging.info(f"Found {len(all_files)} CTE files in {CTE_PATH}")
+    for cte in base_ctes:
+        required_ctes.add(cte)
     
-    # Filter files to only include unearned income CTEs
-    relevant_files = [f for f in all_files if f.name in unearned_income_ctes]
-    logging.info(f"Using {len(relevant_files)} unearned income CTEs")
+    logging.info(f"Identified {len(required_ctes)} required CTEs: {', '.join(required_ctes)}")
     
-    # Sort files based on preferred order
-    def sort_key(file):
-        filename = file.name
-        if filename in unearned_income_ctes:
-            return unearned_income_ctes.index(filename)
-        return len(unearned_income_ctes)  # Put any other files at the end
+    # Track processed files to avoid circular dependencies
+    processed_files = set()
     
-    # Sort the files
-    sorted_files = sorted(relevant_files, key=sort_key)
-    logging.debug(f"Sorted {len(sorted_files)} CTE files for processing")
-    
-    # Load and combine all CTEs
+    # Store all CTEs here
     all_ctes = []
     
-    for cte_file in sorted_files:
+    # Function to process CTEs with include directives
+    def process_cte(cte_file_path, indent_level=0):
+        # Check for circular dependencies and skip if already processed
+        if str(cte_file_path) in processed_files:
+            logging.debug(f"{'  ' * indent_level}Skipping already processed file: {cte_file_path.name}")
+            return None
+        
+        # Mark file as processed
+        processed_files.add(str(cte_file_path))
+        
         try:
-            # Read the file contents using the shared utility function
-            cte_content = read_sql_file(str(cte_file))
+            # Read the file contents
+            cte_content = read_sql_file(str(cte_file_path))
+            
+            # Check for include directives in the content
+            include_pattern = r'<<include:([^>]+)>>'
+            includes = re.findall(include_pattern, cte_content)
+            
+            if includes:
+                logging.debug(f"{'  ' * indent_level}Processing includes in {cte_file_path.name}: {includes}")
+                
+                # Process each include directive
+                for include_path in includes:
+                    # Determine if it's a relative or full path
+                    if include_path.startswith('ctes/'):
+                        # Path relative to query directory
+                        include_file = QUERY_PATH / include_path
+                    else:
+                        # Path relative to CTE directory
+                        include_file = CTE_PATH / include_path
+                    
+                    if include_file.exists():
+                        # Process the included file first (recursive call)
+                        include_content = process_cte(include_file, indent_level + 1)
+                        
+                        # Replace the include directive with empty string (it will be included separately)
+                        if include_content is not None:
+                            cte_content = cte_content.replace(f'<<include:{include_path}>>', '')
+                    else:
+                        logging.warning(f"{'  ' * indent_level}Include file not found: {include_file}")
+                        # Remove the include directive to avoid SQL syntax errors
+                        cte_content = cte_content.replace(f'<<include:{include_path}>>', '')
             
             # Apply date parameters
             if cte_content and date_range:
                 cte_content = apply_date_parameters(cte_content, date_range)
                 
-                # Add a comment indicating the source file
-                cte_with_comment = f"""
--- From {cte_file.name}
+            # Clean up content - remove empty lines and trim whitespace
+            cte_content = "\n".join(line for line in cte_content.split("\n") if line.strip())
+                
+            # Add a comment indicating the source file
+            cte_with_comment = f"""
+-- From {cte_file_path.name}
 {cte_content}"""
-                all_ctes.append(cte_with_comment)
-                logging.debug(f"Added CTE from {cte_file.name}")
+            
+            return cte_with_comment
+        
         except Exception as e:
-            logging.error(f"Error loading CTE file {cte_file}: {str(e)}")
+            logging.error(f"{'  ' * indent_level}Error loading CTE file {cte_file_path}: {str(e)}")
+            return None
+    
+    # Process the base CTEs first (they have known dependencies)
+    for cte_name in base_ctes:
+        if cte_name in required_ctes:
+            cte_file = CTE_PATH / cte_name
+            if cte_file.exists():
+                logging.info(f"Processing base CTE: {cte_name}")
+                cte_content = process_cte(cte_file)
+                if cte_content:
+                    all_ctes.append(cte_content)
+                    logging.debug(f"Added base CTE from {cte_name}")
+            else:
+                logging.warning(f"Base CTE file not found: {cte_name}")
+    
+    # Now process the remaining required CTEs
+    for cte_name in sorted(required_ctes):  # Sort to ensure deterministic order
+        if cte_name not in base_ctes:  # Skip those we already processed
+            cte_file = CTE_PATH / cte_name
+            if cte_file.exists() and str(cte_file) not in processed_files:
+                logging.info(f"Processing required CTE: {cte_name}")
+                cte_content = process_cte(cte_file)
+                if cte_content:
+                    all_ctes.append(cte_content)
+                    logging.debug(f"Added required CTE from {cte_name}")
+            elif not cte_file.exists():
+                logging.warning(f"Required CTE file not found: {cte_name}")
     
     # Join all CTEs with appropriate separators - don't add comma after the last CTE
     combined_ctes = ""
@@ -251,6 +353,41 @@ def get_query(query_name: str, ctes: str = None, date_range: DateRange = None) -
     if date_range is None:
         raise ValueError("Date range must be provided")
     
+    # Process include directives in the query
+    include_pattern = r'<<include:([^>]+)>>'
+    includes = re.findall(include_pattern, query_content)
+    
+    # Process each include directive
+    for include_path in includes:
+        # Determine the full path to the include file
+        if include_path.startswith('ctes/'):
+            # Path is relative to the query directory
+            include_file = QUERY_PATH / include_path
+        else:
+            # Path is relative to the CTE directory
+            include_file = CTE_PATH / include_path
+        
+        if include_file.exists():
+            try:
+                # Read the include file
+                include_content = read_sql_file(str(include_file))
+                
+                # Apply date parameters to the included content
+                if include_content and date_range:
+                    include_content = apply_date_parameters(include_content, date_range)
+                
+                # Replace the include directive with the file content
+                query_content = query_content.replace(f'<<include:{include_path}>>', include_content)
+                logging.debug(f"Processed include directive: {include_path}")
+            except Exception as e:
+                logging.error(f"Error processing include directive '{include_path}': {str(e)}")
+                # Remove the include directive to avoid SQL syntax errors
+                query_content = query_content.replace(f'<<include:{include_path}>>', f"-- Error including {include_path}: {str(e)}")
+        else:
+            logging.warning(f"Include file not found: {include_file}")
+            # Remove the include directive to avoid SQL syntax errors
+            query_content = query_content.replace(f'<<include:{include_path}>>', f"-- Missing include: {include_path}")
+    
     # Prepare SQL with date parameters and CTEs - ensure each statement ends with a semicolon
     final_query = f"""
 -- Set date parameters
@@ -307,8 +444,9 @@ def get_exports(ctes: str, date_range: DateRange = None) -> list:
     """
     exports = []
     
-    # List of query files without the .sql extension
+    # List of query files to process (same as in get_ctes)
     query_names = [
+        'unassigned_provider_transactions',
         'unearned_income_aging_analysis',
         'unearned_income_main_transactions',
         'unearned_income_monthly_trend',
@@ -319,8 +457,22 @@ def get_exports(ctes: str, date_range: DateRange = None) -> list:
         'unearned_income_unearned_type_summary'
     ]
     
+    # Check if the files exist and add a warning if not
+    missing_files = []
+    for query_name in query_names:
+        if not (QUERY_PATH / f"{query_name}.sql").exists():
+            missing_files.append(query_name)
+    
+    if missing_files:
+        logging.warning(f"The following query files were not found: {', '.join(missing_files)}")
+    
     # Build export configuration for each query
     for query_name in query_names:
+        # Skip files that don't exist
+        if not (QUERY_PATH / f"{query_name}.sql").exists():
+            logging.warning(f"Skipping missing query file: {query_name}.sql")
+            continue
+            
         export_config = get_query(query_name, ctes, date_range)
         exports.append(export_config)
         logging.info(f"Added export config for {query_name}")
@@ -478,6 +630,7 @@ def extract_report_data(start_date='2025-01-01', end_date='2025-02-28', db_name=
     # Create output directory if it doesn't exist
     output_dir = DATA_DIR
     os.makedirs(output_dir, exist_ok=True)
+    logging.debug(f"Output directory: {output_dir.resolve()}")
     
     # Convert string dates to DateRange object
     date_range = DateRange.from_strings(start_date, end_date)
