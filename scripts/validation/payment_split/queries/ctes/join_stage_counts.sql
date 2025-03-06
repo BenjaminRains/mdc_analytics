@@ -1,5 +1,5 @@
 -- JoinStageCounts: Analyze payment progression through join stages and related metrics.
--- depends on: PaymentBaseCounts, PaymentJoinDiagnostics, PaymentSummary
+-- depends on: PaymentBaseCounts, PaymentJoinDiagnostics, PaymentLevelMetrics
 -- Date filter: Uses @start_date to @end_date
 JoinStageCounts AS (
     SELECT 
@@ -17,6 +17,6 @@ JoinStageCounts AS (
         COUNT(DISTINCT CASE WHEN pjd.PayAmt > 5000 THEN pjd.PayNum END) as large_payment_count
     FROM PaymentBaseCounts pbc
     CROSS JOIN PaymentJoinDiagnostics pjd
-    LEFT JOIN PaymentSummary ps ON pjd.PayNum = ps.PayNum
+    LEFT JOIN PaymentLevelMetrics ps ON pjd.PayNum = ps.PayNum
     GROUP BY pbc.total_payments
 )
