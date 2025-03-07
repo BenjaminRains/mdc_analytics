@@ -3,7 +3,7 @@
 -- Uses DailyStats CTE for aggregation
 -- Date filter: Use @start_date to @end_date variables
 -- Include CTEs
-<<include:ctes/daily_stats.sql>>
+<<include:daily_stats.sql>>
 
 -- Then calculate the rolling averages and ratios
 SELECT 
