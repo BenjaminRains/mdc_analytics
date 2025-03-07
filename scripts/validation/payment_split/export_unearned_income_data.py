@@ -212,20 +212,13 @@ def get_ctes(date_range: DateRange = None) -> str:
             # Read the file contents
             cte_content = read_sql_file(str(cte_file_path))
             
-            # Extract CTE name from the first AS statement to avoid duplicates
+            # Extract CTE name from the first AS statement
             cte_name_match = re.search(r'(\w+)\s+AS\s*\(', cte_content)
             original_cte_name = cte_name_match.group(1) if cte_name_match else None
             
-            # If we found a CTE name, make it unique by adding a suffix based on the file name
-            if original_cte_name:
-                # Generate a unique suffix from the file name (remove .sql and common prefixes)
-                file_suffix = cte_file_path.stem.replace('unearned_income_', '')
-                # Replace the original CTE name with a unique one
-                unique_cte_name = f"{original_cte_name}_{file_suffix}"
-                # Replace in content, being careful to only replace the CTE name definition, not references
-                pattern = r'(^\s*)(' + re.escape(original_cte_name) + r')(\s+AS\s*\()'
-                cte_content = re.sub(pattern, r'\1' + unique_cte_name + r'\3', cte_content, flags=re.MULTILINE)
-                logging.debug(f"{'  ' * indent_level}Renamed CTE: {original_cte_name} → {unique_cte_name} in {cte_file_path.name}")
+            # IMPORTANT CHANGE: We'll no longer rename the CTEs in the content
+            # Instead, we'll just add a comment to identify where it came from
+            # This preserves the original CTE names that are referenced in the queries
             
             # Check for include directives in the content
             include_pattern = r'<<include:([^>]+)>>'
@@ -306,7 +299,10 @@ def get_ctes(date_range: DateRange = None) -> str:
         combined_ctes += cte.strip()
         if i < len(all_ctes) - 1:
             # If not the last CTE, add a comma after it
-            combined_ctes += ",\n"
+            combined_ctes += ",\n\n\n"
+        else:
+            # Add spacing after the last CTE
+            combined_ctes += "\n"
     
     logging.info(f"Combined {len(all_ctes)} CTEs into query structure")
     
