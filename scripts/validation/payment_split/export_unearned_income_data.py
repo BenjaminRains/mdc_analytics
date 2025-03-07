@@ -43,11 +43,11 @@ import argparse
 import os
 import re
 import sys
-import time
+# import time  # Unused import
 import logging
-import json
-import csv
-import mysql.connector
+# import json  # Unused import
+# import csv   # Unused import - pandas is used for CSV operations
+# import mysql.connector  # Unused import - using ConnectionFactory instead
 import pandas as pd
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -781,8 +781,9 @@ def execute_query(connection, db_name, query_name, query, output_dir=None):
         # Log the first part of the query for debugging
         logging.info(f"Query preview for '{query_name}': {query_without_headers[:500].replace(chr(10), ' ')}...")
         
-        # Get connection and cursor - this matches how test_cte_query works
-        cursor = connection.get_connection().cursor(dictionary=True)
+        # Get connection and cursor - use get_connection() to get the actual database connection
+        conn = connection.get_connection()
+        cursor = conn.cursor(dictionary=True)
         
         # Execute the query
         logging.info(f"Executing query '{query_name}' with separate statements")
@@ -800,27 +801,24 @@ def execute_query(connection, db_name, query_name, query, output_dir=None):
                 # Only fetch results from the last statement (the actual query, not the SET commands)
                 if i == len(statements) - 1:
                     rows = cursor.fetchall()
-                    logging.info(f"Query '{query_name}' returned {len(rows)} rows")
+                    
+        logging.info(f"Query '{query_name}' returned {len(rows)} rows")
         
-        # Create a DataFrame from the results
-        if rows:
+        # Export to CSV if output directory is specified
+        if output_dir and rows:
+            # Create DataFrame
             df = pd.DataFrame(rows)
             
-            # Export to CSV if an output directory is provided
-            if output_dir and not df.empty:
-                csv_path = export_to_csv(
-                    df, 
-                    output_dir, 
-                    query_name
-                )
-                return csv_path
-                
-        cursor.close()
-        return None
+            # Export to CSV
+            output_file = export_to_csv(df, output_dir, query_name)
+            return output_file
+        
+        return rows
         
     except Exception as e:
         logging.error(f"SQL Error executing query '{query_name}': {str(e)}")
         logging.error(f"SQL Statement causing the error (first 1000 chars):\n{query_without_headers[:1000]}")
+        logging.error(f"Error executing query '{query_name}': {str(e)}")
         raise
 
 def test_cte_query(connection, db_name, date_range):
@@ -828,7 +826,7 @@ def test_cte_query(connection, db_name, date_range):
     Test a simple CTE query to verify database connectivity and CTE functionality
     
     Args:
-        connection: Database connection factory
+        connection: Database connection object from ConnectionFactory
         db_name: Database name
         date_range: DateRange object with start and end dates
         
@@ -838,6 +836,7 @@ def test_cte_query(connection, db_name, date_range):
     try:
         logging.info("Testing simple CTE query...")
         
+        # Use get_connection() to get the actual database connection before getting a cursor
         conn = connection.get_connection()
         cursor = conn.cursor(dictionary=True)
         
@@ -867,7 +866,7 @@ def test_cte_query(connection, db_name, date_range):
             if stmt.strip():
                 logging.info(f"Test CTE - Executing statement {i+1}/{len(statements)}: {stmt[:100].replace(chr(10), ' ')}...")
                 cursor.execute(stmt)
-                
+        
                 # Only fetch results from the last statement
                 if i == len(statements) - 1:
                     rows = cursor.fetchall()
@@ -877,9 +876,9 @@ def test_cte_query(connection, db_name, date_range):
                         for row in rows:
                             logging.info(f"Test CTE results: {row}")
                         return True
-                    else:
-                        logging.warning("Test CTE query returned no rows")
-                        return False
+        else:
+            logging.warning("Test CTE query returned no rows")
+            return False
         
         cursor.close()
     except Exception as e:
