@@ -30,36 +30,8 @@ sys.path.insert(0, project_root)
 # Add Jinja2 for template handling
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-# Import database connection functionality from the correct location
-try:
-    from src.connections.factory import ConnectionFactory
-    logging.info("Successfully imported ConnectionFactory from src.connections.factory")
-except ImportError as e:
-    logging.warning(f"Could not import ConnectionFactory: {e}")
-    
-    # Fallback ConnectionFactory implementation
-    logging.warning("Using fallback ConnectionFactory implementation")
-    class ConnectionFactory:
-        @staticmethod
-        def create_connection(connection_type, database):
-            if connection_type == 'local_mariadb':
-                import mysql.connector
-                return mysql.connector.connect(
-                    host='localhost',
-                    user=os.environ.get('DB_USER', 'root'),
-                    password=os.environ.get('DB_PASSWORD', ''),
-                    database=database
-                )
-            elif connection_type == 'remote_mariadb':
-                import mysql.connector
-                return mysql.connector.connect(
-                    host=os.environ.get('REMOTE_DB_HOST', 'localhost'),
-                    user=os.environ.get('REMOTE_DB_USER', 'root'),
-                    password=os.environ.get('REMOTE_DB_PASSWORD', ''),
-                    database=database
-                )
-            else:
-                raise ValueError(f"Unsupported connection type: {connection_type}")
+# Import database connection functionality
+from src.connections.factory import ConnectionFactory
 
 class DateRange(NamedTuple):
     """Simple class to store start and end dates."""
@@ -292,11 +264,12 @@ def export_query_results(connection_type: str, database: str, query_name: str,
         return False
     
     try:
-        # Create database connection
+        # Create database connection using the ConnectionFactory
         conn = ConnectionFactory.create_connection(connection_type, database)
         logging.info(f"Connected to {connection_type} database: {database}")
         
-        # Execute the query
+        # Get cursor from the connection object
+        # The connection object returned by ConnectionFactory has a cursor method
         cursor = conn.cursor()
         logging.info(f"Executing query: {query_name}")
         cursor.execute(sql_content)

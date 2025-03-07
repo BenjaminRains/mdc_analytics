@@ -48,30 +48,6 @@ try:
 except ImportError:
     logging.warning("Failed to import ConnectionFactory from src.connections.factory")
 
-# Try other possible locations
-if ConnectionFactory is None:
-    potential_paths = [
-        'scripts.base.connection_factory',
-        'src.connections.connection_factory',
-        'base.connection_factory',
-    ]
-    
-    for path in potential_paths:
-        try:
-            module = __import__(path, fromlist=['ConnectionFactory', 'get_valid_databases'])
-            ConnectionFactory = getattr(module, 'ConnectionFactory')
-            get_valid_databases = getattr(module, 'get_valid_databases', None)
-            if ConnectionFactory:
-                logging.info(f"Successfully imported ConnectionFactory from {path}")
-                break
-        except (ImportError, AttributeError):
-            logging.warning(f"Failed to import ConnectionFactory from {path}")
-
-# Check if we found ConnectionFactory
-if ConnectionFactory is None:
-    logging.error("Failed to import ConnectionFactory from any location")
-    sys.exit(1)
-
 def check_environment():
     """Log the environment variables that are loaded."""
     mariadb_vars = {

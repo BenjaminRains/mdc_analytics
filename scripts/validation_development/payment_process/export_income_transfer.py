@@ -54,7 +54,7 @@ Usage:
 
 Requirements:
     - .env file must be set up in the project root with MariaDB configuration
-    - SQL files should have QUERY_NAME markers for proper extraction
+    - SQL files should be available in the queries directory
 """
 
 import os
@@ -85,7 +85,7 @@ load_dotenv(dotenv_path=env_path)
 logging.info(f"Loading environment from: {env_path}")
 
 # Import shared utilities
-from scripts.validation.payment_split.utils.sql_export_utils import (
+from scripts.validation_development.payment_process.utils.sql_export_utils import (
     DateRange, apply_date_parameters, read_sql_file, sanitize_table_name,
     extract_queries_with_markers, extract_all_queries_generic,
     export_to_csv, print_summary
@@ -93,51 +93,55 @@ from scripts.validation.payment_split.utils.sql_export_utils import (
 
 # Import other required modules
 from src.connections.factory import ConnectionFactory, get_valid_databases
-from scripts.base.index_manager import sanitize_table_name as get_db_index_info
+from scripts.validation_development.index_manager import sanitize_table_name as get_db_index_info
 
 # Constants
 SCRIPT_DIR = Path(__file__).parent
-INDICATORS_QUERY_PATH = SCRIPT_DIR / "queries" / "income_transfer_indicators.sql"
-UNASSIGNED_QUERY_PATH = SCRIPT_DIR / "queries" / "unassigned_provider_transactions.sql"
+QUERIES_DIR = SCRIPT_DIR / "queries"
 DATA_DIR = SCRIPT_DIR / "data" / "income_transfer_indicators"
 LOG_DIR = SCRIPT_DIR / "logs"
 
-# Use a query prefix for consistent file naming
-QUERY_PREFIX = "income_transfer"
+# Dictionary mapping query names to their file paths
+QUERIES = {
+    "recent_procedures_for_patients_with_unassigned_payments": QUERIES_DIR / "income_trans_recent_procs_unassigned_pay.sql",
+    "user_groups_creating_unassigned_payments": QUERIES_DIR / "income_trans_users_unassigned_pay.sql",
+    "payment_sources_for_unassigned_transactions": QUERIES_DIR / "income_trans_pay_sources_unassigned.sql",
+    "appointments_near_payment_date": QUERIES_DIR / "income_trans_appts_near_payment_date.sql",
+    "time_patterns_by_day": QUERIES_DIR / "income_trans_patterns_day.sql",
+    "time_patterns_by_month": QUERIES_DIR / "income_trans_patterns_by_month.sql",
+    "detailed_payment_information": QUERIES_DIR / "income_trans_detailed_payment_info.sql",
+    "unassigned_provider_transactions": QUERIES_DIR / "income_trans_unassigned_prov_trans.sql"
+}
 
-def extract_all_queries(full_sql: str, date_range: DateRange, is_unassigned_provider: bool = False) -> Dict[str, str]:
+def extract_all_queries(date_range: DateRange) -> Dict[str, Dict[str, Any]]:
     """
-    Extract each query from the SQL file
+    Extract all queries from individual SQL files
     
     Args:
-        full_sql: String containing all SQL queries
         date_range: DateRange object for date parameter substitution
-        is_unassigned_provider: Whether the SQL is from the unassigned provider transactions file
         
     Returns:
-        Dictionary mapping query names to query strings
+        Dictionary mapping query names to a dictionary containing query string and file path
     """
-    # If this is the unassigned provider transactions SQL, handle it differently
-    if is_unassigned_provider:
-        # Apply date parameters to replace placeholders in the SQL
-        sql_with_dates = apply_date_parameters(full_sql, date_range)
-        
-        # Extract the main union query as a single report
-        # The unassigned provider SQL doesn't use QUERY_NAME markers, so we handle it as a single query
-        return {"unassigned_provider_transactions": sql_with_dates}
+    queries = {}
     
-    # Otherwise, process income transfer indicators SQL with QUERY_NAME markers
-    # First try to extract using the QUERY_NAME markers
-    queries = extract_queries_with_markers(full_sql, date_range)
-    
-    # If no queries were found, fall back to generic extraction
-    if not queries:
-        logging.warning("No queries found using QUERY_NAME markers. Using generic extraction.")
-        queries = extract_all_queries_generic(full_sql, date_range)
-        
-        # If still no queries, log an error
-        if not queries:
-            logging.error("Failed to extract any queries from the SQL file")
+    for query_name, query_path in QUERIES.items():
+        try:
+            # Read the SQL file
+            logging.info(f"Reading SQL file: {query_path}")
+            sql_content = read_sql_file(query_path)
+            
+            # Apply date parameters to replace placeholders in the SQL
+            sql_with_dates = apply_date_parameters(sql_content, date_range)
+            
+            # Store the query and its file path
+            queries[query_name] = {
+                "query": sql_with_dates,
+                "path": query_path
+            }
+            
+        except Exception as e:
+            logging.error(f"Error reading SQL file {query_path}: {e}")
     
     return queries
 
@@ -187,7 +191,7 @@ def execute_query(connection, db_name, query_name, query, output_dir=None):
                     df, 
                     output_dir, 
                     query_name, 
-                    prefix=QUERY_PREFIX, 
+                    prefix="income_transfer", 
                     include_date=True
                 )
         
@@ -200,28 +204,23 @@ def execute_query(connection, db_name, query_name, query, output_dir=None):
     return df, csv_path
 
 
-def process_sql_file(query_path, date_range, db_name, output_dir, is_unassigned_provider=False):
+def process_queries(date_range, db_name, output_dir):
     """
-    Process a single SQL file, extracting and executing all queries
+    Process all SQL queries
     
     Args:
-        query_path: Path to the SQL file
         date_range: DateRange object for date parameter substitution
         db_name: Database name to connect to
         output_dir: Directory for output CSV files
-        is_unassigned_provider: Whether this is the unassigned provider transactions SQL
         
     Returns:
         Dictionary of query results
     """
-    # Read SQL file contents
-    full_sql = read_sql_file(query_path)
-    
     # Extract all queries
-    queries = extract_all_queries(full_sql, date_range, is_unassigned_provider)
+    queries_data = extract_all_queries(date_range)
     
-    if not queries:
-        logging.error(f"No queries extracted from SQL file: {query_path}")
+    if not queries_data:
+        logging.error("No queries extracted from SQL files")
         return {}
     
     # Connect to the database
@@ -231,17 +230,19 @@ def process_sql_file(query_path, date_range, db_name, output_dir, is_unassigned_
     # Execute each query and store results
     query_results = {}
     
-    for query_name, query in queries.items():
+    for query_name, query_info in queries_data.items():
         logging.info(f"Processing query: '{query_name}'")
+        logging.info(f"SQL file: {query_info['path']}")
         
         # Execute the query
-        df, csv_path = execute_query(connection, db_name, query_name, query, output_dir)
+        df, csv_path = execute_query(connection, db_name, query_name, query_info['query'], output_dir)
         
         # Store results
         result = {
             'status': 'SUCCESS' if df is not None and not df.empty else 'FAILED',
             'rows': len(df) if df is not None else 0,
-            'output_file': csv_path
+            'output_file': csv_path,
+            'source_file': str(query_info['path'])
         }
         
         query_results[query_name] = result
@@ -251,7 +252,7 @@ def process_sql_file(query_path, date_range, db_name, output_dir, is_unassigned_
 
 def extract_report_data(from_date='2025-01-01', to_date='2025-02-28', db_name=None):
     """
-    Extract and export data from both SQL files
+    Extract and export data from all SQL files
     
     Args:
         from_date: Start date in YYYY-MM-DD format
@@ -259,7 +260,7 @@ def extract_report_data(from_date='2025-01-01', to_date='2025-02-28', db_name=No
         db_name: Database name to connect to (optional)
         
     Returns:
-        Dictionary of query results from both SQL files
+        Dictionary of query results from all SQL files
     """
     output_dir = DATA_DIR
     
@@ -280,40 +281,18 @@ def extract_report_data(from_date='2025-01-01', to_date='2025-02-28', db_name=No
             print(f"Valid databases: {', '.join(valid_dbs)}")
         return {}
     
-    # Process both SQL files and combine results
-    all_results = {}
-    
-    # 1. Process income transfer indicators SQL
+    # Process all SQL queries
     logging.info("="*80)
     logging.info("PROCESSING: INCOME TRANSFER INDICATORS")
-    logging.info(f"SQL file: {INDICATORS_QUERY_PATH.resolve()}")
     logging.info("="*80)
     
-    indicators_results = process_sql_file(
-        INDICATORS_QUERY_PATH,
+    query_results = process_queries(
         date_range,
         db_name,
-        output_dir,
-        is_unassigned_provider=False
+        output_dir
     )
-    all_results.update(indicators_results)
     
-    # 2. Process unassigned provider transactions SQL
-    logging.info("="*80)
-    logging.info("PROCESSING: UNASSIGNED PROVIDER TRANSACTIONS")
-    logging.info(f"SQL file: {UNASSIGNED_QUERY_PATH.resolve()}")
-    logging.info("="*80)
-    
-    unassigned_results = process_sql_file(
-        UNASSIGNED_QUERY_PATH,
-        date_range,
-        db_name,
-        output_dir,
-        is_unassigned_provider=True
-    )
-    all_results.update(unassigned_results)
-    
-    return all_results
+    return query_results
 
 
 def setup_logging():
@@ -322,7 +301,7 @@ def setup_logging():
     os.makedirs(LOG_DIR, exist_ok=True)
     
     # Set up logging with timestamp in filename
-    log_file = LOG_DIR / f"income_transfer_indicators_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+    log_file = LOG_DIR / f"log_income_transfer_indicators_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
     
     # Reset logging configuration
     for handler in logging.root.handlers[:]:
@@ -380,13 +359,13 @@ def main():
         return  # Exit early if database is invalid
     
     logging.info("="*80)
-    logging.info("STARTING EXPORT PROCESS: INCOME TRANSFER AND UNASSIGNED PROVIDER REPORTS")
+    logging.info("STARTING EXPORT PROCESS: INCOME TRANSFER INDICATORS")
     logging.info(f"Output directory: {DATA_DIR.resolve()}")
     logging.info(f"Date range: {args.start_date} to {args.end_date}")
     logging.info(f"Database: {args.database}")
     logging.info("="*80)
     
-    # Extract and export data from both SQL files
+    # Extract and export data from all SQL files
     query_results = extract_report_data(
         from_date=args.start_date,
         to_date=args.end_date,
@@ -403,7 +382,7 @@ def main():
         logging.info("="*80)
         
         # Print detailed summary
-        print_summary(query_results, DATA_DIR, "INCOME TRANSFER AND UNASSIGNED PROVIDER REPORTS")
+        print_summary(query_results, DATA_DIR, "INCOME TRANSFER INDICATORS")
     else:
         logging.error("Export process failed or no results returned")
         print("\nExport process failed. Check the logs for details.")

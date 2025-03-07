@@ -1,0 +1,36 @@
+digraph "CTE Dependencies" {
+            // CTE Dependency Visualization
+            rankdir=LR;
+            size="10,8";
+            ratio=fill;
+            fontsize=14;
+            ranksep=1.5;
+            nodesep=0.5;
+            node [shape=box, style=filled, color=lightblue];
+            "BasePayments" [label="BasePayments"];
+    "ClaimMetrics" [label="ClaimMetrics"];
+    "PaymentDailyDetails" [label="PaymentDailyDetails"];
+    "PaymentJoinDiagnostics" [label="PaymentJoinDiagnostics"];
+    "PaymentSourceCategories" [label="PaymentSourceCategories"];
+    "PaymentBaseCounts" [label="PaymentBaseCounts"];
+    "PaymentDetailsBase" [label="PaymentDetailsBase"];
+    "PaymentLevelMetrics" [label="PaymentLevelMetrics"];
+    "ProblemClaimDetails" [label="ProblemClaimDetails"];
+    "ProcedurePayments" [label="ProcedurePayments"];
+    "SuspiciousSplitAnalysis" [label="SuspiciousSplitAnalysis"];
+    "UnearnedIncomeAllPaymentTypes" [label="UnearnedIncomeAllPaymentTypes"];
+    "UnearnedIncomePatientAllPayments" [label="UnearnedIncomePatientAllPayments"];
+    "UnearnedIncomePatientBalances" [label="UnearnedIncomePatientBalances"];
+    "UnearnedIncomePatientPaymentSummary" [label="UnearnedIncomePatientPaymentSummary"];
+    "UnearnedIncomePatientRegularPayments" [label="UnearnedIncomePatientRegularPayments"];
+    "UnearnedIncomePatientUnearnedIncome" [label="UnearnedIncomePatientUnearnedIncome"];
+    "UnearnedIncomePaymentUnearnedTypeSummary" [label="UnearnedIncomePaymentUnearnedTypeSummary"];
+    "UnearnedIncomePayTypeDef" [label="UnearnedIncomePayTypeDef"];
+    "UnearnedIncomeProviderDefs" [label="UnearnedIncomeProviderDefs"];
+    "UnearnedIncomeRegularPayments" [label="UnearnedIncomeRegularPayments"];
+    "UnearnedIncomeSplitSummaryByType" [label="UnearnedIncomeSplitSummaryByType"];
+    "UnearnedIncomeTransactionCounts" [label="UnearnedIncomeTransactionCounts"];
+    "UnearnedIncomeUnearnedPayments" [label="UnearnedIncomeUnearnedPayments"];
+    "UnearnedIncomeUnearnedTypeDef" [label="UnearnedIncomeUnearnedTypeDef"];
+    "ClaimMetrics" -> "PaymentLevelMetrics";
+}

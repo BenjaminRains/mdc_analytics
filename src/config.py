@@ -89,6 +89,21 @@ class DataPaths:
         return self.data_dir("payment_split", subdir)
     
     @property
+    def income_transfer(self) -> Path:
+        """Path to income transfer directory under payment_split"""
+        return self.payment_split / "income_transfer"
+    
+    @property
+    def split_validation(self) -> Path:
+        """Path to split validation directory under payment_split"""
+        return self.payment_split / "split_validation"
+    
+    @property
+    def unearned_income(self) -> Path:
+        """Path to unearned income directory under payment_split"""
+        return self.payment_split / "unearned_income"
+    
+    @property
     def income_transfer_indicators(self) -> Path:
         """Path to income transfer indicators directory under payment_split"""
         return self.payment_split_subdir("income_transfer_indicators")
@@ -97,52 +112,6 @@ class DataPaths:
     def payment_split_validation(self) -> Path:
         """Path to payment split validation directory under payment_split"""
         return self.payment_split_subdir("payment_split_validation")
-    
-    @property
-    def unassigned_by_month(self) -> Path:
-        """Path to unassigned by month directory under payment_split"""
-        return self.payment_split_subdir("unassigned_by_month")
-    
-    # File paths for files directly in the payment_split/data directory
-    @property
-    def unassigned_provider_transactions_file(self) -> Path:
-        """Path to unassigned provider transactions CSV file in payment_split_validation directory"""
-        return self.payment_split_validation / "unassigned_provider_transactions.csv"
-    
-    @property
-    def unearned_income_aging_analysis_file(self) -> Path:
-        """Path to unearned income aging analysis file directly in payment_split data"""
-        return self.payment_split / "unearned_income_aging_analysis.csv"
-    
-    @property
-    def unearned_income_main_transactions_file(self) -> Path:
-        """Path to unearned income main transactions file directly in payment_split data"""
-        return self.payment_split / "unearned_income_main_transactions.csv"
-    
-    @property
-    def unearned_income_negative_prepayments_file(self) -> Path:
-        """Path to unearned income negative prepayments file directly in payment_split data"""
-        return self.payment_split / "unearned_income_negative_prepayments.csv"
-    
-    @property
-    def unearned_income_patient_balance_report_file(self) -> Path:
-        """Path to unearned income patient balance report file directly in payment_split data"""
-        return self.payment_split / "unearned_income_patient_balance_report.csv"
-    
-    @property
-    def unearned_income_payment_type_summary_file(self) -> Path:
-        """Path to unearned income payment type summary file directly in payment_split data"""
-        return self.payment_split / "unearned_income_payment_type_summary.csv"
-    
-    @property
-    def unearned_income_top_patients_file(self) -> Path:
-        """Path to unearned income top patients file directly in payment_split data"""
-        return self.payment_split / "unearned_income_top_patients.csv"
-    
-    @property
-    def unearned_income_unearned_type_summary_file(self) -> Path:
-        """Path to unearned income unearned type summary file directly in payment_split data"""
-        return self.payment_split / "unearned_income_unearned_type_summary.csv"
     
     @property
     def procedurelog(self) -> Path:

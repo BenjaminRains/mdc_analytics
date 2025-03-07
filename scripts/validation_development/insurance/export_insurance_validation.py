@@ -78,7 +78,7 @@ from typing import Dict, Optional, List, Tuple, NamedTuple
 import re
 import time
 from src.connections.factory import ConnectionFactory
-from scripts.base.index_manager import IndexManager
+from scripts.validation_development.index_manager import IndexManager
 
 # Directory constants
 BASE_DIR = Path(__file__).parent.resolve()

@@ -47,7 +47,7 @@ load_dotenv(dotenv_path=env_path)
 logger = logging.getLogger('insurance_opportunity_analysis_export')
 logger.info(f"Loading environment from: {env_path}")
 
-from scripts.base.index_manager import sanitize_table_name
+from scripts.validation_development.index_manager import sanitize_table_name
 
 # Define constant paths
 SCRIPT_DIR = Path(__file__).parent
