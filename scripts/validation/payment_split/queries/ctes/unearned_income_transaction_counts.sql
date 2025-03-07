@@ -1,9 +1,9 @@
--- TransactionCounts: Counts payment transactions by type (regular vs unearned)
+-- UnearnedIncomeTransactionCounts: Counts payment transactions by type (regular vs unearned)
 -- Provides transaction count metrics for patients within the date range
 -- Dependencies: None
 -- Date filter: Uses @start_date and @end_date parameters to filter transactions
 
-TransactionCounts AS (
+UnearnedIncomeTransactionCounts AS (
     SELECT
         PatNum,
         COUNT(*) AS total_transaction_count,

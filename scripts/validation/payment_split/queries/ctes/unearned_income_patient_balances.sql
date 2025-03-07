@@ -3,7 +3,7 @@
 -- Dependencies: None
 -- Date filter: @end_date
 
-PatientBalances AS (
+UnearnedIncomePatientBalances AS (
     SELECT 
         p.PatNum,
         p.BalTotal AS total_balance,

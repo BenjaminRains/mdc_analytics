@@ -76,10 +76,10 @@ SELECT
 FROM paysplit ps
 JOIN payment pm ON pm.PayNum = ps.PayNum
 JOIN patient pt ON pt.PatNum = ps.PatNum
-LEFT JOIN UnearntypeDef ud ON ud.DefNum = ps.UnearnedType
-LEFT JOIN PayTypeDef pd ON pd.DefNum = pm.PayType
-LEFT JOIN ProviderDef prvd ON prvd.ProvNum = ps.ProvNum
-LEFT JOIN PatientBalances pb ON pb.PatNum = ps.PatNum
+LEFT JOIN UnearnedIncomeUnearnedTypeDef ud ON ud.DefNum = ps.UnearnedType
+LEFT JOIN UnearnedIncomePayTypeDef pd ON pd.DefNum = pm.PayType
+LEFT JOIN UnearnedIncomeProviderDefs prvd ON prvd.ProvNum = ps.ProvNum
+LEFT JOIN UnearnedIncomePatientBalances pb ON pb.PatNum = ps.PatNum
 WHERE 
     -- Date filter can be adjusted as needed
     ps.DatePay BETWEEN @start_date AND @end_date

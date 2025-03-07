@@ -3,7 +3,7 @@
 -- Dependencies: None
 -- Date filter: None (not date dependent)
 
-PayTypeDef AS (
+UnearnedIncomePayTypeDef AS (
     -- Get PayType definitions once
     SELECT 
         DefNum,

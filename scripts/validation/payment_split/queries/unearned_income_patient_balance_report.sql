@@ -68,7 +68,7 @@ SELECT
     -- Additional metrics
     pb.last_payment_date AS last_payment_date,
     DATEDIFF(@end_date, pb.last_payment_date) AS days_since_last_payment
-FROM PatientPaymentSummary pb
+FROM UnearnedIncomePatientPaymentSummary pb
 INNER JOIN patient pt ON pt.PatNum = pb.PatNum
-LEFT JOIN TransactionCounts tc ON tc.PatNum = pb.PatNum
+LEFT JOIN UnearnedIncomeTransactionCounts tc ON tc.PatNum = pb.PatNum
 ORDER BY pb.total_payment_amount DESC 

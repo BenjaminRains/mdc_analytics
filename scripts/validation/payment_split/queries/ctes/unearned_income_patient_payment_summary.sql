@@ -1,9 +1,9 @@
--- PatientPaymentSummary: Aggregates payment data by payment types
+-- UnearnedIncomePatientPaymentSummary: Aggregates payment data by payment types
 -- Summary of payments grouped by patient: regular vs unearned income
 -- Dependencies: None
 -- Date filter: Uses @end_date parameter to filter payments
 
-PatientPaymentSummary AS (
+UnearnedIncomePatientPaymentSummary AS (
     SELECT
         ps.PatNum,
         -- Regular payments

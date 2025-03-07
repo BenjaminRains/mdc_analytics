@@ -1,14 +1,14 @@
--- CTE for provider definitions
+-- UnearnedIncomeProviderDefs: CTE for provider definitions
 -- Purpose: Provides a lookup for provider names from provider table
 -- Dependencies: None
 -- Date filter: None
 
-ProviderDef AS (
+UnearnedIncomeProviderDefs AS (
     SELECT 
         ProvNum,
         FName,
         LName,
-        CONCAT(FName, ' ', LName) AS ProviderName,
+        CONCAT(FName, ' ', LName) AS provider_name,
         Specialty
     FROM provider
     WHERE ProvNum IN (
@@ -23,7 +23,7 @@ ProviderDef AS (
         0 AS ProvNum,
         'Unassigned' AS FName,
         'Provider' AS LName,
-        'Unassigned Provider' AS ProviderName,
+        'Unassigned Provider' AS provider_name,
         0 AS Specialty
     WHERE NOT EXISTS (
         SELECT 1 FROM provider WHERE ProvNum = 0
