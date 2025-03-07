@@ -250,7 +250,7 @@ def get_ctes(date_range: DateRange = None) -> str:
                 
             # Add a comment indicating the source file, with minimal whitespace
             cte_with_comment = f"""-- From {cte_file_path.name}
-{cte_content}"""
+{cte_content.strip()}"""
             
             return cte_with_comment
         
@@ -289,7 +289,7 @@ def get_ctes(date_range: DateRange = None) -> str:
     for i, cte in enumerate(all_ctes):
         if i > 0:
             # Add a comma after the previous CTE
-            combined_ctes += ",\n\n"
+            combined_ctes += ",\n"
         
         # Add the current CTE (trimmed to remove any leading/trailing whitespace)
         combined_ctes += cte.strip()
@@ -408,8 +408,8 @@ SET @end_date = '{date_range.end_date}';
             
         final_query += f"""
 -- Common Table Expressions
-WITH 
-{ctes}
+WITH
+{ctes.strip()}
 -- Main Query from {query_name}.sql
 {query_content}
 """
@@ -426,6 +426,9 @@ WITH
 """
     
     logging.info(f"Prepared query for {query_name}")
+    
+    # Create a clean, final version by removing excessive whitespace
+    final_query = re.sub(r'\n{3,}', '\n\n', final_query)
     
     return {
         'name': query_name,
