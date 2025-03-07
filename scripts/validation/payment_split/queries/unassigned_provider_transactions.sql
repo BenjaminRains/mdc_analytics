@@ -42,7 +42,7 @@
  * - income_transfer_indicators.sql: Additional analysis queries
  *
  * REVISION HISTORY:
- * 2025-03-06: Added AccountBalance at time of transaction
+ * 2025-03-06: Added account_balance at time of transaction
  * 2025-03-05: Enhanced documentation and parameter explanations
  * 2025-03-02: Added adjustment transactions and priority classification
  * 2025-02-15: Added suggested provider logic based on appointment history
@@ -69,14 +69,14 @@
  * provider based on appointment history.
  *
  * KEY FEATURES:
- * - TransactionType: Always 'PaySplit' in this section to distinguish from adjustments
- * - PayTypeName: Resolves payment type codes to human-readable names using definition table
- * - SuggestedProvider: Derived from the most recent appointment before the payment date
- * - Priority: Calculated based on amount size and transaction age
- * - DaysOld: Number of days since the transaction was created
- * - AccountBalance: Shows the patient's balance at the time of the transaction
- * - TransactionCategory: Classifies transaction as Income Transfer, Credit Allocation, etc.
- * - OriginalPaymentInfo: Shows source of funds for transfers/allocations
+ * - transaction_type: Always 'PaySplit' in this section to distinguish from adjustments
+ * - pay_type_name: Resolves payment type codes to human-readable names using definition table
+ * - suggested_provider: Derived from the most recent appointment before the payment date
+ * - priority: Calculated based on amount size and transaction age
+ * - days_old: Number of days since the transaction was created
+ * - account_balance: Shows the patient's balance at the time of the transaction
+ * - transaction_category: Classifies transaction as Income Transfer, Credit Allocation, etc.
+ * - original_payment_info: Shows source of funds for transfers/allocations
  *
  * CUSTOMIZATION:
  * - Update the date range in the WHERE clause to focus on a specific period
@@ -86,13 +86,13 @@
 
 -- Date filter: Use @start_date to @end_date variables
 SELECT 
-    'PaySplit' AS TransactionType,
-    ps.SplitNum AS TransactionNum,
+    'PaySplit' AS transaction_type,
+    ps.SplitNum AS transaction_num,
     ps.PayNum,
     ps.PatNum,
-    CONCAT(p.LName, ', ', p.FName) AS PatientName,
+    CONCAT(p.LName, ', ', p.FName) AS patient_name,
     ps.SplitAmt,
-    pay.PayDate AS TransactionDate,
+    pay.PayDate AS transaction_date,
     -- Enhanced payment type display with fallback for special cases
     CASE
         -- Check if payment type exists in definition
@@ -113,14 +113,14 @@ SELECT
         WHEN ps.ProcNum = 0 AND ps.SplitAmt > 0 THEN 'Unallocated Payment'
         WHEN ps.ProcNum = 0 AND ps.SplitAmt < 0 THEN 'Credit Adjustment'
         ELSE 'Unspecified'
-    END AS PayTypeName,
+    END AS pay_type_name,
     ps.ProcNum,
-    pay.PayNote AS Note,
-    u.UserName AS EnteredBy,
+    pay.PayNote AS note,
+    u.UserName AS entered_by,
     CASE 
         WHEN prov.FName IS NULL THEN 'Unassigned'
         ELSE CONCAT(prov.LName, ', ', prov.FName)
-    END AS CurrentProvider,
+    END AS current_provider,
     -- Suggested provider based on most recent appointment
     (SELECT 
         CONCAT(prov2.LName, ', ', prov2.FName)
@@ -129,8 +129,8 @@ SELECT
      WHERE a.PatNum = ps.PatNum
        AND a.AptDateTime <= pay.PayDate
      ORDER BY a.AptDateTime DESC
-     LIMIT 1) AS SuggestedProvider,
-    DATEDIFF(CURRENT_DATE, pay.PayDate) AS DaysOld,
+     LIMIT 1) AS suggested_provider,
+    DATEDIFF(CURRENT_DATE, pay.PayDate) AS days_old,
     -- Account balance at time of transaction (rounded to 2 decimal places to avoid floating-point artifacts)
     ROUND(
         (
@@ -153,7 +153,7 @@ SELECT
             ), 0)
         ),
         2
-    ) AS AccountBalance,
+    ) AS account_balance,
     -- Transaction category for better understanding the purpose
     CASE
         WHEN pay.PayNote LIKE '%income transfer%' THEN 'Income Transfer'
@@ -166,7 +166,7 @@ SELECT
         WHEN ps.SplitAmt > 0 AND ps.ProcNum = 0 THEN 'Prepayment/Deposit'
         WHEN ps.SplitAmt < 0 AND ps.ProcNum = 0 THEN 'Credit/Refund'
         ELSE 'Standard Payment'
-    END AS TransactionCategory,
+    END AS transaction_category,
     -- Information about the original payment (for transfers and allocations)
     CASE
         -- When this is likely a transfer or reallocation, find the original payment
@@ -193,7 +193,7 @@ SELECT
             ORDER BY origpay.PayDate DESC
             LIMIT 1)
         ELSE NULL
-    END AS OriginalPaymentInfo,
+    END AS original_payment_info,
     CASE
         -- Priority calculation logic:
         -- 1. Critical: Large amounts (>$5000) or old transactions (>30 days)
@@ -204,7 +204,7 @@ SELECT
         WHEN ps.SplitAmt BETWEEN 1000 AND 5000 OR DATEDIFF(CURRENT_DATE, pay.PayDate) BETWEEN 15 AND 30 THEN 'High'
         WHEN ps.SplitAmt BETWEEN 200 AND 999 OR DATEDIFF(CURRENT_DATE, pay.PayDate) BETWEEN 7 AND 14 THEN 'Medium'
         ELSE 'Low'
-    END AS Priority
+    END AS priority
 FROM paysplit ps
 LEFT JOIN patient p ON ps.PatNum = p.PatNum
 LEFT JOIN payment pay ON ps.PayNum = pay.PayNum
@@ -226,10 +226,10 @@ UNION ALL
  * but sources data from the adjustment table instead.
  *
  * KEY DIFFERENCES FROM PAYMENT SPLITS:
- * - TransactionType: Always 'Adjustment' to distinguish from payment splits
- * - PayNum: Set to 0 as placeholder since adjustments don't have PayNum
- * - PayTypeName: Maps to adjustment types instead of payment types
- * - Uses AdjAmt instead of SplitAmt (but aliased as SplitAmt for the UNION)
+ * - transaction_type: Always 'Adjustment' to distinguish from payment splits
+ * - pay_num: Set to 0 as placeholder since adjustments don't have PayNum
+ * - pay_type_name: Maps to adjustment types instead of payment types
+ * - Uses AdjAmt instead of SplitAmt (but aliased as split_amt for the UNION)
  * - Uses ABS() for amount thresholds since adjustments can be negative
  *
  * CUSTOMIZATION:
@@ -238,13 +238,13 @@ UNION ALL
  */
 -- Add adjustments with unassigned providers
 SELECT 
-    'Adjustment' AS TransactionType,
-    adj.AdjNum AS TransactionNum,
-    0 AS PayNum,  -- Placeholder since adjustments don't have PayNum
+    'Adjustment' AS transaction_type,
+    adj.AdjNum AS transaction_num,
+    0 AS pay_num,  -- Placeholder since adjustments don't have PayNum
     adj.PatNum,
-    CONCAT(p.LName, ', ', p.FName) AS PatientName,
-    adj.AdjAmt AS SplitAmt,
-    adj.AdjDate AS TransactionDate,
+    CONCAT(p.LName, ', ', p.FName) AS patient_name,
+    adj.AdjAmt AS split_amt,
+    adj.AdjDate AS transaction_date,
     -- Get adjustment type name with improved fallback
     CASE
         WHEN (SELECT d.ItemName 
@@ -262,14 +262,14 @@ SELECT
         WHEN adj.AdjAmt > 0 THEN 'Positive Adjustment'
         WHEN adj.AdjAmt < 0 THEN 'Negative Adjustment'
         ELSE 'Unspecified Adjustment'
-    END AS PayTypeName,
+    END AS pay_type_name,
     adj.ProcNum,
-    adj.AdjNote AS Note,
-    u.UserName AS EnteredBy,
+    adj.AdjNote AS note,
+    u.UserName AS entered_by,
     CASE 
         WHEN prov.FName IS NULL THEN 'Unassigned'
         ELSE CONCAT(prov.LName, ', ', prov.FName)
-    END AS CurrentProvider,
+    END AS current_provider,
     -- Suggested provider based on most recent appointment
     (SELECT 
         CONCAT(prov2.LName, ', ', prov2.FName)
@@ -278,8 +278,8 @@ SELECT
      WHERE a.PatNum = adj.PatNum
        AND a.AptDateTime <= adj.AdjDate
      ORDER BY a.AptDateTime DESC
-     LIMIT 1) AS SuggestedProvider,
-    DATEDIFF(CURRENT_DATE, adj.AdjDate) AS DaysOld,
+     LIMIT 1) AS suggested_provider,
+    DATEDIFF(CURRENT_DATE, adj.AdjDate) AS days_old,
     -- Account balance at time of transaction (rounded to 2 decimal places to avoid floating-point artifacts)
     ROUND(
         (
@@ -302,7 +302,7 @@ SELECT
             ), 0)
         ),
         2
-    ) AS AccountBalance,
+    ) AS account_balance,
     -- Transaction category for better understanding the purpose
     CASE
         WHEN adj.AdjNote LIKE '%write%off%' THEN 'Write-Off'
@@ -311,7 +311,7 @@ SELECT
         WHEN adj.AdjAmt > 0 THEN 'Credit Adjustment'
         WHEN adj.AdjAmt < 0 THEN 'Debit Adjustment'
         ELSE 'Standard Adjustment'
-    END AS TransactionCategory,
+    END AS transaction_category,
     -- Information about related payments for context
     (SELECT CONCAT('Recent payment: ', 
              DATE_FORMAT(relatedpay.PayDate, '%Y-%m-%d'), 
@@ -321,14 +321,14 @@ SELECT
      WHERE relatedps.PatNum = adj.PatNum
      AND ABS(DATEDIFF(relatedpay.PayDate, adj.AdjDate)) < 7  -- Related payments within 7 days
      ORDER BY ABS(DATEDIFF(relatedpay.PayDate, adj.AdjDate))
-     LIMIT 1) AS OriginalPaymentInfo,
+     LIMIT 1) AS original_payment_info,
     CASE
         -- Using ABS() for adjustment amounts since they can be negative
         WHEN ABS(adj.AdjAmt) > 5000 OR DATEDIFF(CURRENT_DATE, adj.AdjDate) > 30 THEN 'Critical'
         WHEN ABS(adj.AdjAmt) BETWEEN 1000 AND 5000 OR DATEDIFF(CURRENT_DATE, adj.AdjDate) BETWEEN 15 AND 30 THEN 'High'
         WHEN ABS(adj.AdjAmt) BETWEEN 200 AND 999 OR DATEDIFF(CURRENT_DATE, adj.AdjDate) BETWEEN 7 AND 14 THEN 'Medium'
         ELSE 'Low'
-    END AS Priority
+    END AS priority
 FROM adjustment adj
 LEFT JOIN patient p ON adj.PatNum = p.PatNum
 LEFT JOIN provider prov ON adj.ProvNum = prov.ProvNum
@@ -346,7 +346,7 @@ AND adj.AdjDate BETWEEN @start_date AND @end_date
  * 
  * This ensures that the most important transactions appear at the top of the report.
  */
-ORDER BY Priority, ABS(SplitAmt) DESC;
+ORDER BY priority, ABS(split_amt) DESC;
 
 /*
  * ===============================================================================
