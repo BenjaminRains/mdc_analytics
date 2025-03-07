@@ -61,14 +61,15 @@
  * The provider listed for completed procedures is often the correct provider
  * for unassigned payment transactions from the same patient.
  */
+-- Dependent CTEs: None
 -- Date filter: Use @start_date to @end_date variables
 SELECT
     proc.ProcNum,
     proc.ProcDate,
     proc.ProvNum,
-    CONCAT(prov.FName, ' ', prov.LName) AS ProviderName,
+    CONCAT(prov.FName, ' ', prov.LName) AS provider_name,
     proc.PatNum,
-    CONCAT(pat.LName, ', ', pat.FName) AS PatientName,
+    CONCAT(pat.LName, ', ', pat.FName) AS patient_name,
     proc.ProcStatus,
     proc.ProcFee
 FROM procedurelog proc
@@ -105,11 +106,11 @@ ORDER BY proc.PatNum, proc.ProcDate DESC;
  */
 SELECT
     u.UserName,
-    ug.Description AS UserGroupName,
-    COUNT(*) AS TransactionCount,
-    SUM(ps.SplitAmt) AS TotalAmount,
-    MIN(ps.DatePay) AS FirstTransaction,
-    MAX(ps.DatePay) AS LastTransaction
+    ug.Description AS user_group_name,
+    COUNT(*) AS transaction_count,
+    SUM(ps.SplitAmt) AS total_amount,
+    MIN(ps.DatePay) AS first_transaction,
+    MAX(ps.DatePay) AS last_transaction
 FROM paysplit ps
 LEFT JOIN userod u ON ps.SecUserNumEntry = u.UserNum
 LEFT JOIN usergroupattach uga ON u.UserNum = uga.UserNum
@@ -138,9 +139,9 @@ ORDER BY COUNT(*) DESC;
  */
 SELECT
     pay.PayType,
-    COALESCE(def.ItemName, CONCAT('Type ', pay.PayType)) AS PayTypeName,
-    COUNT(*) AS TransactionCount,
-    SUM(ps.SplitAmt) AS TotalAmount
+    COALESCE(def.ItemName, CONCAT('Type ', pay.PayType)) AS pay_type_name,
+    COUNT(*) AS transaction_count,
+    SUM(ps.SplitAmt) AS total_amount
 FROM paysplit ps
 INNER JOIN payment pay ON ps.PayNum = pay.PayNum
 LEFT JOIN definition def ON pay.PayType = def.DefNum
@@ -169,16 +170,16 @@ ORDER BY COUNT(*) DESC;
  */
 SELECT
     pat.PatNum,
-    CONCAT(pat.LName, ', ', pat.FName) AS PatientName,
+    CONCAT(pat.LName, ', ', pat.FName) AS patient_name,
     apt.AptDateTime,
     apt.ProvNum,
-    CONCAT(prov.LName, ', ', prov.FName) AS ProviderName,
+    CONCAT(prov.LName, ', ', prov.FName) AS provider_name,
     -- Find the most recent payment date for this patient
     (SELECT MAX(ps.DatePay) 
      FROM paysplit ps 
      WHERE ps.PatNum = pat.PatNum 
      AND ps.ProvNum = 0
-     AND ps.DatePay BETWEEN @start_date AND @end_date) AS LastUnassignedPayment,
+     AND ps.DatePay BETWEEN @start_date AND @end_date) AS last_unassigned_payment,
     -- Calculate days between appointment and payment
     ABS(DATEDIFF(
         apt.AptDateTime, 
@@ -187,7 +188,7 @@ SELECT
          WHERE ps.PatNum = pat.PatNum 
          AND ps.ProvNum = 0
          AND ps.DatePay BETWEEN @start_date AND @end_date)
-    )) AS DaysBetweenAptAndPayment
+    )) AS days_between_apt_and_payment
 FROM patient pat
 INNER JOIN appointment apt ON pat.PatNum = apt.PatNum
 LEFT JOIN provider prov ON apt.ProvNum = prov.ProvNum
@@ -198,7 +199,7 @@ WHERE pat.PatNum IN (
 )
 AND apt.AptDateTime BETWEEN @start_date AND @end_date
 AND apt.AptStatus = 2  -- Completed appointments only
-ORDER BY pat.PatNum, DaysBetweenAptAndPayment;
+ORDER BY pat.PatNum, days_between_apt_and_payment;
 
 -- QUERY_NAME: time_patterns_by_hour
 /*
@@ -216,9 +217,9 @@ ORDER BY pat.PatNum, DaysBetweenAptAndPayment;
  * - Patterns by hour may indicate shift change issues or specific staffing concerns
  */
 SELECT
-    HOUR(DatePay) AS HourOfDay,
-    COUNT(*) AS TransactionCount,
-    FORMAT(AVG(SplitAmt), 2) AS AverageAmount
+    HOUR(DatePay) AS hour_of_day,
+    COUNT(*) AS transaction_count,
+    FORMAT(AVG(SplitAmt), 2) AS average_amount
 FROM paysplit
 WHERE ProvNum = 0
 AND DatePay BETWEEN @start_date AND @end_date
@@ -241,9 +242,9 @@ ORDER BY HOUR(DatePay);
  * - Patterns by weekday may indicate staffing gaps or training issues on specific days
  */
 SELECT
-    DAYNAME(DatePay) AS DayOfWeek,
-    COUNT(*) AS TransactionCount,
-    FORMAT(AVG(SplitAmt), 2) AS AverageAmount
+    DAYNAME(DatePay) AS day_of_week,
+    COUNT(*) AS transaction_count,
+    FORMAT(AVG(SplitAmt), 2) AS average_amount
 FROM paysplit
 WHERE ProvNum = 0
 AND DatePay BETWEEN @start_date AND @end_date
@@ -266,10 +267,10 @@ ORDER BY FIELD(DAYNAME(DatePay), 'Monday', 'Tuesday', 'Wednesday', 'Thursday', '
  * - Patterns by month may indicate seasonal trends or correlate with system updates
  */
 SELECT
-    MONTH(DatePay) AS MonthNumber,
-    MONTHNAME(DatePay) AS MonthName,
-    COUNT(*) AS TransactionCount,
-    FORMAT(AVG(SplitAmt), 2) AS AverageAmount
+    MONTH(DatePay) AS month_number,
+    MONTHNAME(DatePay) AS month_name,
+    COUNT(*) AS transaction_count,
+    FORMAT(AVG(SplitAmt), 2) AS average_amount
 FROM paysplit
 WHERE ProvNum = 0
 AND DatePay BETWEEN @start_date AND @end_date
@@ -298,18 +299,18 @@ ORDER BY MONTH(DatePay);
 SELECT
     ps.SplitNum,
     ps.PatNum,
-    CONCAT(pat.LName, ', ', pat.FName) AS PatientName,
+    CONCAT(pat.LName, ', ', pat.FName) AS patient_name,
     ps.DatePay,
-    ps.DatePay AS TransactionDate,
+    ps.DatePay AS transaction_date,
     ps.SplitAmt,
     ps.PayNum,
     pay.PayType,
     -- Using COALESCE to avoid NULL values in PayTypeName
-    COALESCE(def.ItemName, CONCAT('Type ', pay.PayType)) AS PayTypeName, 
+    COALESCE(def.ItemName, CONCAT('Type ', pay.PayType)) AS pay_type_name, 
     pay.PayNote,
     ps.ProcNum,
-    u.UserName AS EnteredBy,
-    pg.Description AS UserGroup
+    u.UserName AS entered_by,
+    pg.Description AS user_group
 FROM paysplit ps
 INNER JOIN patient pat ON ps.PatNum = pat.PatNum
 INNER JOIN payment pay ON ps.PayNum = pay.PayNum
