@@ -45,7 +45,7 @@
  * - transaction_type: Always 'Adjustment' to distinguish from payment splits
  * - pay_num: Set to 0 as placeholder since adjustments don't have PayNum
  * - pay_type_name: Maps to adjustment types instead of payment types
- * - Uses AdjAmt instead of SplitAmt (but aliased as split_amt for the UNION)
+ * - Uses AdjAmt instead of SplitAmt (but aliased as amount for the UNION)
  * - Uses ABS() for amount thresholds since adjustments can be negative
  *
  * - Dependent CTEs: None
@@ -57,7 +57,7 @@ SELECT
     ps.PayNum,
     ps.PatNum,
     CONCAT(p.LName, ', ', p.FName) AS patient_name,
-    ps.SplitAmt,
+    ps.SplitAmt AS amount,
     pay.PayDate AS transaction_date,
     -- Enhanced payment type display with fallback for special cases
     CASE
@@ -179,7 +179,7 @@ SELECT
     0 AS pay_num,  -- Placeholder since adjustments don't have PayNum
     adj.PatNum,
     CONCAT(p.LName, ', ', p.FName) AS patient_name,
-    adj.AdjAmt AS split_amt,
+    adj.AdjAmt AS amount,
     adj.AdjDate AS transaction_date,
     -- Get adjustment type name with improved fallback
     CASE
@@ -267,4 +267,4 @@ LEFT JOIN provider prov ON adj.ProvNum = prov.ProvNum
 LEFT JOIN userod u ON adj.SecUserNumEntry = u.UserNum
 WHERE adj.ProvNum = 0  -- Unassigned provider
 AND adj.AdjDate BETWEEN @start_date AND @end_date
-ORDER BY priority, ABS(split_amt) DESC;
+ORDER BY priority, ABS(amount) DESC;
