@@ -1,4 +1,4 @@
--- Analyze suspicious split patterns using SuspiciousSplitAnalysis CTE
+-- Analyze suspicious split patterns using SuspiciousSplitAnalysis CTE. threshold can be adjusted
 -- Date filter: Use @start_date to @end_date variables
 -- Include dependent CTE
 <<include:suspicious_split_analysis.sql>>
@@ -14,5 +14,5 @@ SELECT
     split_pattern
 FROM SuspiciousSplitAnalysis
 GROUP BY PayDate, ClaimNum, ProcNum, split_pattern
-HAVING COUNT(PaySplitNum) > 1000  -- Alert threshold
+HAVING COUNT(PaySplitNum) > 500  -- Alert threshold
 ORDER BY split_count DESC;
