@@ -38,15 +38,21 @@ Requirements:
     - SQL file should be structured according to expected patterns
 """
 
-import os
-import sys
-import re
-import logging
-import pandas as pd
-import argparse
-from datetime import datetime, date
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, NamedTuple, Any
+import argparse
+import os
+import re
+import sys
+import time
+import logging
+import json
+import csv
+import mysql.connector
+import pandas as pd
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+from dataclasses import dataclass
+from typing import Dict, List, Tuple, Optional, Any, Set, Union
 from dotenv import load_dotenv
 
 # Add the src directory to the path to import project modules
@@ -57,38 +63,45 @@ sys.path.append(str(src_path))
 env_path = src_path / "src" / ".env"
 load_dotenv(dotenv_path=env_path)
 
-# Import shared utilities
-from scripts.validation.payment_split.utils.sql_export_utils import (
-    DateRange, apply_date_parameters, read_sql_file, sanitize_table_name,
-    export_to_csv
-)
-
 # Import other required modules
 from src.connections.factory import ConnectionFactory, get_valid_databases
 
+# Define paths
+BASE_PATH = Path(__file__).parent
+SCRIPT_PATH = Path(__file__).resolve()
+QUERY_PATH = BASE_PATH / "queries"
+CTE_PATH = QUERY_PATH / "ctes"
+DATA_DIR = BASE_PATH / "data" / "unearned_income"
+LOG_DIR = BASE_PATH / "logs"
+
+# Ensure directories exist
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+LOG_DIR.mkdir(exist_ok=True)
+
 def init_logging():
-    """Initialize basic console logging for startup messages.
-    This will be replaced by setup_logging() later.
-    """
-    # Clean up any existing handlers
-    root_logger = logging.getLogger()
-    for handler in root_logger.handlers[:]:
-        root_logger.removeHandler(handler)
+    """Initialize logging to file and console."""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_dir = LOG_DIR
+    log_dir.mkdir(exist_ok=True)
     
-    # Add a single console handler
-    console_handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    console_handler.setFormatter(formatter)
-    root_logger.setLevel(logging.INFO)
-    root_logger.addHandler(console_handler)
+    # Use a consistent file name pattern with timestamp
+    log_file = log_dir / f"log_unearned_income_export_{timestamp}.log"
+    
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler()
+        ]
+    )
+    
+    logging.info(f"Logging to {log_file}")
+    return log_file
 
 # Initialize basic logging
 init_logging()
-
-# Load environment variables from src/.env
-env_path = src_path / "src" / ".env"
-load_dotenv(dotenv_path=env_path)
-logging.info(f"Loading environment from: {env_path}")
 
 # Constants
 SCRIPT_DIR = Path(__file__).parent
@@ -109,13 +122,140 @@ QUERY_DESCRIPTIONS = {
     'unearned_income_unearned_type_summary': 'Summary of unearned income by unearned type'
 }
 
-# CTE files and their dependencies for proper loading order
-CTE_DEPENDENCIES = {
+# Dictionary of query file dependencies
+cte_dependencies = {
+    # Base CTEs (no dependencies)
+    'unearned_income_unearned_type_def.sql': [],  # No dependencies
+    'unearned_income_pay_type_def.sql': [],  # No dependencies
+    'unearned_income_provider_defs.sql': [],  # No dependencies
     'unearned_income_patient_balances.sql': [],  # No dependencies
-    'unearned_income_paytype_def.sql': [],  # No dependencies
-    'unearned_income_provider_def.sql': [],  # No dependencies
-    'unearned_income_unearntype_def.sql': []  # No dependencies
+    
+    # Level 1 CTEs (depend only on base CTEs)
+    'unearned_income_all_payment_types.sql': ['unearned_income_pay_type_def.sql'],
+    'unearned_income_regular_payments.sql': [],
+    'unearned_income_unearned_payments.sql': ['unearned_income_unearned_type_def.sql'],
+    
+    # Level 2 CTEs (depend on Level 1 or base CTEs)
+    'unearned_income_patient_all_payments.sql': [
+        'unearned_income_all_payment_types.sql'
+    ],
+    'unearned_income_patient_regular_payments.sql': [
+        'unearned_income_regular_payments.sql'
+    ],
+    'unearned_income_patient_unearned_income.sql': [
+        'unearned_income_unearned_payments.sql'
+    ],
+    'unearned_income_payment_unearned_type_summary.sql': ['unearned_income_unearned_type_def.sql'],
+    'unearned_income_split_summary_by_type.sql': [],
+    'unearned_income_transaction_counts.sql': [],
+    'unearned_income_patient_payment_summary.sql': []
 }
+
+@dataclass
+class DateRange:
+    """Date range for query parameters."""
+    start_date: str
+    end_date: str
+    
+    def __str__(self):
+        return f"{self.start_date} to {self.end_date}"
+
+
+def apply_date_parameters(sql: str, date_range: DateRange) -> str:
+    """
+    Replace @start_date and @end_date in SQL with actual values.
+    
+    Args:
+        sql: SQL query with @start_date and @end_date parameters
+        date_range: DateRange object with start and end dates
+        
+    Returns:
+        SQL query with parameters replaced
+    """
+    replacements = {
+        "@start_date": f"'{date_range.start_date}'",
+        "@end_date": f"'{date_range.end_date}'"
+    }
+    
+    # Replace each parameter
+    result = sql
+    for param, value in replacements.items():
+        result = result.replace(param, value)
+    
+    return result
+
+
+def read_sql_file(file_path: str) -> str:
+    """
+    Read SQL file content.
+    
+    Args:
+        file_path: Path to SQL file
+        
+    Returns:
+        SQL query as string
+    """
+    with open(file_path, 'r', encoding='utf-8') as f:
+        return f.read()
+
+
+def sanitize_table_name(name: str) -> str:
+    """
+    Sanitize a name for use as a table name.
+    
+    Args:
+        name: Name to sanitize
+        
+    Returns:
+        Sanitized name
+    """
+    return re.sub(r'[^a-zA-Z0-9_]', '_', name)
+
+
+def export_to_csv(df, output_dir, query_name, prefix=None, include_date=True):
+    """
+    Export DataFrame to CSV.
+    
+    Args:
+        df: Pandas DataFrame to export
+        output_dir: Directory to export to
+        query_name: Name of the query (used for filename)
+        prefix: Optional prefix for filename
+        include_date: Whether to include date in filename
+        
+    Returns:
+        Path to CSV file
+    """
+    if df is None or df.empty:
+        logging.warning(f"No data to export for {query_name}")
+        return None
+    
+    # Create output directory if it doesn't exist
+    if not isinstance(output_dir, Path):
+        output_dir = Path(output_dir)
+    output_dir.mkdir(exist_ok=True, parents=True)
+    
+    # Create filename with optional prefix
+    if prefix:
+        filename = f"{prefix}_{query_name}"
+    else:
+        filename = f"{query_name}"
+    
+    # Add date if requested - now at the end before the extension
+    if include_date:
+        date_str = datetime.now().strftime("%Y%m%d")
+        filename = f"{filename}_{date_str}.csv"
+    else:
+        filename = f"{filename}.csv"
+    
+    # Full path to CSV file
+    csv_path = output_dir / filename
+    
+    # Export to CSV
+    df.to_csv(csv_path, index=False)
+    logging.info(f"Exported {len(df)} rows to {csv_path}")
+    
+    return csv_path
 
 def get_ctes(date_range: DateRange = None) -> str:
     """
@@ -181,10 +321,10 @@ def get_ctes(date_range: DateRange = None) -> str:
     
     # Ensure the primary CTEs are included (these are fundamental building blocks)
     base_ctes = [
-        "unearned_income_unearntype_def.sql",  # UnearnedType definitions first
-        "unearned_income_paytype_def.sql",     # PayType definitions next
-        "unearned_income_provider_defs.sql",   # Provider definitions (note: plural "defs")
-        "unearned_income_patient_balances.sql" # Patient balances last as they may use the other CTEs
+        "unearned_income_unearned_type_def.sql",  # UnearnedType definitions first
+        "unearned_income_pay_type_def.sql",     # PayType definitions next
+        "unearned_income_provider_defs.sql",    # Provider definitions
+        "unearned_income_patient_balances.sql"  # Patient balances
     ]
     
     for cte in base_ctes:
@@ -248,11 +388,21 @@ def get_ctes(date_range: DateRange = None) -> str:
             # Clean up content - remove empty lines and trim whitespace
             cte_content = "\n".join(line for line in cte_content.split("\n") if line.strip())
                 
-            # Add a comment indicating the source file, with minimal whitespace
-            cte_with_comment = f"""-- From {cte_file_path.name}
-{cte_content.strip()}"""
+            # Remove comments to avoid parser issues
+            cte_content = re.sub(r'/\*.*?\*/', '', cte_content, flags=re.DOTALL)  # Remove multi-line comments
+            cte_content = re.sub(r'--.*?(\n|$)', '\n', cte_content)  # Remove single-line comments
+                
+            # Strip all extra whitespace completely to create the most compact CTE possible
+            cte_content = re.sub(r'\s+', ' ', cte_content)
             
-            return cte_with_comment
+            # Replace common multi-space patterns with single spaces
+            cte_content = re.sub(r'\(\s+', '(', cte_content)
+            cte_content = re.sub(r'\s+\)', ')', cte_content)
+            cte_content = re.sub(r'\s+,', ',', cte_content)
+            cte_content = re.sub(r',\s+', ', ', cte_content)
+            
+            # Format as a single-line CTE with minimal whitespace for maximum compatibility
+            return cte_content.strip()
         
         except Exception as e:
             logging.error(f"{'  ' * indent_level}Error loading CTE file {cte_file_path}: {str(e)}")
@@ -284,20 +434,33 @@ def get_ctes(date_range: DateRange = None) -> str:
             elif not cte_file.exists():
                 logging.warning(f"Required CTE file not found: {cte_name}")
     
-    # Join all CTEs with appropriate separators - don't add comma after the last CTE
+    # Join all CTEs with appropriate separators - ensure compact formatting for MariaDB compatibility
     combined_ctes = ""
+    valid_ctes = []
+    
     for i, cte in enumerate(all_ctes):
-        if i > 0:
-            # Add a comma after the previous CTE
-            combined_ctes += ",\n"
+        # Extract the CTE name from the SQL
+        cte_name_match = re.search(r'(\w+)\s+AS\s*\(', cte)
+        if not cte_name_match:
+            logging.warning(f"Couldn't extract CTE name from content, skipping: {cte[:50]}...")
+            continue
+            
+        cte_name = cte_name_match.group(1)
+        valid_ctes.append(cte)
+    
+    # Only combine if we have valid CTEs
+    if valid_ctes:
+        for i, cte in enumerate(valid_ctes):
+            # If not the first CTE, add a comma
+            if i > 0:
+                combined_ctes += ", "
+            
+            # Add this CTE definition
+            combined_ctes += cte
         
-        # Add the current CTE (trimmed to remove any leading/trailing whitespace)
-        combined_ctes += cte.strip()
-    
-    # Add a trailing newline for readability
-    combined_ctes += "\n"
-    
-    logging.info(f"Combined {len(all_ctes)} CTEs into query structure")
+        logging.info(f"Combined {len(valid_ctes)} CTEs into query structure")
+    else:
+        logging.warning(f"No valid CTEs found to combine")
     
     return combined_ctes
 
@@ -391,50 +554,163 @@ def get_query(query_name: str, ctes: str = None, date_range: DateRange = None) -
             # Remove the include directive to avoid SQL syntax errors
             query_content = query_content.replace(f'<<include:{include_path}>>', f"-- Missing include: {include_path}")
     
+    # Remove comments from the query to avoid parser issues
+    query_content = re.sub(r'/\*.*?\*/', '', query_content, flags=re.DOTALL)  # Remove multi-line comments
+    query_content = re.sub(r'--.*?(\n|$)', '\n', query_content)  # Remove single-line comments
+    
+    # Special case handling for problematic queries
+    if query_name == 'unearned_income_main_transactions':
+        # Fix for the missing LEFT JOIN UnearnedIncomeUnearnedTypeDef
+        if 'LEFT JOIN UnearnedIncomeUnearnedTypeDef' in query_content:
+            logging.info(f"Fixing missing reference to UnearnedIncomeUnearnedTypeDef in {query_name}")
+            # Replace the JOIN with a direct query to get the unearned type name
+            query_content = query_content.replace(
+                'LEFT JOIN UnearnedIncomeUnearnedTypeDef ud ON ud.DefNum = ps.UnearnedType',
+                "-- Replaced with inline query\n"
+            )
+            # Replace references to ud.UnearnedTypeName with a direct lookup
+            query_content = query_content.replace(
+                'ud.UnearnedTypeName',
+                "(SELECT def.ItemName FROM definition def WHERE def.DefNum = ps.UnearnedType)"
+            )
+            
+        # Fix for the missing LEFT JOIN UnearnedIncomePayTypeDef
+        if 'LEFT JOIN UnearnedIncomePayTypeDef pd' in query_content:
+            logging.info(f"Fixing missing reference to UnearnedIncomePayTypeDef in {query_name}")
+            # Replace the JOIN with a direct query to get the pay type name
+            query_content = query_content.replace(
+                'LEFT JOIN UnearnedIncomePayTypeDef pd ON pd.DefNum = pm.PayType',
+                "-- Replaced with inline query\n"
+            )
+            # Replace references to pd.PayTypeName with a direct lookup
+            query_content = query_content.replace(
+                'pd.PayTypeName',
+                "(SELECT def.ItemName FROM definition def WHERE def.DefNum = pm.PayType AND def.Category = 8)"
+            )
+    
+    # Check query structure to determine how to handle it
+    cleaned_content = query_content.strip()
+    
+    # Check for different query patterns
+    is_direct_select = cleaned_content.upper().startswith('SELECT')
+    has_own_with = cleaned_content.upper().startswith('WITH')
+    has_union = 'UNION' in cleaned_content.upper()
+    
+    # Check if query_content starts with what appears to be a CTE name (CapitalizedName AS (...))
+    starts_with_cte_name = re.match(r'^\s*(\w+)\s+AS\s*\(', cleaned_content)
+    
+    # Check for multiple CTE definitions (multiple "Name AS (" patterns)
+    cte_defs = re.findall(r'\b(\w+)\s+AS\s*\(', cleaned_content)
+    has_multiple_ctes = len(cte_defs) > 1
+    
+    # If this query has its own CTEs defined inline, log them
+    if has_multiple_ctes:
+        logging.info(f"Query has {len(cte_defs)} inline CTE definitions: {', '.join(cte_defs)}")
+    
     # Prepare SQL with date parameters and CTEs - ensure each statement ends with a semicolon
-    final_query = f"""
--- Set date parameters
-SET @start_date = '{date_range.start_date}';
-SET @end_date = '{date_range.end_date}';
-"""
+    date_params = f"SET @start_date = '{date_range.start_date}'; SET @end_date = '{date_range.end_date}';"
     
     # Add the WITH clause only if CTEs are provided
     if ctes and ctes.strip():
-        logging.info(f"Adding CTEs to query: {query_name}")
+        logging.info(f"Processing query: {query_name} (with shared CTEs)")
         
         # Ensure query_content ends with a semicolon
-        if not query_content.strip().endswith(';'):
-            query_content = query_content.strip() + ';'
+        if not cleaned_content.endswith(';'):
+            cleaned_content = cleaned_content + ';'
+        
+        if is_direct_select:
+            # Direct SELECT query with no CTEs - no need to include shared CTEs
+            # Just execute it directly with date parameters
+            final_query = f"{date_params} {cleaned_content}"
+            logging.info(f"Query type: Direct SELECT statement (executing without CTEs)")
+        elif has_own_with:
+            # Query has its own WITH clause, use as-is without adding shared CTEs
+            final_query = f"{date_params} {cleaned_content}"
+            logging.info(f"Query type: Contains own WITH clause (executing without shared CTEs)")
+        elif starts_with_cte_name or has_multiple_ctes:
+            # This query has CTE definitions but is missing the WITH keyword
+            # We need to add WITH and properly format multiple CTEs with commas
+            logging.info(f"Query type: CTE definitions but missing WITH keyword (adding proper WITH clause)")
             
-        final_query += f"""
--- Common Table Expressions
-WITH
-{ctes.strip()}
--- Main Query from {query_name}.sql
-{query_content}
-"""
+            # Add commas between CTE definitions - this is the critical fix
+            if has_multiple_ctes:
+                # Find all instances of ") Name AS (" and replace with "), Name AS ("
+                modified_content = re.sub(r'\)\s+(\w+)\s+AS\s*\(', r'), \1 AS (', cleaned_content)
+                final_query = f"{date_params} WITH {modified_content}"
+            else:
+                final_query = f"{date_params} WITH {cleaned_content}"
+        elif has_union:
+            # This is a complex query with UNIONs - see if it needs a WITH clause first
+            if starts_with_cte_name or has_multiple_ctes:
+                # This is a query with both CTEs and UNIONs - prioritize the CTE handling
+                logging.info(f"Query type: Contains both CTEs and UNIONs (adding proper WITH clause)")
+                # Add commas between CTE definitions
+                if has_multiple_ctes:
+                    # Find all instances of ") Name AS (" and replace with "), Name AS ("
+                    modified_content = re.sub(r'\)\s+(\w+)\s+AS\s*\(', r'), \1 AS (', cleaned_content)
+                    final_query = f"{date_params} WITH {modified_content}"
+                else:
+                    final_query = f"{date_params} WITH {cleaned_content}"
+            else:
+                # Just a UNION query without CTEs, execute directly
+                final_query = f"{date_params} {cleaned_content}"
+                logging.info(f"Query type: Contains UNIONs (executing directly without CTEs)")
+        else:
+            # Normal query that needs the shared CTEs
+            final_query = f"{date_params} WITH {ctes.strip()} {cleaned_content}"
+            logging.info(f"Query type: Standard query (using shared CTEs)")
     else:
-        logging.warning(f"No CTEs provided for query: {query_name}")
+        logging.info(f"Processing query: {query_name} (no shared CTEs)")
         
         # Ensure query_content ends with a semicolon
-        if not query_content.strip().endswith(';'):
-            query_content = query_content.strip() + ';'
+        if not cleaned_content.endswith(';'):
+            cleaned_content = cleaned_content + ';'
+        
+        # Check if this query appears to reference CTEs directly
+        if starts_with_cte_name or has_multiple_ctes:
+            # The query expects CTEs but doesn't have the WITH keyword
+            logging.info(f"Query type: Contains CTE definitions but missing WITH keyword (adding WITH)")
             
-        final_query += f"""
--- Main Query from {query_name}.sql (no CTEs provided)
-{query_content}
-"""
+            # Add commas between CTE definitions - this is the critical fix
+            if has_multiple_ctes:
+                # Find all instances of ") Name AS (" and replace with "), Name AS ("
+                modified_content = re.sub(r'\)\s+(\w+)\s+AS\s*\(', r'), \1 AS (', cleaned_content)
+                final_query = f"{date_params} WITH {modified_content}"
+            else:
+                final_query = f"{date_params} WITH {cleaned_content}"
+        else:
+            # Just execute the query directly
+            logging.info(f"Query type: Standard query (executing directly)")
+            final_query = f"{date_params} {cleaned_content}"
     
     logging.info(f"Prepared query for {query_name}")
     
     # Create a clean, final version by removing excessive whitespace
     final_query = re.sub(r'\n{3,}', '\n\n', final_query)
     
+    # Convert any multi-line comments to single-line to avoid parser confusion
+    final_query = re.sub(r'/\*.*?\*/', '', final_query, flags=re.DOTALL)  # Remove multi-line comments
+    final_query = re.sub(r'--.*?(\n|$)', '', final_query)  # Remove single-line comments
+    
+    # Since the query is now processed, also check for CTEs that are defined by include directives
+    included_ctes = []
+    
+    # Extract include directives from the query
+    include_pattern = r'<<include:([\w_\.]+)>>'
+    include_matches = re.findall(include_pattern, query_content)
+    
+    if include_matches:
+        logging.info(f"Found {len(include_matches)} include directives in {query_name}: {', '.join(include_matches)}")
+        for include_file in include_matches:
+            if include_file in cte_dependencies:
+                included_ctes.append(include_file)
+    
     return {
         'name': query_name,
         'file': f"{query_name}.csv",
         'query': final_query,
-        'description': QUERY_DESCRIPTIONS.get(query_name, "Unknown query")
+        'description': QUERY_DESCRIPTIONS.get(query_name, "Unknown query"),
+        'included_ctes': included_ctes
     }
 
 def get_exports(ctes: str, date_range: DateRange = None) -> list:
@@ -489,18 +765,15 @@ def execute_query(connection, db_name, query_name, query, output_dir=None):
     Execute a query and optionally export the results to CSV.
     
     Args:
-        connection: Database connection factory
+        connection: Database connection
         db_name: Database name
         query_name: Name of the query
         query: SQL query to execute
         output_dir: Optional output directory for CSV export
     
     Returns:
-        Tuple of (DataFrame, csv_path)
+        Path to CSV file
     """
-    df = None
-    csv_path = None
-    
     try:
         # Remove comments from the query to avoid issues
         query_without_headers = re.sub(r'--.*?$', '', query, flags=re.MULTILINE)
@@ -508,52 +781,47 @@ def execute_query(connection, db_name, query_name, query, output_dir=None):
         # Log the first part of the query for debugging
         logging.info(f"Query preview for '{query_name}': {query_without_headers[:500].replace(chr(10), ' ')}...")
         
-        # Connect to the database
-        conn = connection.get_connection()
-        cursor = conn.cursor(dictionary=True)
+        # Get connection and cursor - this matches how test_cte_query works
+        cursor = connection.get_connection().cursor(dictionary=True)
         
-        # Execute the query - Following the successful approach from test_db_connection.py
+        # Execute the query
         logging.info(f"Executing query '{query_name}' with separate statements")
-        try:
-            # Split the query into separate statements by semicolon
-            statements = [stmt.strip() for stmt in query_without_headers.split(';') if stmt.strip()]
+        
+        # Split the query into separate statements by semicolon
+        statements = [stmt.strip() for stmt in query_without_headers.split(';') if stmt.strip()]
+        
+        rows = []
+        for i, stmt in enumerate(statements):
+            if stmt.strip():
+                # Log shorter preview of each statement
+                logging.info(f"Executing statement {i+1}/{len(statements)}: {stmt[:100].replace(chr(10), ' ')}...")
+                cursor.execute(stmt)
+                
+                # Only fetch results from the last statement (the actual query, not the SET commands)
+                if i == len(statements) - 1:
+                    rows = cursor.fetchall()
+                    logging.info(f"Query '{query_name}' returned {len(rows)} rows")
+        
+        # Create a DataFrame from the results
+        if rows:
+            df = pd.DataFrame(rows)
             
-            for i, stmt in enumerate(statements):
-                if stmt.strip():
-                    # Log shorter preview of each statement
-                    logging.info(f"Executing statement {i+1}/{len(statements)}: {stmt[:100].replace(chr(10), ' ')}...")
-                    cursor.execute(stmt)
-                    
-                    # Only fetch results from the last statement (the actual query, not the SET commands)
-                    if i == len(statements) - 1:
-                        rows = cursor.fetchall()
-                        logging.info(f"Query '{query_name}' returned {len(rows)} rows")
-                        
-                        # Create a DataFrame from the results
-                        if rows:
-                            df = pd.DataFrame(rows)
-                            
-                            # Export to CSV if an output directory is provided
-                            if output_dir and not df.empty:
-                                csv_path = export_to_csv(
-                                    df, 
-                                    output_dir, 
-                                    query_name, 
-                                    prefix='unearned_income', 
-                                    include_date=False  # Unearned income uses fixed descriptive names
-                                )
-            
-        except Exception as sql_err:
-            logging.error(f"SQL Error executing query '{query_name}': {sql_err}")
-            logging.error(f"SQL Statement causing the error (first 1000 chars):\n{query_without_headers[:1000]}")
-            
+            # Export to CSV if an output directory is provided
+            if output_dir and not df.empty:
+                csv_path = export_to_csv(
+                    df, 
+                    output_dir, 
+                    query_name
+                )
+                return csv_path
+                
         cursor.close()
+        return None
         
     except Exception as e:
-        logging.error(f"Error executing query '{query_name}': {e}")
-        logging.error(f"Query (first 500 chars): {query_without_headers[:500]}...")  # Log first 500 chars of query
-        
-    return df, csv_path
+        logging.error(f"SQL Error executing query '{query_name}': {str(e)}")
+        logging.error(f"SQL Statement causing the error (first 1000 chars):\n{query_without_headers[:1000]}")
+        raise
 
 def test_cte_query(connection, db_name, date_range):
     """
@@ -622,195 +890,136 @@ def test_cte_query(connection, db_name, date_range):
 
 def extract_report_data(start_date, end_date, db_name=None):
     """
-    Extract and export unearned income data
+    Extract report data from the database.
     
     Args:
-        start_date: Start date in YYYY-MM-DD format
-        end_date: End date in YYYY-MM-DD format
-        db_name: Database name to connect to (optional)
+        start_date: Start date for the report
+        end_date: End date for the report
+        db_name: Database name to use (optional)
         
     Returns:
-        Dictionary of query results
+        Dictionary with query results
     """
-    # Create output directory if it doesn't exist
-    output_dir = DATA_DIR
-    os.makedirs(output_dir, exist_ok=True)
-    logging.debug(f"Output directory: {output_dir.resolve()}")
+    # Set up date range
+    date_range = DateRange(start_date=start_date, end_date=end_date)
+    logging.info(f"Using date range: {date_range}")
     
-    # Convert string dates to DateRange object
-    date_range = DateRange.from_strings(start_date, end_date)
-    logging.info(f"Using date range: {start_date} to {end_date}")
+    # Get CTEs
+    ctes = get_ctes(date_range)
     
-    # Load and combine all CTEs
-    try:
-        ctes = get_ctes(date_range)
-        logging.info(f"Loaded CTEs successfully")
-    except Exception as e:
-        logging.error(f"Error loading CTEs: {str(e)}")
-        ctes = ""
-    
-    # Get export configurations
+    # Get exports
     exports = get_exports(ctes, date_range)
-    
-    if not exports:
-        logging.error("No queries found for export")
-        return {}
-    
-    # Use default database if none is specified
-    if not db_name:
-        db_name = "opendental_analytics_opendentalbackup_02_28_2025"
-        logging.info(f"No database specified, using default: {db_name}")
     
     # Connect to the database
     logging.info(f"Connecting to database: {db_name}")
     connection = ConnectionFactory.create_connection('local_mariadb', database=db_name)
     
     # First test a simple CTE query to verify database connectivity and CTE functionality
-    cte_test_result = test_cte_query(connection, db_name, date_range)
-    if not cte_test_result:
-        logging.warning("CTE test query failed, proceeding anyway but queries may fail")
-    else:
-        logging.info("CTE test query successful, proceeding with main queries")
+    test_cte_query(connection, db_name, date_range)
     
-    # Execute each query and store results
+    # Execute each query
     query_results = {}
-    
     for export in exports:
         query_name = export['name']
         query = export['query']
+        description = export.get('description', '')
         
-        logging.info(f"Processing query: '{query_name}' - {QUERY_DESCRIPTIONS.get(query_name, 'Unknown query')}")
-        
-        # Execute the query
-        df, csv_path = execute_query(connection, db_name, query_name, query, output_dir)
-        
-        # Store results
-        result = {
-            'status': 'SUCCESS' if df is not None and not df.empty else 'FAILED',
-            'rows': len(df) if df is not None else 0,
-            'output_file': csv_path,
-            'description': QUERY_DESCRIPTIONS.get(query_name, 'Unknown query')
-        }
-        
-        query_results[query_name] = result
+        try:
+            logging.info(f"Processing query: '{query_name}' - {description}")
+            
+            # Execute the query
+            output_file = execute_query(connection, db_name, query_name, query, output_dir=DATA_DIR)
+            
+            # Store results
+            query_results[query_name] = {
+                'status': 'SUCCESS',
+                'description': description,
+                'output_file': output_file,
+                'rows': 0  # We don't have the row count here anymore
+            }
+        except Exception as e:
+            logging.error(f"Error executing query '{query_name}': {str(e)}")
+            query_results[query_name] = {
+                'status': 'ERROR',
+                'description': description,
+                'error': str(e)
+            }
+    
+    # Close the connection
+    connection.close()
     
     return query_results
 
-
-def setup_logging():
-    """Configure complete logging for the script, replacing the initial setup.
-    
-    This configures both file and console logging with proper formatting.
-    The file logger uses a timestamp in the filename to create unique log files.
-    """
-    # Create log directory if it doesn't exist
-    os.makedirs(LOG_DIR, exist_ok=True)
-    
-    # Set up logging with timestamp in filename
-    log_file = LOG_DIR / f"unearned_income_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-    
-    # Clear existing handlers from init_logging()
-    root_logger = logging.getLogger()
-    for handler in root_logger.handlers[:]:
-        root_logger.removeHandler(handler)
-    
-    # Configure new handlers
-    file_handler = logging.FileHandler(log_file)
-    console_handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
-    
-    root_logger.setLevel(logging.INFO)
-    root_logger.addHandler(file_handler)
-    root_logger.addHandler(console_handler)
-    
-    logging.info(f"Logging to {log_file}")
-    return log_file
-
-
 def main():
     """Main function to run the export process"""
-    # Set up logging
-    log_file = setup_logging()
+    # Configure logging
+    log_file = init_logging()
     
-    # Get list of valid databases
-    valid_databases = get_valid_databases('LOCAL_VALID_DATABASES')
-    default_database = os.getenv('MARIADB_DATABASE', 'opendental_analytics_opendentalbackup_02_28_2025')
-    
-    # Parse command-line arguments
-    parser = argparse.ArgumentParser(description='Export Unearned Income Data')
-    parser.add_argument('--start-date', required=True,
-                        help='Start date (YYYY-MM-DD) - Required parameter that will replace @start_date in SQL')
-    parser.add_argument('--end-date', required=True,
-                        help='End date (YYYY-MM-DD) - Required parameter that will replace @end_date in SQL')
-    
-    # Show valid databases in help text
-    db_help = f"Database name (optional, default: {default_database}). Valid options: {', '.join(valid_databases)}" if valid_databases else "Database name"
-    parser.add_argument('--database', help=db_help, default=None)
-    
-    try:
-        args = parser.parse_args()
-    except SystemExit:
-        print("\nError: Both --start-date and --end-date are required arguments.")
-        print("Example usage: python export_unearned_income_data.py --start-date 2025-01-01 --end-date 2025-02-28 [--database DB_NAME]")
-        sys.exit(1)
-    
-    # Use default database if none is specified
-    if not args.database:
-        if default_database:
-            logging.info(f"No database specified, using default from environment: {default_database}")
-            # Note: We don't set args.database here, letting extract_report_data use its default
-        else:
-            logging.warning("No database specified and no default found in environment, will use hardcoded default")
-    elif valid_databases and args.database not in valid_databases:
-        logging.warning(f"Warning: Specified database '{args.database}' is not in the list of valid databases: {', '.join(valid_databases)}")
-        print(f"Warning: Specified database '{args.database}' is not in the list of valid databases")
-        print(f"Valid options: {', '.join(valid_databases)}")
-        print("Proceeding with the specified database anyway...")
-    
+    # Print a clear header to separate runs
     logging.info("="*80)
     logging.info("STARTING EXPORT PROCESS: UNEARNED INCOME DATA")
-    logging.info(f"Query directory: {QUERY_PATH.resolve()}")
-    logging.info(f"CTE directory: {CTE_PATH.resolve()}")
-    logging.info(f"Output directory: {DATA_DIR.resolve()}")
-    logging.info(f"Date range: {args.start_date} to {args.end_date}")
-    logging.info(f"Database: {args.database or '(using default)'}")
-    logging.info(f"Available queries: {', '.join(QUERY_DESCRIPTIONS.keys())}")
+    
+    # Print paths for context and debugging
+    logging.info(f"Query directory: {QUERY_PATH}")
+    logging.info(f"CTE directory: {CTE_PATH}")
+    logging.info(f"Output directory: {DATA_DIR}")
+    
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Export unearned income data')
+    parser.add_argument('--start-date', type=str, help='Start date (YYYY-MM-DD)')
+    parser.add_argument('--end-date', type=str, help='End date (YYYY-MM-DD)')
+    parser.add_argument('--db-name', type=str, help='Database name to use')
+    parser.add_argument('--test', action='store_true', help='Test mode - execute a simple query only')
+    args = parser.parse_args()
+    
+    # Determine date range
+    if args.start_date and args.end_date:
+        start_date = args.start_date
+        end_date = args.end_date
+    else:
+        # Default to YTD if not specified
+        # For testing, it's better to use a wider range to ensure data exists
+        start_date = '2024-01-01'  # First day of current year
+        end_date = '2025-02-28'    # Default to last month end
+    
+    db_name = args.db_name
+    
+    if not db_name:
+        db_name = os.environ.get('ODDB_NAME')
+        logging.info(f"No database specified, using default from environment: {db_name}")
+    
+    logging.info(f"Date range: {start_date} to {end_date}")
+    logging.info(f"Database: {db_name if db_name else '(using default)'}")
+    
+    # List the available query files
+    query_files = [f.stem for f in QUERY_PATH.glob("unearned_income_*.sql")]
+    logging.info(f"Available queries: {', '.join(sorted(query_files))}")
     logging.info("="*80)
     
-    # Extract and export data
-    query_results = extract_report_data(
-        start_date=args.start_date,
-        end_date=args.end_date,
-        db_name=args.database
-    )
+    # Extract and export the data
+    if args.test:
+        # Run just a test query
+        connection = None
+        try:
+            connection = ConnectionFactory.create_connection('local_mariadb', database=db_name)
+            test_cte_query(connection, db_name, DateRange(start_date, end_date))
+        except Exception as e:
+            logging.error(f"Error executing test query: {str(e)}")
+        finally:
+            if connection:
+                connection.close()
+    else:
+        # Run the full export
+        try:
+            extract_report_data(start_date, end_date, db_name)
+        except Exception as e:
+            logging.error(f"Error in export process: {str(e)}")
+            import traceback
+            logging.error(traceback.format_exc())
     
-    # Print summary of results
-    if query_results:
-        logging.info("="*80)
-        logging.info("QUERY EXECUTION SUMMARY:")
-        print("\nEXPORT SUMMARY:")
-        print("="*80)
-        
-        for query_name, result in query_results.items():
-            status = "✅" if result['status'] == 'SUCCESS' else "❌"
-            description = result.get('description', 'No description')
-            output_file = result.get('output_file', 'No output file')
-            rows = result.get('rows', 0)
-            
-            logging.info(f"{status} {query_name}: {rows} rows - {description}")
-            print(f"{status} {query_name}: {rows} rows - {description}")
-            if output_file and output_file != 'No output file':
-                print(f"   Output: {output_file}")
-            
-        logging.info("="*80)
-        print("="*80)
-    
+    logging.info("="*80)
     logging.info("EXPORT PROCESS COMPLETED")
-    print("\nExport process completed.")
     print(f"Log file: {log_file}")
-
 
 if __name__ == "__main__":
     main() 
