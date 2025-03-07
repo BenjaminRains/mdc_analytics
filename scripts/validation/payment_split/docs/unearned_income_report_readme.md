@@ -6,11 +6,19 @@ The Unearned Income Report is designed to track and analyze payments that have n
 
 ## Business Context
 
-Unearned income represents money received by the practice that has not yet been "earned" by providing dental services. This includes:
+Unearned income represents money received by the practice that has not yet been "earned" by providing dental services. In OpenDental, these are represented by **non-zero** UnearnedType values in the paysplit table:
 
-- **Prepayments** (UnearnedType = 288): Payments received before procedures are performed (10.9% of splits)
-- **Treatment Plan Prepayments** (UnearnedType = 439): Deposits specifically for treatment plans (0.2% of splits)
-- **Other Unearned Types**: Any other non-zero UnearnedType values
+- **Prepayments** (UnearnedType = 288): Payments received before procedures are performed (0.67% of splits)
+- **Treatment Plan Prepayments** (UnearnedType = 439): Deposits specifically for treatment plans (0.02% of splits)
+- **Other Unearned Types**: Any other non-zero UnearnedType values defined in the definition table
+
+**IMPORTANT**: UnearnedType = 0 (99.31% of splits) is NOT classified as unearned income in OpenDental. It is the default payment type and does not appear in the definition table. Only payments with UnearnedType > 0 should be considered true unearned income for analysis purposes.
+
+As confirmed in the OpenDental manual:
+1. The UnearnedType field is specifically used to "designate a split as Unearned/Prepayment"
+2. Regular payments (Type 0) are handled differently from unearned income in the system
+3. Income transfers can move unallocated income to unearned types, but this is an explicit process
+4. The OpenDental UI only shows unearned types (288, 439) in unearned income reports and totals
 
 Tracking unearned income is critical for:
 1. Accurate financial reporting
@@ -18,6 +26,29 @@ Tracking unearned income is critical for:
 3. Patient account management
 4. Cash flow analysis
 5. Identifying funds that may need to be applied to procedures
+
+## Technical Implementation of UnearnedType in OpenDental
+
+The `UnearnedType` field in the paysplit table serves as a classification mechanism with these key behaviors:
+
+1. **Default Behavior**: When no special designation is needed, UnearnedType = 0 is used (regular income)
+
+2. **Unallocated Payments**: If there is no procedure attached to a paysplit, it "defaults to the type set in Preferences, _Default unearned type for unallocated paysplits_" 
+
+3. **Income Allocation Process**: 
+   - UnearnedType values appear when creating manual payment splits in the Payment window
+   - When allocating unearned income to procedures, the system creates negative splits with the unearned type and positive splits attached to procedures
+   - The Income Transfer Manager can move unallocated payments to the default unearned type
+
+4. **Allocation Rules**:
+   - When UnearnedType > 0, the payment appears in the "Unearned" total in the Account module
+   - Users can hover over this total to see a breakdown by unearned type
+   - Allocations try to match provider, patient, and clinic combinations when redistributing funds
+
+5. **Database Representation**:
+   - UnearnedType values are stored as DefNum references to the definition table
+   - Type 0 does not exist in the definition table because it's the system default
+   - Types 288 and 439 are specifically defined under Category 29 in the definition table
 
 ## Report Components
 
