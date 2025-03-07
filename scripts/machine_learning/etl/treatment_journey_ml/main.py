@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Optional
 
 from scripts.etl.base.etl_base import ETLJob
-from scripts.base.index_manager import IndexManager
+from scripts.validation_development.index_manager import IndexManager
 from src.connections.factory import ConnectionFactory
 from src.file_paths import DataPaths
 from .transform import transform_data, calculate_metrics
