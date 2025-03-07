@@ -9,12 +9,12 @@ Purpose:
 
 Analysis Guide:
 ------------------------
-This query produces a single result set with three sections (identified by the 'Section' column):
+This query produces a single result set with three sections (identified by the 'section' column):
 'All Payment Types', 'Regular Payments', and 'Unearned Income'.
 
 Key Analysis Steps:
-1. Filter by Section for focused analysis (e.g., df[df['Section']=='All Payment Types'])
-2. Convert 'Payment Month' to datetime: df['Date'] = pd.to_datetime(df['Payment Month'] + '-01')
+1. Filter by Section for focused analysis (e.g., df[df['section']=='All Payment Types'])
+2. Convert 'payment_month' to datetime: df['date'] = pd.to_datetime(df['payment_month'] + '-01')
 3. Analyze payment methods over time using pivot tables
 4. Compare regular vs unearned payment patterns
 5. Visualize with stacked charts to show payment composition changes
@@ -22,21 +22,21 @@ Key Analysis Steps:
 Sample Code:
 ```python
 # Essential transformations
-df['Date'] = pd.to_datetime(df['Payment Month'] + '-01')
-df_all = df[df['Section'] == 'All Payment Types']
+df['date'] = pd.to_datetime(df['payment_month'] + '-01')
+df_all = df[df['section'] == 'All Payment Types']
 
 # Payment method trend analysis
 method_trend = df_all.pivot_table(
-    values='Total Amount', 
-    index='Date',
-    columns='Payment Type',
+    values='total_amount', 
+    index='date',
+    columns='payment_type',
     aggfunc='sum'
 )
 
 # Regular vs Unearned composition
-composition = df_all.groupby('Date').agg({
-    'Regular Payment Amount': 'sum',
-    'Unearned Income Amount': 'sum'
+composition = df_all.groupby('date').agg({
+    'regular_payment_amount': 'sum',
+    'unearned_income_amount': 'sum'
 })
 ```
 
@@ -53,9 +53,9 @@ Date Filter: @start_date to @end_date variables
 <<include:unearned_income_regular_payments.sql>>
 <<include:unearned_income_unearned_payments.sql>>
 
-SELECT * FROM unearned_income_all_payment_types
+SELECT * FROM UnearnedIncomeAllPaymentTypes
 UNION ALL
-SELECT * FROM unearned_income_regular_payments
+SELECT * FROM UnearnedIncomeRegularPayments
 UNION ALL
-SELECT * FROM unearned_income_unearned_payments
-ORDER BY `Section`, `Payment Month`, `Total Amount` DESC 
+SELECT * FROM UnearnedIncomeUnearnedPayments
+ORDER BY section, payment_month, total_amount DESC 

@@ -1,8 +1,8 @@
--- unearned_income_payment_unearned_type_summary: Detailed breakdown of payments by unearned type
+-- UnearnedIncomePaymentUnearnedTypeSummary: Detailed breakdown of payments by unearned type
 -- depends on: none
 -- Date filter: Uses @start_date to @end_date variables
 
-unearned_income_payment_unearned_type_summary AS (
+UnearnedIncomePaymentUnearnedTypeSummary AS (
     SELECT 
         CONCAT(
             IFNULL(
@@ -12,17 +12,17 @@ unearned_income_payment_unearned_type_summary AS (
                 CASE WHEN ps.UnearnedType = 0 THEN 'Regular Payment' ELSE 'Unknown' END
             ),
             ' (Type ', CAST(ps.UnearnedType AS CHAR), ')'
-        ) AS 'Payment Category',
-        COUNT(*) AS 'Total Splits',
-        SUM(ps.SplitAmt) AS 'Total Amount',
-        AVG(ps.SplitAmt) AS 'Avg Amount',
-        COUNT(DISTINCT ps.PatNum) AS 'Unique Patients',
-        CASE WHEN ps.UnearnedType = 0 THEN COUNT(*) ELSE 0 END AS 'Regular Payment Splits',
-        CASE WHEN ps.UnearnedType != 0 THEN COUNT(*) ELSE 0 END AS 'Unearned Income Splits',
-        CASE WHEN ps.UnearnedType = 0 THEN SUM(ps.SplitAmt) ELSE 0 END AS 'Regular Payment Amount',
-        CASE WHEN ps.UnearnedType != 0 THEN SUM(ps.SplitAmt) ELSE 0 END AS 'Unearned Income Amount',
-        CASE WHEN ps.UnearnedType = 0 THEN '100.0' ELSE '0.0' END AS '% Regular Payments',
-        CASE WHEN ps.UnearnedType != 0 THEN '100.0' ELSE '0.0' END AS '% Unearned Income',
+        ) AS payment_category,
+        COUNT(*) AS total_splits,
+        SUM(ps.SplitAmt) AS total_amount,
+        AVG(ps.SplitAmt) AS avg_amount,
+        COUNT(DISTINCT ps.PatNum) AS unique_patients,
+        CASE WHEN ps.UnearnedType = 0 THEN COUNT(*) ELSE 0 END AS regular_payment_splits,
+        CASE WHEN ps.UnearnedType != 0 THEN COUNT(*) ELSE 0 END AS unearned_income_splits,
+        CASE WHEN ps.UnearnedType = 0 THEN SUM(ps.SplitAmt) ELSE 0 END AS regular_payment_amount,
+        CASE WHEN ps.UnearnedType != 0 THEN SUM(ps.SplitAmt) ELSE 0 END AS unearned_income_amount,
+        CASE WHEN ps.UnearnedType = 0 THEN '100.0' ELSE '0.0' END AS percent_regular_payments,
+        CASE WHEN ps.UnearnedType != 0 THEN '100.0' ELSE '0.0' END AS percent_unearned_income,
         1 AS sort_order -- Make detail rows appear after summary
     FROM paysplit ps
     WHERE ps.DatePay BETWEEN @start_date AND @end_date

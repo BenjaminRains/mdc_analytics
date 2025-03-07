@@ -1,28 +1,28 @@
--- CTE for regular payments analysis
+-- UnearnedIncomeRegularPayments: CTE for regular payments analysis
 -- Purpose: Isolates regular payment data (UnearnedType = 0) by payment method and date
 -- Dependencies: None
 -- Date filter: @start_date to @end_date
 
-regular_payments AS (
+UnearnedIncomeRegularPayments AS (
     SELECT 
-        'Regular Payments' AS 'Section',
-        DATE_FORMAT(ps.DatePay, '%Y-%m') AS 'Payment Month',
+        'Regular Payments' AS section,
+        DATE_FORMAT(ps.DatePay, '%Y-%m') AS payment_month,
         IFNULL(
             (SELECT def.ItemName 
              FROM definition def 
              WHERE def.DefNum = pm.PayType), 
             'Income Transfer'
-        ) AS 'Payment Type',
-        'Regular Payments' AS 'Payment Category',
-        COUNT(*) AS 'Transaction Count',
-        SUM(ps.SplitAmt) AS 'Total Amount',
-        COUNT(DISTINCT ps.PatNum) AS 'Unique Patients',
-        SUM(ps.SplitAmt) AS 'Regular Payment Amount',
-        0 AS 'Unearned Income Amount',
-        100 AS 'Regular Payment %',
-        AVG(ps.SplitAmt) AS 'Average Payment Amount',
-        NULL AS 'Prepayment Amount',
-        NULL AS 'Treatment Plan Prepayment Amount'
+        ) AS payment_type,
+        'Regular Payments' AS payment_category,
+        COUNT(*) AS transaction_count,
+        SUM(ps.SplitAmt) AS total_amount,
+        COUNT(DISTINCT ps.PatNum) AS unique_patients,
+        SUM(ps.SplitAmt) AS regular_payment_amount,
+        0 AS unearned_income_amount,
+        100 AS regular_payment_percent,
+        AVG(ps.SplitAmt) AS average_payment_amount,
+        NULL AS prepayment_amount,
+        NULL AS treatment_plan_prepayment_amount
     FROM paysplit ps
     INNER JOIN payment pm ON pm.PayNum = ps.PayNum
     WHERE ps.DatePay BETWEEN @start_date AND @end_date

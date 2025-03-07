@@ -11,7 +11,7 @@ Purpose:
 EXECUTION NOTE:
 - This version uses UNION ALL to combine summary and detail queries into a single result set
 - The combined query is optimized for export scripts
-- Results can be filtered by 'Payment Category' in pandas to separate summary from detail rows
+- Results can be filtered by 'payment_category' in pandas to separate summary from detail rows
 - The first row shows the overall summary, followed by individual payment type breakdowns
 
 PANDAS ANALYSIS GUIDE:
@@ -56,7 +56,7 @@ IMPORTANT CONSIDERATIONS:
    monetary amounts instead, which can tell a different story.
 
 3. Patient Overlap: Some patients appear in multiple payment type categories, 
-   so summing 'Unique Patients' across all types will exceed the actual total.
+   so summing 'unique_patients' across all types will exceed the actual total.
 
 4. Financial Flow Analysis: This data is ideal for understanding how money 
    flows through your system - particularly how prepayments are collected in 
@@ -67,25 +67,25 @@ Date Filter: @start_date to @end_date
 */
 
 -- Include external CTE files
-<<include:ctes/unearned_income_split_summary_by_type.sql>>
-<<include:ctes/unearned_income_payment_unearned_type_summary.sql>>
+<<include:unearned_income_split_summary_by_type.sql>>
+<<include:unearned_income_payment_unearned_type_summary.sql>>
 
--- Now combine the results and sort by the explicit sort_order column and then by Total Splits
+-- Now combine the results and sort by the explicit sort_order column and then by total_splits
 SELECT 
-    `Payment Category`,
-    `Total Splits`,
-    `Total Amount`,
-    `Avg Amount`,
-    `Unique Patients`,
-    `Regular Payment Splits`,
-    `Unearned Income Splits`,
-    `Regular Payment Amount`,
-    `Unearned Income Amount`,
-    `% Regular Payments`,
-    `% Unearned Income`
+    payment_category,
+    total_splits,
+    total_amount,
+    avg_amount,
+    unique_patients,
+    regular_payment_splits,
+    unearned_income_splits,
+    regular_payment_amount,
+    unearned_income_amount,
+    percent_regular_payments,
+    percent_unearned_income
 FROM (
-    SELECT * FROM unearned_income_split_summary_by_type
+    SELECT * FROM UnearnedIncomeSplitSummaryByType
     UNION ALL
-    SELECT * FROM unearned_income_payment_unearned_type_summary
+    SELECT * FROM UnearnedIncomePaymentUnearnedTypeSummary
 ) combined
-ORDER BY sort_order, `Total Splits` DESC; 
+ORDER BY sort_order, total_splits DESC; 

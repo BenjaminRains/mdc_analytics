@@ -26,44 +26,44 @@ from datetime import datetime
 df_combined = pd.read_csv('top_patients_combined.csv')
 
 # 2. Split into component dataframes if needed for separate analysis
-df_all = df_combined[df_combined['Payment Type'] == 'All Payment Types']
-df_regular = df_combined[df_combined['Payment Type'] == 'Regular Payments (Type 0)']
-df_unearned = df_combined[df_combined['Payment Type'] == 'Unearned Income (Type != 0)']
+df_all = df_combined[df_combined['payment_type'] == 'All Payment Types']
+df_regular = df_combined[df_combined['payment_type'] == 'Regular Payments (Type 0)']
+df_unearned = df_combined[df_combined['payment_type'] == 'Unearned Income (Type != 0)']
 
 # 3. Data Type Conversions
 for df in [df_combined, df_all, df_regular, df_unearned]:
     # Handle dates - ensure proper datetime format
-    df['First Payment Date'] = pd.to_datetime(df['First Payment Date'])
-    df['Last Payment Date'] = pd.to_datetime(df['Last Payment Date'])
+    df['first_payment_date'] = pd.to_datetime(df['first_payment_date'])
+    df['last_payment_date'] = pd.to_datetime(df['last_payment_date'])
     
     # Round monetary values to 2 decimal places
-    for col in ['Total Amount', 'Regular Payment Amount', 'Unearned Income Amount']:
+    for col in ['total_amount', 'regular_payment_amount', 'unearned_income_amount']:
         df[col] = df[col].round(2)
     
     # Fix any floating point precision issues
-    df['Regular Payment %'] = df['Regular Payment %'].round(2)
+    df['regular_payment_percent'] = df['regular_payment_percent'].round(2)
     
     # Add useful derived columns
-    df['First Month'] = df['First Payment Date'].dt.to_period('M')
-    df['Last Month'] = df['Last Payment Date'].dt.to_period('M')
-    df['Months Active'] = ((df['Last Payment Date'].dt.year - df['First Payment Date'].dt.year) * 12 + 
-                          (df['Last Payment Date'].dt.month - df['First Payment Date'].dt.month))
+    df['first_month'] = df['first_payment_date'].dt.to_period('M')
+    df['last_month'] = df['last_payment_date'].dt.to_period('M')
+    df['months_active'] = ((df['last_payment_date'].dt.year - df['first_payment_date'].dt.year) * 12 + 
+                          (df['last_payment_date'].dt.month - df['first_payment_date'].dt.month))
     
     # Create categorical columns for better analysis
-    df['Payment Category'] = pd.cut(
-        df['Regular Payment %'], 
+    df['payment_category'] = pd.cut(
+        df['regular_payment_percent'], 
         bins=[-0.001, 0.001, 25, 75, 99.999, 100.001], 
         labels=['All Unearned', 'Mostly Unearned', 'Mixed', 'Mostly Regular', 'All Regular']
     )
     
-    df['Duration Category'] = pd.cut(
-        df['Days Between First and Last'],
+    df['duration_category'] = pd.cut(
+        df['days_between_first_and_last'],
         bins=[-1, 0, 30, 90, 180, 365, float('inf')],
         labels=['Same Day', '1-30 Days', '1-3 Months', '3-6 Months', '6-12 Months', '12+ Months']
     )
     
     # Add transaction size metrics
-    df['Avg Transaction Size'] = df['Total Amount'] / df['Transaction Count']
+    df['avg_transaction_size'] = df['total_amount'] / df['transaction_count']
 ```
 
 KEY ANALYSIS TECHNIQUES:
@@ -71,57 +71,57 @@ KEY ANALYSIS TECHNIQUES:
 1. Payment Pattern Analysis:
 ```python
 # Analysis by payment type section
-section_summary = df_combined.groupby('Payment Type').agg({
-    'Patient Number': 'nunique',
-    'Total Amount': 'sum',
-    'Transaction Count': 'sum'
-}).rename(columns={'Patient Number': 'Unique Patients'})
+section_summary = df_combined.groupby('payment_type').agg({
+    'patient_number': 'nunique',
+    'total_amount': 'sum',
+    'transaction_count': 'sum'
+}).rename(columns={'patient_number': 'unique_patients'})
 
 # Segmentation by payment composition
-pattern_summary = df_all.groupby('Payment Category').agg({
-    'Patient Number': 'count',
-    'Total Amount': 'sum',
-    'Transaction Count': 'sum',
-}).rename(columns={'Patient Number': 'Patient Count'})
+pattern_summary = df_all.groupby('payment_category').agg({
+    'patient_number': 'count',
+    'total_amount': 'sum',
+    'transaction_count': 'sum',
+}).rename(columns={'patient_number': 'patient_count'})
 
 # Transaction efficiency (amount per transaction)
-df_all['Amount per Transaction'] = df_all['Total Amount'] / df_all['Transaction Count']
+df_all['amount_per_transaction'] = df_all['total_amount'] / df_all['transaction_count']
 ```
 
 2. Patient Comparison Analysis:
 ```python
 # Find patients with both regular and unearned payments
-common_patients = set(df_regular['Patient Number']) & set(df_unearned['Patient Number'])
-dual_payment_df = df_all[df_all['Patient Number'].isin(common_patients)]
+common_patients = set(df_regular['patient_number']) & set(df_unearned['patient_number'])
+dual_payment_df = df_all[df_all['patient_number'].isin(common_patients)]
 
 # Calculate additional metrics for these patients
-dual_payment_df['Regular:Unearned Ratio'] = dual_payment_df['Regular Payment Amount'] / dual_payment_df['Unearned Income Amount'].replace(0, np.nan)
+dual_payment_df['regular_unearned_ratio'] = dual_payment_df['regular_payment_amount'] / dual_payment_df['unearned_income_amount'].replace(0, np.nan)
 ```
 
 3. Temporal Analysis:
 ```python
 # Cohort analysis by first payment month
-df_all['Cohort'] = df_all['First Payment Date'].dt.to_period('M')
-cohort_summary = df_all.groupby('Cohort').agg({
-    'Patient Number': 'nunique',
-    'Total Amount': 'sum',
-    'Transaction Count': 'sum'
-}).rename(columns={'Patient Number': 'Unique Patients'})
+df_all['cohort'] = df_all['first_payment_date'].dt.to_period('M')
+cohort_summary = df_all.groupby('cohort').agg({
+    'patient_number': 'nunique',
+    'total_amount': 'sum',
+    'transaction_count': 'sum'
+}).rename(columns={'patient_number': 'unique_patients'})
 
 # Payment velocity (amount per day active)
-df_all['Payment Velocity'] = df_all['Total Amount'] / df_all['Days Between First and Last'].replace(0, 1)
+df_all['payment_velocity'] = df_all['total_amount'] / df_all['days_between_first_and_last'].replace(0, 1)
 ```
 
 VISUALIZATION RECOMMENDATIONS:
 ---------------------------------------------------------------------
 ```python
 # 1. Payment Composition for Top Patients
-top10_patients = df_all.nlargest(10, 'Total Amount')
+top10_patients = df_all.nlargest(10, 'total_amount')
 fig, ax = plt.subplots(figsize=(12, 6))
 top10_patients.plot(
     kind='barh', 
-    x='Patient Name',
-    y=['Regular Payment Amount', 'Unearned Income Amount'],
+    x='patient_name',
+    y=['regular_payment_amount', 'unearned_income_amount'],
     stacked=True,
     ax=ax
 )
@@ -132,10 +132,10 @@ plt.tight_layout()
 plt.figure(figsize=(10, 8))
 sns.scatterplot(
     data=df_all,
-    x='Transaction Count', 
-    y='Total Amount',
-    hue='Payment Category',
-    size='Days Between First and Last',
+    x='transaction_count', 
+    y='total_amount',
+    hue='payment_category',
+    size='days_between_first_and_last',
     sizes=(50, 500),
     alpha=0.7
 )
@@ -144,12 +144,12 @@ plt.xlabel('Number of Transactions')
 plt.ylabel('Total Amount ($)')
 
 # 3. Patient Duration and Value
-df_all['Duration Days'] = df_all['Days Between First and Last']
+df_all['duration_days'] = df_all['days_between_first_and_last']
 duration_pivot = df_all.pivot_table(
-    index='Duration Category',
-    values=['Total Amount', 'Patient Number', 'Transaction Count'],
-    aggfunc={'Total Amount': 'sum', 'Patient Number': 'count', 'Transaction Count': 'sum'}
-).rename(columns={'Patient Number': 'Patient Count'})
+    index='duration_category',
+    values=['total_amount', 'patient_number', 'transaction_count'],
+    aggfunc={'total_amount': 'sum', 'patient_number': 'count', 'transaction_count': 'sum'}
+).rename(columns={'patient_number': 'patient_count'})
 ```
 
 POTENTIAL ISSUES TO WATCH FOR:
@@ -175,8 +175,8 @@ subset.
 
 -- Main query using external CTEs
 -- Combine all results and then apply the ORDER BY and LIMIT
-(SELECT * FROM unearned_income_patient_all_payments ORDER BY `Total Amount` DESC LIMIT 100)
+(SELECT * FROM UnearnedIncomePatientAllPayments ORDER BY total_amount DESC LIMIT 100)
 UNION ALL
-(SELECT * FROM unearned_income_patient_regular_payments ORDER BY `Total Amount` DESC LIMIT 100)
+(SELECT * FROM UnearnedIncomePatientRegularPayments ORDER BY total_amount DESC LIMIT 100)
 UNION ALL
-(SELECT * FROM unearned_income_patient_unearned_income ORDER BY `Total Amount` DESC LIMIT 100) 
+(SELECT * FROM UnearnedIncomePatientUnearnedIncome ORDER BY total_amount DESC LIMIT 100) 

@@ -11,7 +11,7 @@ Purpose:
 NOTE FOR PANDAS ANALYSIS:
 - This query outputs 3 rows per month (All, Regular, Unearned categories)
 - Results will need to be reshaped using pivot_table() for proper time series analysis
-- Example: df_pivot = pd.pivot_table(df, index='Month', columns='Payment Category', values=['Total Amount', 'Transaction Count'])
+- Example: df_pivot = pd.pivot_table(df, index='month', columns='payment_category', values=['total_amount', 'transaction_count'])
 - Investigate negative values in Prepayment/Treatment Plan columns which represent application of previously collected prepayments
 
 - Dependencies: None
@@ -20,23 +20,23 @@ NOTE FOR PANDAS ANALYSIS:
 
 -- Monthly trend of all payment types
 SELECT 
-    DATE_FORMAT(ps.DatePay, '%Y-%m') AS 'Month',
-    'All Payment Types' AS 'Payment Category',
-    COUNT(*) AS 'Transaction Count',
-    SUM(ps.SplitAmt) AS 'Total Amount',
+    DATE_FORMAT(ps.DatePay, '%Y-%m') AS month,
+    'All Payment Types' AS payment_category,
+    COUNT(*) AS transaction_count,
+    SUM(ps.SplitAmt) AS total_amount,
     -- Regular payments
-    SUM(CASE WHEN ps.UnearnedType = 0 THEN ps.SplitAmt ELSE 0 END) AS 'Regular Payment Amount',
-    COUNT(CASE WHEN ps.UnearnedType = 0 THEN 1 ELSE NULL END) AS 'Regular Payment Count',
+    SUM(CASE WHEN ps.UnearnedType = 0 THEN ps.SplitAmt ELSE 0 END) AS regular_payment_amount,
+    COUNT(CASE WHEN ps.UnearnedType = 0 THEN 1 ELSE NULL END) AS regular_payment_count,
     -- Unearned income types
-    SUM(CASE WHEN ps.UnearnedType != 0 THEN ps.SplitAmt ELSE 0 END) AS 'Total Unearned Amount',
-    COUNT(CASE WHEN ps.UnearnedType != 0 THEN 1 ELSE NULL END) AS 'Unearned Transaction Count',
+    SUM(CASE WHEN ps.UnearnedType != 0 THEN ps.SplitAmt ELSE 0 END) AS total_unearned_amount,
+    COUNT(CASE WHEN ps.UnearnedType != 0 THEN 1 ELSE NULL END) AS unearned_transaction_count,
     -- Breakdown by unearned income type
-    SUM(CASE WHEN ps.UnearnedType = 288 THEN ps.SplitAmt ELSE 0 END) AS 'Prepayment Amount',
-    SUM(CASE WHEN ps.UnearnedType = 439 THEN ps.SplitAmt ELSE 0 END) AS 'Treatment Plan Prepayment Amount',
-    SUM(CASE WHEN ps.UnearnedType NOT IN (0, 288, 439) AND ps.UnearnedType != 0 THEN ps.SplitAmt ELSE 0 END) AS 'Other Unearned Amount',
+    SUM(CASE WHEN ps.UnearnedType = 288 THEN ps.SplitAmt ELSE 0 END) AS prepayment_amount,
+    SUM(CASE WHEN ps.UnearnedType = 439 THEN ps.SplitAmt ELSE 0 END) AS treatment_plan_prepayment_amount,
+    SUM(CASE WHEN ps.UnearnedType NOT IN (0, 288, 439) AND ps.UnearnedType != 0 THEN ps.SplitAmt ELSE 0 END) AS other_unearned_amount,
     -- Percentage calculations
-    FORMAT((SUM(CASE WHEN ps.UnearnedType = 0 THEN ps.SplitAmt ELSE 0 END) / NULLIF(SUM(ps.SplitAmt), 0)) * 100, 1) AS '% Regular Payments',
-    FORMAT((SUM(CASE WHEN ps.UnearnedType != 0 THEN ps.SplitAmt ELSE 0 END) / NULLIF(SUM(ps.SplitAmt), 0)) * 100, 1) AS '% Unearned Income'
+    FORMAT((SUM(CASE WHEN ps.UnearnedType = 0 THEN ps.SplitAmt ELSE 0 END) / NULLIF(SUM(ps.SplitAmt), 0)) * 100, 1) AS percent_regular_payments,
+    FORMAT((SUM(CASE WHEN ps.UnearnedType != 0 THEN ps.SplitAmt ELSE 0 END) / NULLIF(SUM(ps.SplitAmt), 0)) * 100, 1) AS percent_unearned_income
 FROM paysplit ps
 WHERE ps.DatePay BETWEEN @start_date AND @end_date
 GROUP BY DATE_FORMAT(ps.DatePay, '%Y-%m')
@@ -45,23 +45,23 @@ UNION ALL
 
 -- Monthly trend of regular payments only (Type 0)
 SELECT 
-    DATE_FORMAT(ps.DatePay, '%Y-%m') AS 'Month',
-    'Regular Payments (Type 0)' AS 'Payment Category',
-    COUNT(*) AS 'Transaction Count',
-    SUM(ps.SplitAmt) AS 'Total Amount',
+    DATE_FORMAT(ps.DatePay, '%Y-%m') AS month,
+    'Regular Payments (Type 0)' AS payment_category,
+    COUNT(*) AS transaction_count,
+    SUM(ps.SplitAmt) AS total_amount,
     -- Regular payments
-    SUM(ps.SplitAmt) AS 'Regular Payment Amount',
-    COUNT(*) AS 'Regular Payment Count',
+    SUM(ps.SplitAmt) AS regular_payment_amount,
+    COUNT(*) AS regular_payment_count,
     -- Unearned income types (set to 0 for this category)
-    0 AS 'Total Unearned Amount',
-    0 AS 'Unearned Transaction Count',
+    0 AS total_unearned_amount,
+    0 AS unearned_transaction_count,
     -- Breakdown by unearned income type (set to 0 for this category)
-    0 AS 'Prepayment Amount',
-    0 AS 'Treatment Plan Prepayment Amount',
-    0 AS 'Other Unearned Amount',
+    0 AS prepayment_amount,
+    0 AS treatment_plan_prepayment_amount,
+    0 AS other_unearned_amount,
     -- Percentage calculations
-    '100.0' AS '% Regular Payments',
-    '0.0' AS '% Unearned Income'
+    '100.0' AS percent_regular_payments,
+    '0.0' AS percent_unearned_income
 FROM paysplit ps
 WHERE ps.DatePay BETWEEN @start_date AND @end_date
     AND ps.UnearnedType = 0
@@ -71,33 +71,33 @@ UNION ALL
 
 -- Monthly trend of unearned income only (Type != 0)
 SELECT 
-    DATE_FORMAT(ps.DatePay, '%Y-%m') AS 'Month',
-    'Unearned Income (Type != 0)' AS 'Payment Category',
-    COUNT(*) AS 'Transaction Count',
-    SUM(ps.SplitAmt) AS 'Total Amount',
+    DATE_FORMAT(ps.DatePay, '%Y-%m') AS month,
+    'Unearned Income (Type != 0)' AS payment_category,
+    COUNT(*) AS transaction_count,
+    SUM(ps.SplitAmt) AS total_amount,
     -- Regular payments (set to 0 for this category)
-    0 AS 'Regular Payment Amount',
-    0 AS 'Regular Payment Count',
+    0 AS regular_payment_amount,
+    0 AS regular_payment_count,
     -- Unearned income types
-    SUM(ps.SplitAmt) AS 'Total Unearned Amount',
-    COUNT(*) AS 'Unearned Transaction Count',
+    SUM(ps.SplitAmt) AS total_unearned_amount,
+    COUNT(*) AS unearned_transaction_count,
     -- Breakdown by unearned income type
-    SUM(CASE WHEN ps.UnearnedType = 288 THEN ps.SplitAmt ELSE 0 END) AS 'Prepayment Amount',
-    SUM(CASE WHEN ps.UnearnedType = 439 THEN ps.SplitAmt ELSE 0 END) AS 'Treatment Plan Prepayment Amount',
-    SUM(CASE WHEN ps.UnearnedType NOT IN (0, 288, 439) AND ps.UnearnedType != 0 THEN ps.SplitAmt ELSE 0 END) AS 'Other Unearned Amount',
+    SUM(CASE WHEN ps.UnearnedType = 288 THEN ps.SplitAmt ELSE 0 END) AS prepayment_amount,
+    SUM(CASE WHEN ps.UnearnedType = 439 THEN ps.SplitAmt ELSE 0 END) AS treatment_plan_prepayment_amount,
+    SUM(CASE WHEN ps.UnearnedType NOT IN (0, 288, 439) AND ps.UnearnedType != 0 THEN ps.SplitAmt ELSE 0 END) AS other_unearned_amount,
     -- Percentage calculations
-    '0.0' AS '% Regular Payments',
-    '100.0' AS '% Unearned Income'
+    '0.0' AS percent_regular_payments,
+    '100.0' AS percent_unearned_income
 FROM paysplit ps
 WHERE ps.DatePay BETWEEN @start_date AND @end_date
     AND ps.UnearnedType != 0
 GROUP BY DATE_FORMAT(ps.DatePay, '%Y-%m')
 
 ORDER BY 
-    Month,
+    month,
     CASE 
-        WHEN 'Payment Category' = 'All Payment Types' THEN 1
-        WHEN 'Payment Category' = 'Regular Payments (Type 0)' THEN 2
-        WHEN 'Payment Category' = 'Unearned Income (Type != 0)' THEN 3
+        WHEN payment_category = 'All Payment Types' THEN 1
+        WHEN payment_category = 'Regular Payments (Type 0)' THEN 2
+        WHEN payment_category = 'Unearned Income (Type != 0)' THEN 3
         ELSE 4
     END; 
