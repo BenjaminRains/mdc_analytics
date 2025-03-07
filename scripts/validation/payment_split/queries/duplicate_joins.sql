@@ -14,8 +14,8 @@ Key metrics:
 */
 -- Date filter: Use @start_date to @end_date variables
 -- Include CTEs
-<<include:ctes/payment_split_analysis.sql>>
-<<include:ctes/problem_claim_analysis.sql>>
+<<include:payment_split_analysis.sql>>
+<<include:problem_claim_analysis.sql>>
 
 SELECT * FROM (
     SELECT * FROM PaymentSplitAnalysis
