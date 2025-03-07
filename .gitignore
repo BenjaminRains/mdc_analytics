@@ -8,6 +8,18 @@
 # Ignore database configuration files
 *.db
 
+# Ignore all image file types
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.tif
+*.svg
+*.webp
+*.ico
+
 # Ignore all files in a specific directory
 /temp/*
 !/temp/
