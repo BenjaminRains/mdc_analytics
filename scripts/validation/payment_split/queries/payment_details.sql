@@ -4,8 +4,8 @@
 -- Date filter: Use @start_date to @end_date variables
 
 -- Include CTEs in order of dependency
-<<include:ctes/payment_details_base.sql>>
-<<include:ctes/payment_details_metrics.sql>>
+<<include:payment_details_base.sql>>
+<<include:payment_details_metrics.sql>>
 
 SELECT 
     pm.*,
