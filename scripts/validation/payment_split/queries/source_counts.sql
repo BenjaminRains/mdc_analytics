@@ -1,9 +1,6 @@
--- Insurance vs Patient payment counts
--- Date filter: Use @start_date to @end_date variables
--- Include dependent CTE
+<<include:payment_source_categories.sql>>
 <<include:payment_source_summary.sql>>
 <<include:total_payments.sql>>
-
 SELECT 
     ps.payment_source,
     ps.payment_count,

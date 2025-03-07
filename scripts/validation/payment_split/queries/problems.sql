@@ -1,9 +1,4 @@
--- Detailed problem payment records
--- All issues ordered by priority and amount
--- Date filter: Use @start_date to @end_date variables
--- Include dependent CTE
 <<include:payment_filter_diagnostics.sql>>
-
 SELECT 
     'problem_details' as report_type,
     pfd.PayNum,
@@ -12,17 +7,14 @@ SELECT
     pfd.join_status,
     pfd.split_count,
     pfd.proc_count,
-    -- Problem flags
     pfd.has_multiple_splits_per_proc as is_complex_split,
     pfd.is_large_payment,
     pfd.has_high_split_ratio,
     pfd.has_oversplit_claims,
-    -- Calculated metrics
     CASE 
         WHEN pfd.proc_count > 0 THEN ROUND(pfd.split_count * 1.0 / pfd.proc_count, 1)
         ELSE NULL 
     END as splits_per_proc,
-    -- Priority categorization
     CASE 
         WHEN pfd.has_oversplit_claims = 1 THEN 'High'
         WHEN pfd.has_high_split_ratio = 1 THEN 'High'

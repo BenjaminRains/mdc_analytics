@@ -1,12 +1,4 @@
--- Analyze individual payment details and their split patterns
--- This query helps identify unusual payment behaviors and split patterns. 
--- Note the configurable thresholds for split volume and split difference.
--- Date filter: Use @start_date to @end_date variables
-
--- Include CTEs in order of dependency
-<<include:payment_details_base.sql>>
 <<include:payment_details_metrics.sql>>
-
 SELECT 
     pm.*,
     CASE 

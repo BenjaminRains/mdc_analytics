@@ -1,21 +1,3 @@
-/*
-Payment Split Analysis Query
-===========================
-
-Purpose:
-- Analyzes payment splits, procedures, and insurance relationships
-- Identifies problematic payment patterns
-- Generates summary metrics and detailed problem records
-
-Output Branches:
-1. Summary Branch: Aggregated metrics and patterns
-2. Problem Detail Branch: Individual problematic payments
-
-Date Range: @start_date to @end_date
-*/
--- Date filter: Use @start_date to @end_date variables
--- Include dependent CTEs
-<<include:base_payments.sql>>
 <<include:base_splits.sql>>
 <<include:payment_level_metrics.sql>>
 <<include:payment_method_analysis.sql>>
@@ -25,10 +7,7 @@ Date Range: @start_date to @end_date
 <<include:payment_base_counts.sql>>
 <<include:payment_filter_diagnostics.sql>>
 <<include:problem_payments.sql>>
-
--- Final output: union of summary and problem detail branches
 SELECT * FROM (
-    -- Summary Branch
     SELECT 
         'summary' AS report_type,
         pbc.total_payments AS base_payment_count,
@@ -62,10 +41,7 @@ SELECT * FROM (
     LEFT JOIN PaymentMethodAnalysis pma ON ps.PayType = pma.PayType
     LEFT JOIN InsurancePaymentAnalysis ipa ON 1=1
     GROUP BY pbc.total_payments
-
     UNION ALL
-
-    -- Problem Detail Branch
     SELECT 
         'problem_detail' AS report_type,
         CAST(pfd.PayNum AS CHAR) AS base_payment_count,
@@ -95,11 +71,3 @@ SELECT * FROM (
     JOIN SplitPatternAnalysis spa ON pp.ProcNum = spa.ProcNum
 ) combined_results
 ORDER BY report_type DESC;
-
-/*
-Expected Results:
-- Summary row with aggregated metrics
-- Problem detail rows for non-normal payments
-- Split pattern distribution should match comments
-- Payment counts should align with base metrics
-*/

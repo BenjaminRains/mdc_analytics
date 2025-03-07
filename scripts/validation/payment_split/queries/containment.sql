@@ -1,8 +1,4 @@
--- Analyze suspicious split patterns using SuspiciousSplitAnalysis CTE. threshold can be adjusted
--- Date filter: Use @start_date to @end_date variables
--- Include dependent CTE
 <<include:suspicious_split_analysis.sql>>
-
 SELECT 
     PayDate,
     ClaimNum,

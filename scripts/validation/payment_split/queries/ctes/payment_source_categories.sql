@@ -1,6 +1,3 @@
--- PaymentSourceCategories: Categorize payments by their source (Insurance, Transfer, Refund, or Patient).
--- depends on: none
--- Date filter: Uses @start_date to @end_date
 PaymentSourceCategories AS (
     SELECT 
         p.PayNum,

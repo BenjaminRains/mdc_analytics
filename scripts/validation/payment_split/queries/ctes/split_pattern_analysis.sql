@@ -1,8 +1,4 @@
--- SplitPatternAnalysis: Analyze and categorize payment split patterns.
--- Date filter: Uses @start_date to @end_date
--- Include dependent CTE
 <<include:procedure_payments.sql>>
-
 SplitPatternAnalysis AS (
     SELECT 
         ProcNum,

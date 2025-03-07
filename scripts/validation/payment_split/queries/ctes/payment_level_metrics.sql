@@ -1,6 +1,3 @@
--- PaymentLevelMetrics: Compute basic payment metrics and categorize payments.
--- Date filter: Uses @start_date to @end_date
--- depends on: none
 PaymentLevelMetrics AS (
     SELECT 
         p.PayNum,

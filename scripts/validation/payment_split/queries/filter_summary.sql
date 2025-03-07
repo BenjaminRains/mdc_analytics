@@ -1,22 +1,13 @@
--- Filter summary (consolidated with diagnostic)
--- filter reason breakdown with validation
--- payment counts, amounts and diagnostic metrics by category
--- Date filter: Use @start_date to @end_date variables
--- Include dependent CTEs
-<<include:payment_filter_diagnostics.sql>>
 <<include:filter_stats.sql>>
-
 SELECT 
     fs.filter_reason,
     fs.payment_count,
     fs.percentage,
     fs.total_amount,
     fs.avg_amount,
-    -- Diagnostic metrics calculated directly
     (SELECT AVG(split_count) FROM PaymentFilterDiagnostics WHERE filter_reason = fs.filter_reason) as avg_splits,
     (SELECT MIN(PayAmt) FROM PaymentFilterDiagnostics WHERE filter_reason = fs.filter_reason) as min_amount,
     (SELECT MAX(PayAmt) FROM PaymentFilterDiagnostics WHERE filter_reason = fs.filter_reason) as max_amount,
-    -- Validation flags
     CASE 
         WHEN fs.filter_reason = 'Zero Amount' AND fs.percentage != 13.1 
             THEN 'Unexpected: Should be 13.1%'
@@ -32,7 +23,6 @@ SELECT
             THEN 'Unexpected: Should be 47.2%'
         ELSE 'OK'
     END as validation_check,
-    -- Additional metrics
     fs.complex_split_count,
     fs.large_payment_count,
     fs.simple_payment_count,

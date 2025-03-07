@@ -1,32 +1,7 @@
-/*
-Payment Split Verification Query
-================================
-
-Purpose:
-- Verifies data completeness and integrity
-- Tracks payment progression through processing stages
-- Identifies potential data anomalies or gaps
-- Validates metric consistency across analysis views
-
-Key Metrics:
-- Base payment counts and date ranges
-- Payment type and filter distributions
-- Join relationship verification
-- Data consistency checks
-
--- Date filter: Use @start_date to @end_date variables
-*/
-
--- Include dependent CTEs
 <<include:payment_base_counts.sql>>
-<<include:payment_join_diagnostics.sql>>
 <<include:payment_level_metrics.sql>>
 <<include:payment_filter_diagnostics.sql>>
-
-
--- Verification metrics queries
 SELECT * FROM (
-    -- Base Payment Counts
     SELECT 
         'verification_counts' as report_type,
         'Total Base Payments' as metric,
@@ -34,10 +9,7 @@ SELECT * FROM (
         min_date,
         max_date
     FROM PaymentBaseCounts
-
     UNION ALL
-
-    -- Join Status Distribution
     SELECT 
         'verification_counts' as report_type,
         CONCAT('Join Status: ', join_status) as metric,
@@ -46,10 +18,7 @@ SELECT * FROM (
         MAX(PayDate) as max_date
     FROM PaymentJoinDiagnostics
     GROUP BY join_status
-
     UNION ALL
-
-    -- Payment Type Distribution
     SELECT
         'verification_counts' as report_type,
         CONCAT('Payment Type: ', CAST(PayType AS CHAR), ' (', 
@@ -66,10 +35,7 @@ SELECT * FROM (
         MAX(PayDate) as max_date
     FROM PaymentLevelMetrics
     GROUP BY PayType
-
     UNION ALL
-
-    -- Filter Reason Distribution
     SELECT
         'verification_counts' as report_type,
         CONCAT('Filter: ', filter_reason) as metric,
@@ -79,10 +45,7 @@ SELECT * FROM (
     FROM PaymentFilterDiagnostics pfd
     JOIN PaymentJoinDiagnostics pd ON pfd.PayNum = pd.PayNum
     GROUP BY filter_reason
-
     UNION ALL
-
-    -- Data Consistency Check - Procedure Counts
     SELECT
         'verification_counts' as report_type,
         'Discrepancy: Join vs Filter Missing Procedures' as metric,
@@ -90,10 +53,7 @@ SELECT * FROM (
         (SELECT COUNT(*) FROM PaymentFilterDiagnostics WHERE filter_reason = 'No Procedures') as payment_count,
         NULL as min_date,
         NULL as max_date
-
     UNION ALL
-    
-    -- Split Amount Consistency
     SELECT
         'verification_counts' as report_type,
         'Payments with Split Mismatches' as metric,

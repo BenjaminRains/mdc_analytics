@@ -1,10 +1,6 @@
--- JoinStageCounts: Analyze payment progression through join stages and related metrics.
--- Date filter: Uses @start_date to @end_date
--- Include dependent CTEs
 <<include:payment_base_counts.sql>>
 <<include:payment_join_diagnostics.sql>>
 <<include:payment_level_metrics.sql>>
-
 JoinStageCounts AS (
     SELECT 
         pbc.total_payments as base_count,

@@ -1,6 +1,3 @@
--- ProblemClaimDetails: Detailed analysis of known problematic claims.
--- depends on: none
--- Date filter: Uses @start_date to @end_date
 ProblemClaimDetails AS (
     SELECT 
         cp.ClaimNum,

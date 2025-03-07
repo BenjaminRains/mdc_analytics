@@ -1,8 +1,4 @@
--- PaymentMethodAnalysis: Detailed analysis by payment type.
--- Date filter: Uses @start_date to @end_date
--- Include dependent CTE
 <<include:payment_level_metrics.sql>>
-
 PaymentMethodAnalysis AS (
     SELECT 
         p.PayType,

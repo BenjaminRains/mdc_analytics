@@ -1,8 +1,4 @@
--- PaymentSourceSummary: Summarize payment counts and amounts by payment source.
--- Date filter: Uses @start_date to @end_date
--- Include dependent CTE
 <<include:payment_source_categories.sql>>
-
 PaymentSourceSummary AS (
     SELECT 
         pc.payment_source,

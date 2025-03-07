@@ -1,22 +1,8 @@
-/*
-Duplicate Joins Analysis
-========================
-
-Purpose:
-- Identifies payments with excessive splits or claim linkages
-- Helps detect data quality issues and oversplit claims
-- Provides both payment-level and claim-level details in a single result set
-
-Key metrics:
-- split_count vs claimproc_count ratios
-- Known problematic claim detection
-- Split pattern suspicion scoring
-*/
--- Date filter: Use @start_date to @end_date variables
--- Include CTEs
+<<include:payment_level_metrics.sql>>
+<<include:claim_metrics.sql>>
 <<include:payment_split_analysis.sql>>
+<<include:problem_claim_details.sql>>
 <<include:problem_claim_analysis.sql>>
-
 SELECT * FROM (
     SELECT * FROM PaymentSplitAnalysis
     UNION ALL

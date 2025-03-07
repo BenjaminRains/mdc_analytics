@@ -1,11 +1,5 @@
--- PaymentSplitAnalysis: Analyzes payments with excessive splits or problematic claim linkages
--- depends on: PaymentLevelMetrics, ClaimMetrics
--- Date filter: Uses @start_date to @end_date
-
--- Include dependent CTEs
 <<include:payment_level_metrics.sql>>
 <<include:claim_metrics.sql>>
-
 PaymentSplitAnalysis AS (
     -- Base payment split analysis
     SELECT 

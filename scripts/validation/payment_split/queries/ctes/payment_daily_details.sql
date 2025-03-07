@@ -1,6 +1,3 @@
--- PaymentDailyDetails: Extract daily payment patterns and metrics.
--- depends on: none
--- Date filter: Uses @start_date to @end_date
 PaymentDailyDetails AS (
     SELECT 
         p.PayNum,

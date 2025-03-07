@@ -1,6 +1,3 @@
--- SuspiciousSplitAnalysis: Identify suspicious or abnormal split patterns.
--- depends on: none
--- Date filter: Uses @start_date to @end_date
 SuspiciousSplitAnalysis AS (
     SELECT 
         ps.SplitNum as PaySplitNum,

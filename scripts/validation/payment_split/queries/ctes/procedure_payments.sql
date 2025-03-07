@@ -1,6 +1,3 @@
--- ProcedurePayments: Extract procedure-level payment details.
--- depends on: none
--- Date filter: Uses @start_date to @end_date
 ProcedurePayments AS (
     SELECT 
         pl.ProcNum,

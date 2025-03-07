@@ -1,10 +1,4 @@
--- DailyStats: Aggregate daily payment metrics for pattern analysis
--- depends on: PaymentDailyDetails
--- Date filter: Uses @start_date to @end_date
-
--- Include dependent CTE
 <<include:payment_daily_details.sql>>
-
 DailyStats AS (
     SELECT 
         DATE(pdd.PayDate) as payment_date,

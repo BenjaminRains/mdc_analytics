@@ -1,6 +1,3 @@
--- PaymentDetailsBase: Base payment and split information for detailed analysis.
--- depends on: none
--- Date filter: Uses @start_date to @end_date
 PaymentDetailsBase AS (
     SELECT 
         p.PayNum,

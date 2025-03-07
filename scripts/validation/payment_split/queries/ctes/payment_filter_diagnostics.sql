@@ -1,8 +1,4 @@
--- PaymentFilterDiagnostics: Categorize and filter payments based on diagnostics.
--- Date filter: Uses @start_date to @end_date
--- Include dependent CTE
 <<include:payment_join_diagnostics.sql>>
-
 PaymentFilterDiagnostics AS (
     SELECT 
         pd.PayNum,

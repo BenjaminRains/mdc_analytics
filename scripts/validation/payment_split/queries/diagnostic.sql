@@ -1,16 +1,10 @@
--- Diagnostic summary: advanced diagnostic metrics by filter category. Split patterns, correlation between filter types and issues
--- Date filter: Use @start_date to @end_date variables
--- Include dependent CTE
 <<include:payment_filter_diagnostics.sql>>
-
 SELECT 
     'diagnostic_correlation' as report_type,
     filter_reason,
-    -- Split pattern analysis
     COUNT(*) as payment_count,
     AVG(split_count) as avg_splits,
     ROUND(AVG(split_count * 1.0 / NULLIF(proc_count, 0)), 2) as avg_splits_per_proc,
-    -- Issue correlation
     SUM(has_multiple_splits_per_proc) as complex_split_count,
     SUM(has_multiple_splits_per_proc) * 100.0 / NULLIF(COUNT(*), 0) as pct_complex,
     SUM(is_large_payment) as large_payment_count,

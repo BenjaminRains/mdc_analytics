@@ -1,12 +1,5 @@
--- ProblemClaimAnalysis: Provides detailed analysis of known problematic claims with uniform format
--- depends on: ProblemClaimDetails
--- Date filter: Uses @start_date to @end_date
-
--- Include dependent CTE
 <<include:problem_claim_details.sql>>
-
 ProblemClaimAnalysis AS (
-    -- Problem claim details with payment links
     SELECT 
         NULL as PayNum,
         NULL as PayAmt,

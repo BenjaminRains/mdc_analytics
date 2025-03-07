@@ -1,6 +1,3 @@
--- PaymentBaseCounts: Compute overall payment volume metrics.
--- depends on: none
--- Date filter: Uses @start_date to @end_date
 PaymentBaseCounts AS (
     SELECT 
         'base_counts' as metric,

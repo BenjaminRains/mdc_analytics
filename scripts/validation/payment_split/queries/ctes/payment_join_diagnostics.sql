@@ -1,6 +1,3 @@
--- PaymentJoinDiagnostics: Validate relationships between payments, splits, and procedures.
--- depends on: none
--- Date filter: Uses @start_date to @end_date
 PaymentJoinDiagnostics AS (
     SELECT 
         p.PayNum,

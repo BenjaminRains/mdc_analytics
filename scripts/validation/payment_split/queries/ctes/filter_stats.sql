@@ -1,8 +1,4 @@
--- FilterStats: Compute summary statistics for each payment filter category.
--- Date filter: Uses @start_date to @end_date
--- Include dependent CTE
 <<include:payment_filter_diagnostics.sql>>
-
 FilterStats AS (
     SELECT 
         filter_reason,
