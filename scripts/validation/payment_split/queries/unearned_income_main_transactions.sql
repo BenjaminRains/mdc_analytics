@@ -12,10 +12,10 @@ Purpose:
 Date Filter: @start_date to @end_date
 */
 -- Include dependent CTEs
-<<include:unearned_income_unearned_type_def.sql>>
-<<include:unearned_income_pay_type_def.sql>>
-<<include:unearned_income_provider_defs.sql>>
-<<include:unearned_income_patient_balances.sql>>
+<<include:ctes/unearned_income_unearned_type_def.sql>>
+<<include:ctes/unearned_income_pay_type_def.sql>>
+<<include:ctes/unearned_income_provider_defs.sql>>
+<<include:ctes/unearned_income_patient_balances.sql>>
 
 -- Main query to extract all relevant data for analysis
 SELECT
@@ -23,7 +23,7 @@ SELECT
     ps.SplitNum,
     ps.DatePay AS payment_date,
     ps.UnearnedType,
-    COALESCE(ud.UnearnedTypeName, 'Unknown') AS unearned_type_name,
+    COALESCE(UnearnedIncomeUnearnedTypeDef.unearned_type_name, 'Unknown') AS unearned_type_name,
     ps.SplitAmt,
     CASE 
         WHEN ps.UnearnedType = 0 THEN 'Regular Payment'
@@ -36,7 +36,7 @@ SELECT
     pm.PayNum,
     pm.PayAmt AS total_payment_amount,
     pm.PayType,
-    COALESCE(pd.PayTypeName, 'Income Transfer') AS pay_type_name,
+    COALESCE(UnearnedIncomePayTypeDef.pay_type_name, 'Income Transfer') AS pay_type_name,
     pm.PayDate,
     pm.PayNote,
     
@@ -48,19 +48,19 @@ SELECT
     
     -- Provider Info
     ps.ProvNum,
-    COALESCE(prvd.ProviderName, 'Unassigned') AS provider_name,
+    COALESCE(UnearnedIncomeProviderDefs.provider_name, 'Unassigned') AS provider_name,
     
     -- Balance Info - Using detailed aging data from patient table
-    pb.TotalBalance AS current_patient_balance,
-    pb.Balance0to30 AS balance_0_to_30_days,
-    pb.Balance31to60 AS balance_31_to_60_days,
-    pb.Balance61to90 AS balance_61_to_90_days,
-    pb.BalanceOver90 AS balance_over_90_days,
-    pb.InsuranceEstimate AS insurance_estimate,
-    pb.PercentCurrent AS percent_current_balance,
-    pb.Percent31to60 AS percent_31_to_60_balance,
-    pb.Percent61to90 AS percent_61_to_90_balance,
-    pb.PercentOver90 AS percent_over_90_balance,
+    UnearnedIncomePatientBalances.total_balance AS current_patient_balance,
+    UnearnedIncomePatientBalances.balance_0_to_30 AS balance_0_to_30_days,
+    UnearnedIncomePatientBalances.balance_31_to_60 AS balance_31_to_60_days,
+    UnearnedIncomePatientBalances.balance_61_to_90 AS balance_61_to_90_days,
+    UnearnedIncomePatientBalances.balance_over_90 AS balance_over_90_days,
+    UnearnedIncomePatientBalances.insurance_estimate AS insurance_estimate,
+    UnearnedIncomePatientBalances.percent_current AS percent_current_balance,
+    UnearnedIncomePatientBalances.percent_31_to_60 AS percent_31_to_60_balance,
+    UnearnedIncomePatientBalances.percent_61_to_90 AS percent_61_to_90_balance,
+    UnearnedIncomePatientBalances.percent_over_90 AS percent_over_90_balance,
     
     -- Clinic Info
     ps.ClinicNum,
@@ -76,10 +76,10 @@ SELECT
 FROM paysplit ps
 JOIN payment pm ON pm.PayNum = ps.PayNum
 JOIN patient pt ON pt.PatNum = ps.PatNum
-LEFT JOIN UnearnedIncomeUnearnedTypeDef ud ON ud.DefNum = ps.UnearnedType
-LEFT JOIN UnearnedIncomePayTypeDef pd ON pd.DefNum = pm.PayType
-LEFT JOIN UnearnedIncomeProviderDefs prvd ON prvd.ProvNum = ps.ProvNum
-LEFT JOIN UnearnedIncomePatientBalances pb ON pb.PatNum = ps.PatNum
+LEFT JOIN UnearnedIncomeUnearnedTypeDef ON UnearnedIncomeUnearnedTypeDef.DefNum = ps.UnearnedType
+LEFT JOIN UnearnedIncomePayTypeDef ON UnearnedIncomePayTypeDef.DefNum = pm.PayType
+LEFT JOIN UnearnedIncomeProviderDefs ON UnearnedIncomeProviderDefs.ProvNum = ps.ProvNum
+LEFT JOIN UnearnedIncomePatientBalances ON UnearnedIncomePatientBalances.PatNum = ps.PatNum
 WHERE 
     -- Date filter can be adjusted as needed
     ps.DatePay BETWEEN @start_date AND @end_date
