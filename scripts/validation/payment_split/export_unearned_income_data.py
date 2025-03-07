@@ -212,14 +212,6 @@ def get_ctes(date_range: DateRange = None) -> str:
             # Read the file contents
             cte_content = read_sql_file(str(cte_file_path))
             
-            # Extract CTE name from the first AS statement
-            cte_name_match = re.search(r'(\w+)\s+AS\s*\(', cte_content)
-            original_cte_name = cte_name_match.group(1) if cte_name_match else None
-            
-            # IMPORTANT CHANGE: We'll no longer rename the CTEs in the content
-            # Instead, we'll just add a comment to identify where it came from
-            # This preserves the original CTE names that are referenced in the queries
-            
             # Check for include directives in the content
             include_pattern = r'<<include:([^>]+)>>'
             includes = re.findall(include_pattern, cte_content)
@@ -256,9 +248,8 @@ def get_ctes(date_range: DateRange = None) -> str:
             # Clean up content - remove empty lines and trim whitespace
             cte_content = "\n".join(line for line in cte_content.split("\n") if line.strip())
                 
-            # Add a comment indicating the source file
-            cte_with_comment = f"""
--- From {cte_file_path.name}
+            # Add a comment indicating the source file, with minimal whitespace
+            cte_with_comment = f"""-- From {cte_file_path.name}
 {cte_content}"""
             
             return cte_with_comment
@@ -296,13 +287,15 @@ def get_ctes(date_range: DateRange = None) -> str:
     # Join all CTEs with appropriate separators - don't add comma after the last CTE
     combined_ctes = ""
     for i, cte in enumerate(all_ctes):
+        if i > 0:
+            # Add a comma after the previous CTE
+            combined_ctes += ",\n\n"
+        
+        # Add the current CTE (trimmed to remove any leading/trailing whitespace)
         combined_ctes += cte.strip()
-        if i < len(all_ctes) - 1:
-            # If not the last CTE, add a comma after it
-            combined_ctes += ",\n\n\n"
-        else:
-            # Add spacing after the last CTE
-            combined_ctes += "\n"
+    
+    # Add a trailing newline for readability
+    combined_ctes += "\n"
     
     logging.info(f"Combined {len(all_ctes)} CTEs into query structure")
     
@@ -415,8 +408,8 @@ SET @end_date = '{date_range.end_date}';
             
         final_query += f"""
 -- Common Table Expressions
-WITH {ctes}
-
+WITH 
+{ctes}
 -- Main Query from {query_name}.sql
 {query_content}
 """
