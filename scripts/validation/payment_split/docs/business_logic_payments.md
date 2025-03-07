@@ -22,16 +22,27 @@
   - `UnearnedType` (payment classification)
 
 ### 3. Split Types
-Based on analysis, splits fall into three categories:
-1. **Regular Payments (Type 0)** - 88.9% of splits
-   - Direct application to procedures
-   - Immediate revenue recognition
-2. **Prepayments (Type 288)** - 10.9% of splits
+Based on analysis and OpenDental documentation, splits fall into these categories:
+1. **Regular Payments (Type 0)** - 99.31% of splits
+   - Default payment type (not defined in definition table)
+   - NOT classified as "unearned income" in OpenDental
+   - Most (62.7%) are NOT directly applied to procedures
+   - This is the standard payment type, not a special classification
+2. **Prepayments (Type 288)** - 0.67% of splits
    - Payment received before procedure
    - Held as unearned revenue
-3. **Treatment Plan Prepayments (Type 439)** - 0.2% of splits
+   - Explicitly defined as "Prepayment" in definition table
+3. **Treatment Plan Prepayments (Type 439)** - 0.02% of splits
    - Specific to treatment plan deposits
-   - Highest average amounts
+   - Highest average amounts ($158.39)
+   - Explicitly defined as "Treat Plan Prepayment" in definition table
+
+**IMPORTANT**: Only Types 288 and 439 are true "unearned income" types as per OpenDental's design. Type 0 is the default payment type and should not be classified as unearned income. 
+
+When reviewing reports and queries, be aware that:
+- Only payments with UnearnedType > 0 should be considered true unearned income
+- Type 0 payments represent standard payments, most without procedure linkage
+- The OpenDental UI only shows Types 288 and 439 in unearned income reports
 
 ### 4. Split Patterns
 - **Normal Pattern** (99.3% of payments)
