@@ -1,4 +1,4 @@
-<<include:payment_base_counts.sql>>
+{% include 'payment_base_counts.sql' %}
 SELECT 
     pbc.metric,
     pbc.total_payments,
