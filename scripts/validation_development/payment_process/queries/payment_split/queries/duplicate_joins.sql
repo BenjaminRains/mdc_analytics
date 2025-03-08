@@ -1,8 +1,12 @@
-{% include "payment_level_metrics.sql" %}
-{% include "claim_metrics.sql" %}
-{% include "payment_split_analysis.sql" %}
-{% include "problem_claim_details.sql" %}
-{% include "problem_claim_analysis.sql" %}
+{% import "cte_macros.sql" as macros %}
+
+{{ macros.begin_ctes() }}
+{{ macros.include_cte("payment_level_metrics.sql") }}
+{{ macros.include_cte("claim_metrics.sql") }}
+{{ macros.include_cte("payment_split_analysis.sql") }}
+{{ macros.include_cte("problem_claim_details.sql") }}
+{{ macros.include_cte("problem_claim_analysis.sql", True) }}
+
 SELECT * FROM (
     SELECT * FROM PaymentSplitAnalysis
     UNION ALL

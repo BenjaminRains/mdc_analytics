@@ -167,10 +167,6 @@ def export_query_results(connection_type: str, database: str, query_name: str,
         logging.error(f"Failed to render query template {query_name}: {sql_content}")
         return False
     
-    # Add WITH clause if not already present
-    if "WITH" not in sql_content.upper().split(None, 1)[0]:
-        sql_content = f"WITH {sql_content}"
-    
     logging.debug(f"SQL query rendered successfully:")
     logging.debug("----- SQL QUERY -----")
     logging.debug(sql_content)
@@ -254,7 +250,7 @@ def export_all_queries(connection_type: str, database: str, date_range: DateRang
     """
     # Set default output directory if not specified
     if output_dir is None:
-        output_dir = script_dir / 'output'
+        output_dir = script_dir / 'data' / 'payment_split' 
     
     # Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
