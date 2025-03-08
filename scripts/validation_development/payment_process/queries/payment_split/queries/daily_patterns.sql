@@ -1,4 +1,4 @@
-<<include:daily_stats.sql>>
+{% include "daily_stats.sql" %}
 SELECT 
     ds.*,
     AVG(ds.split_count) OVER(ORDER BY ds.payment_date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) as rolling_avg_splits,

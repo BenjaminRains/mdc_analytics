@@ -1,6 +1,6 @@
-<<include:payment_base_counts.sql>>
-<<include:payment_level_metrics.sql>>
-<<include:payment_filter_diagnostics.sql>>
+{% include "payment_base_counts.sql" %}
+{% include "payment_level_metrics.sql" %}
+{% include "payment_filter_diagnostics.sql" %}
 SELECT * FROM (
     SELECT 
         'verification_counts' as report_type,

@@ -1,4 +1,4 @@
-<<include:payment_details_base.sql>>
+{% include "payment_details_base.sql" %}
 PaymentDetailsMetrics AS (
     SELECT 
         PayNum,

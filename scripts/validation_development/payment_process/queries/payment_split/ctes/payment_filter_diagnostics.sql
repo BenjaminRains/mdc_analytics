@@ -1,4 +1,4 @@
-<<include:payment_join_diagnostics.sql>>
+{% include "payment_join_diagnostics.sql" %}
 PaymentFilterDiagnostics AS (
     SELECT 
         pd.PayNum,

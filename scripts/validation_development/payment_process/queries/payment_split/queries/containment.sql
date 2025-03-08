@@ -1,4 +1,4 @@
-<<include:suspicious_split_analysis.sql>>
+{% include "suspicious_split_analysis.sql" %}
 SELECT 
     PayDate,
     ClaimNum,

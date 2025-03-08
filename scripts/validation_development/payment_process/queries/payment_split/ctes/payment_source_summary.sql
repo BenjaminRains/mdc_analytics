@@ -1,4 +1,4 @@
-<<include:payment_source_categories.sql>>
+{% include "payment_source_categories.sql" %}
 PaymentSourceSummary AS (
     SELECT 
         pc.payment_source,

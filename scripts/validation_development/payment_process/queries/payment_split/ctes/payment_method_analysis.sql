@@ -1,4 +1,4 @@
-<<include:payment_level_metrics.sql>>
+{% include "payment_level_metrics.sql" %}
 PaymentMethodAnalysis AS (
     SELECT 
         p.PayType,

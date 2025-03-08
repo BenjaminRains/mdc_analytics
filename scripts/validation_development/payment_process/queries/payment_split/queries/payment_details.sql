@@ -1,4 +1,4 @@
-<<include:payment_details_metrics.sql>>
+{% include "payment_details_metrics.sql" %}
 SELECT 
     pm.*,
     CASE 

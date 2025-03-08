@@ -1,4 +1,4 @@
-<<include:base_payments.sql>>
+{% include "base_payments.sql" %}
 BaseSplits AS (
     SELECT 
         ps.PayNum,

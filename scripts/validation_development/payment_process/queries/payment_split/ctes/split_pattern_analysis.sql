@@ -1,4 +1,4 @@
-<<include:procedure_payments.sql>>
+{% include "procedure_payments.sql" %}
 SplitPatternAnalysis AS (
     SELECT 
         ProcNum,

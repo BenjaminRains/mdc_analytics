@@ -1,4 +1,4 @@
-<<include:payment_filter_diagnostics.sql>>
+{% include "payment_filter_diagnostics.sql" %}
 SELECT 
     'diagnostic_correlation' as report_type,
     filter_reason,

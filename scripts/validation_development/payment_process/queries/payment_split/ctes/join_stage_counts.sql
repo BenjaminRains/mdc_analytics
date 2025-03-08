@@ -1,6 +1,6 @@
-<<include:payment_base_counts.sql>>
-<<include:payment_join_diagnostics.sql>>
-<<include:payment_level_metrics.sql>>
+{% include "payment_base_counts.sql" %}
+{% include "payment_join_diagnostics.sql" %}
+{% include "payment_level_metrics.sql" %}
 JoinStageCounts AS (
     SELECT 
         pbc.total_payments as base_count,

@@ -1,6 +1,6 @@
-<<include:payment_source_categories.sql>>
-<<include:payment_source_summary.sql>>
-<<include:total_payments.sql>>
+{% include "payment_source_categories.sql" %}
+{% include "payment_source_summary.sql" %}
+{% include "total_payments.sql" %}
 SELECT 
     ps.payment_source,
     ps.payment_count,

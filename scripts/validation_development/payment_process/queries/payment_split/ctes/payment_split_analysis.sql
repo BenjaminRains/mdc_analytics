@@ -1,5 +1,5 @@
-<<include:payment_level_metrics.sql>>
-<<include:claim_metrics.sql>>
+{% include "payment_level_metrics.sql" %}
+{% include "claim_metrics.sql" %}
 PaymentSplitAnalysis AS (
     -- Base payment split analysis
     SELECT 

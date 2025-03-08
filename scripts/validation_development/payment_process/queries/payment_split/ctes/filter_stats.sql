@@ -1,4 +1,4 @@
-<<include:payment_filter_diagnostics.sql>>
+{% include "payment_filter_diagnostics.sql" %}
 FilterStats AS (
     SELECT 
         filter_reason,

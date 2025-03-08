@@ -1,4 +1,4 @@
-<<include:join_stage_counts.sql>>
+{% include "join_stage_counts.sql" %}
 SELECT 
     base_count,
     with_splits,

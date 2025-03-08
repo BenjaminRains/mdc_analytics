@@ -1,4 +1,4 @@
-<<include:problem_claim_details.sql>>
+{% include "problem_claim_details.sql" %}
 ProblemClaimAnalysis AS (
     SELECT 
         NULL as PayNum,

@@ -1,4 +1,4 @@
-<<include:payment_daily_details.sql>>
+{% include "payment_daily_details.sql" %}
 DailyStats AS (
     SELECT 
         DATE(pdd.PayDate) as payment_date,

@@ -1,5 +1,5 @@
-<<include:payment_source_categories.sql>>
-<<include:payment_source_summary.sql>>
+{% include "payment_source_categories.sql" %}
+{% include "payment_source_summary.sql" %}
 InsurancePaymentAnalysis AS (
     SELECT 
         pss.payment_source,

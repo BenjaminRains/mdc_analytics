@@ -1,4 +1,4 @@
-<<include:filter_stats.sql>>
+{% include "filter_stats.sql" %}
 SELECT 
     fs.filter_reason,
     fs.payment_count,

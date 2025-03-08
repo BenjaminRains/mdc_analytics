@@ -1,4 +1,4 @@
-<<include:payment_filter_diagnostics.sql>>
+{% include "payment_filter_diagnostics.sql" %}
 SELECT 
     'problem_details' as report_type,
     pfd.PayNum,

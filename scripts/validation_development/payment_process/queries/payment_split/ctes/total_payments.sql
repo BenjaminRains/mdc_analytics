@@ -1,4 +1,4 @@
-<<include:payment_source_summary.sql>>
+{% include "payment_source_summary.sql" %}
 TotalPayments AS (
     SELECT 
         SUM(payment_count) as total_count,

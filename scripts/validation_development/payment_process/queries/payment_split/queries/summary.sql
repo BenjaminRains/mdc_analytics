@@ -1,12 +1,12 @@
-<<include:base_splits.sql>>
-<<include:payment_level_metrics.sql>>
-<<include:payment_method_analysis.sql>>
-<<include:insurance_payment_analysis.sql>>
-<<include:procedure_payments.sql>>
-<<include:split_pattern_analysis.sql>>
-<<include:payment_base_counts.sql>>
-<<include:payment_filter_diagnostics.sql>>
-<<include:problem_payments.sql>>
+{% include "base_splits.sql" %}
+{% include "payment_level_metrics.sql" %}
+{% include "payment_method_analysis.sql" %}
+{% include "insurance_payment_analysis.sql" %}
+{% include "procedure_payments.sql" %}
+{% include "split_pattern_analysis.sql" %}
+{% include "payment_base_counts.sql" %}
+{% include "payment_filter_diagnostics.sql" %}
+{% include "problem_payments.sql" %}
 SELECT * FROM (
     SELECT 
         'summary' AS report_type,
