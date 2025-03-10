@@ -1,4 +1,5 @@
 {% include "payment_daily_details.sql" %}
+-- Daily payment statistics - aggregates payment activity into daily summary metrics for trend analysis
 DailyStats AS (
     SELECT 
         DATE(pdd.PayDate) as payment_date,
