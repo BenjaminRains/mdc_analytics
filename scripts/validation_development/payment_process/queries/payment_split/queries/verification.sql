@@ -1,4 +1,4 @@
-{% include "payment_base_counts.sql" %}
+{% include "payment_system_summary.sql" %}
 {% include "payment_level_metrics.sql" %}
 {% include "payment_filter_diagnostics.sql" %}
 SELECT * FROM (
@@ -8,7 +8,7 @@ SELECT * FROM (
         total_payments as payment_count,
         min_date,
         max_date
-    FROM PaymentBaseCounts
+    FROM PaymentSystemSummary
     UNION ALL
     SELECT 
         'verification_counts' as report_type,
