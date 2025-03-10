@@ -1,5 +1,6 @@
 {% include "payment_source_categories.sql" %}
 {% include "payment_source_summary.sql" %}
+-- Insurance payer analysis - profiles insurance payment sources with payment methods and timing metrics
 InsurancePaymentAnalysis AS (
     SELECT 
         pss.payment_source,
