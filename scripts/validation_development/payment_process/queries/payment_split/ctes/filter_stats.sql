@@ -1,4 +1,5 @@
 {% include "payment_filter_diagnostics.sql" %}
+-- Filter categorization statistics - summarizes payment filtering reasons with counts and financial impact metrics
 FilterStats AS (
     SELECT 
         filter_reason,
