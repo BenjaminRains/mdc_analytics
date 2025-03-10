@@ -1,3 +1,4 @@
+-- Claim metrics per payment - provides claim counts and flagging of known problematic claims
 ClaimMetrics AS (
     SELECT 
         ps.PayNum,

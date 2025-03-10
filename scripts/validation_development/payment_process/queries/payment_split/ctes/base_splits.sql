@@ -1,4 +1,5 @@
 {% include "base_payments.sql" %}
+-- Payment split aggregation metrics - provides split counts and amounts per payment
 BaseSplits AS (
     SELECT 
         ps.PayNum,
