@@ -4,13 +4,13 @@
 {% include "insurance_payment_analysis.sql" %}
 {% include "procedure_payments.sql" %}
 {% include "split_pattern_analysis.sql" %}
-{% include "payment_base_counts.sql" %}
+{% include "payment_system_summary.sql" %}
 {% include "payment_filter_diagnostics.sql" %}
 {% include "problem_payments.sql" %}
 SELECT * FROM (
     SELECT 
         'summary' AS report_type,
-        pbc.total_payments AS base_payment_count,
+        pss.total_payments AS base_payment_count,
         COUNT(DISTINCT pfd.PayNum) AS filtered_payment_count,
         AVG(pfd.split_count) AS avg_splits_per_payment,
         SUM(CASE WHEN ps.split_difference > 0.01 THEN 1 ELSE 0 END) AS payments_with_split_mismatch,
@@ -32,7 +32,7 @@ SELECT * FROM (
         COUNT(CASE WHEN pp.UnearnedType = 288 THEN 1 ELSE 0 END) AS prepayment_count,
         COUNT(CASE WHEN pp.UnearnedType = 439 THEN 1 ELSE 0 END) AS tp_prepayment_count,
         SUM(CASE WHEN pfd.filter_reason != 'Normal Payment' THEN 1 ELSE 0 END) AS problem_payment_count
-    FROM PaymentBaseCounts pbc
+    FROM PaymentSystemSummary pss
     JOIN (SELECT DISTINCT 1 as join_key FROM PaymentFilterDiagnostics) pfd_key ON 1=1
     LEFT JOIN PaymentFilterDiagnostics pfd ON 1=1
     LEFT JOIN PaymentLevelMetrics ps ON pfd.PayNum = ps.PayNum
@@ -40,7 +40,7 @@ SELECT * FROM (
     LEFT JOIN SplitPatternAnalysis spa ON pp.ProcNum = spa.ProcNum
     LEFT JOIN PaymentMethodAnalysis pma ON ps.PayType = pma.PayType
     LEFT JOIN InsurancePaymentAnalysis ipa ON 1=1
-    GROUP BY pbc.total_payments
+    GROUP BY pss.total_payments
     UNION ALL
     SELECT 
         'problem_detail' AS report_type,
