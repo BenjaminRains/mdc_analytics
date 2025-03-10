@@ -167,6 +167,14 @@ def export_query_results(connection_type: str, database: str, query_name: str,
         logging.error(f"Failed to render query template {query_name}: {sql_content}")
         return False
     
+    # Write the rendered SQL to a debug file for inspection
+    debug_dir = script_dir / 'debug'
+    debug_dir.mkdir(exist_ok=True)
+    debug_file = debug_dir / f"{query_name}_rendered.sql"
+    with open(debug_file, 'w') as f:
+        f.write(sql_content)
+    logging.debug(f"Wrote rendered SQL to debug file: {debug_file}")
+    
     logging.debug(f"SQL query rendered successfully:")
     logging.debug("----- SQL QUERY -----")
     logging.debug(sql_content)
@@ -349,6 +357,6 @@ def main():
     except Exception as e:
         logging.error(f"Error in export process: {str(e)}", exc_info=True)
         sys.exit(1)
-    
+
 if __name__ == "__main__":
     main() 
