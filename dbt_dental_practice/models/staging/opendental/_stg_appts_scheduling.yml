@@ -1,0 +1,367 @@
+version: 2
+
+models:
+  - name: stg_appointment
+    description: "Standardized appointment scheduling and tracking information"
+    columns:
+      # Keys
+      - name: appointment_id
+        description: "Primary key for appointment records"
+        tests:
+          - unique
+          - not_null
+      - name: patient_id
+        description: "Foreign key to patient"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_patient')
+              field: patient_id
+      - name: provider_id
+        description: "Primary provider for appointment"
+        tests:
+          - relationships:
+              to: ref('stg_provider')
+              field: provider_id
+      - name: hygienist_id
+        description: "Assigned hygienist"
+      - name: assistant_id
+        description: "Assigned assistant"
+      - name: clinic_id
+        description: "Location of appointment"
+      - name: operatory_id
+        description: "Assigned operatory"
+      - name: appointment_type_id
+        description: "Type of appointment"
+        tests:
+          - relationships:
+              to: ref('stg_appointmenttype')
+              field: appointment_type_id
+
+      # Timing
+      - name: appointment_datetime
+        description: "Scheduled date and time"
+        tests:
+          - not_null
+      - name: appointment_date
+        description: "Scheduled date"
+      - name: appointment_time
+        description: "Scheduled time"
+      - name: asked_to_arrive_datetime
+        description: "When patient was asked to arrive"
+      - name: arrived_datetime
+        description: "When patient arrived"
+      - name: seated_datetime
+        description: "When patient was seated"
+      - name: dismissed_datetime
+        description: "When patient was dismissed"
+
+      # Flow Metrics
+      - name: minutes_arrival_difference
+        description: "Minutes difference between asked arrival and actual arrival"
+      - name: wait_time_minutes
+        description: "Minutes between arrival and seating"
+      - name: chair_time_minutes
+        description: "Minutes between seating and dismissal"
+
+      # Details
+      - name: appointment_status
+        description: "Current status of appointment"
+      - name: time_pattern
+        description: "Primary time pattern (each X = 5 minutes)"
+      - name: secondary_time_pattern
+        description: "Secondary time pattern if applicable"
+      - name: duration_minutes
+        description: "Calculated appointment duration in minutes"
+      - name: is_time_locked
+        description: "Whether appointment time is locked"
+      - name: priority
+        description: "Appointment priority level"
+
+      # Flags
+      - name: is_hygiene_appointment
+        description: "Indicates if appointment is for hygiene"
+      - name: is_new_patient
+        description: "Indicates if appointment is for new patient"
+
+      # Metadata
+      - name: created_at
+        description: "When the appointment was created"
+        tests:
+          - not_null
+      - name: updated_at
+        description: "When the appointment was last updated"
+      - name: created_by_user_id
+        description: "User who created the appointment"
+
+  - name: stg_appointmenttype
+    description: "Categorization of appointment types and durations"
+    columns:
+      - name: appointment_type_id
+        description: "Primary key for appointment types"
+        tests:
+          - unique
+          - not_null
+      - name: type_name
+        description: "Name of appointment type"
+        tests:
+          - not_null
+      - name: color_value
+        description: "Display color for appointment type"
+      - name: sort_order
+        description: "Display order in lists"
+      - name: is_hidden
+        description: "Whether type is hidden from view"
+      - name: time_pattern
+        description: "Default time pattern (each X = 5 minutes)"
+      - name: duration_minutes
+        description: "Calculated duration in minutes"
+      - name: associated_procedure_codes
+        description: "Procedure codes typically associated"
+      - name: required_procedure_codes
+        description: "Procedure codes required for type"
+      - name: minimum_required_codes_count
+        description: "Minimum number of required codes"
+      - name: blockout_type_list
+        description: "Associated blockout types"
+
+  - name: stg_histappointment
+    description: "Historical appointment data and changes"
+    columns:
+      # History tracking
+      - name: appointment_history_id
+        description: "Primary key for appointment history"
+        tests:
+          - unique
+          - not_null
+      - name: appointment_id
+        description: "Foreign key to appointment"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_appointment')
+              field: appointment_id
+      - name: history_user_id
+        description: "User who made the change"
+      - name: history_timestamp
+        description: "When the change occurred"
+        tests:
+          - not_null
+      - name: history_action_type
+        description: "Type of change made"
+      - name: appointment_source
+        description: "Source of appointment change"
+
+      # Core appointment data (point-in-time)
+      - name: patient_id
+        description: "Patient at time of change"
+        tests:
+          - relationships:
+              to: ref('stg_patient')
+              field: patient_id
+      - name: provider_id
+        description: "Provider at time of change"
+      - name: appointment_datetime
+        description: "Scheduled time at point of change"
+      - name: appointment_status
+        description: "Status at point of change"
+      - name: time_pattern
+        description: "Time pattern at point of change"
+      - name: duration_minutes
+        description: "Duration at point of change"
+
+      # Metadata
+      - name: created_at
+        description: "When history record was created"
+        tests:
+          - not_null
+      - name: updated_at
+        description: "When history record was updated"
+      
+  - name: stg_recall
+    description: "Patient recall scheduling information"
+    columns:
+      # Primary Key
+      - name: recall_id
+        description: "Primary key for recall records"
+        tests:
+          - unique
+          - not_null
+
+      # Relationships
+      - name: patient_id
+        description: "Foreign key to patient"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_patient')
+              field: patient_id
+      - name: recall_type_id
+        description: "Foreign key to recall type"
+        tests:
+          - relationships:
+              to: ref('stg_recalltype')
+              field: recall_type_id
+
+      # Dates
+      - name: calculated_due_date
+        description: "System calculated due date"
+      - name: due_date
+        description: "Manually adjusted due date"
+      - name: previous_date
+        description: "Date of previous recall"
+      - name: scheduled_date
+        description: "Date recall is scheduled"
+      - name: disable_until_date
+        description: "Date until recall is disabled"
+
+      # Configuration
+      - name: interval_days
+        description: "Days between recalls"
+      - name: status_id
+        description: "Current recall status"
+      - name: priority
+        description: "Recall priority level"
+      - name: time_pattern_override
+        description: "Override for default time pattern"
+
+      # Disable Settings
+      - name: is_disabled_flag
+        description: "Whether recall is currently disabled"
+      - name: disable_until_balance
+        description: "Balance threshold for disabling recall"
+
+      # Additional Info
+      - name: recall_notes
+        description: "Notes about recall"
+
+      # Metadata
+      - name: updated_at
+        description: "When recall was last updated"
+
+  - name: stg_recalltrigger
+    description: "Links between recall types and triggering procedures"
+    columns:
+      - name: recall_trigger_id
+        description: "Primary key for recall triggers"
+        tests:
+          - unique
+          - not_null
+      - name: recall_type_id
+        description: "Foreign key to recall type"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_recalltype')
+              field: recall_type_id
+      - name: procedure_code_id
+        description: "Foreign key to procedure code"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_procedurecode')
+              field: procedure_code_id
+
+  - name: stg_recalltype
+    description: "Types of recall appointments and their default settings"
+    columns:
+      - name: recall_type_id
+        description: "Primary key for recall types"
+        tests:
+          - unique
+          - not_null
+      - name: recall_type_description
+        description: "Description of recall type"
+        tests:
+          - not_null
+      - name: default_interval_days
+        description: "Default number of days between recalls"
+      - name: time_pattern
+        description: "Default time pattern for recall type"
+      - name: procedure_codes
+        description: "Associated procedure codes"
+      - name: append_to_special_flag
+        description: "Whether to append to special scheduling"
+
+  - name: stg_schedule
+    description: "Provider and employee schedule information"
+    columns:
+      # Primary Key
+      - name: schedule_id
+        description: "Primary key for schedule records"
+        tests:
+          - unique
+          - not_null
+
+      # Relationships
+      - name: provider_id
+        description: "Foreign key to provider"
+        tests:
+          - relationships:
+              to: ref('stg_provider')
+              field: provider_id
+      - name: employee_id
+        description: "Foreign key to employee"
+        tests:
+          - relationships:
+              to: ref('stg_employee')
+              field: employee_id
+      - name: clinic_id
+        description: "Foreign key to clinic"
+        tests:
+          - relationships:
+              to: ref('stg_clinic')
+              field: clinic_id
+
+      # Schedule Details
+      - name: schedule_type
+        description: "Type of schedule entry"
+      - name: blockout_type_id
+        description: "Type of blockout if applicable"
+      - name: schedule_status
+        description: "Current status of schedule"
+
+      # Timing
+      - name: schedule_date
+        description: "Date of schedule"
+        tests:
+          - not_null
+      - name: start_time
+        description: "Start time of schedule block"
+        tests:
+          - not_null
+      - name: stop_time
+        description: "End time of schedule block"
+        tests:
+          - not_null
+
+      # Additional Info
+      - name: schedule_notes
+        description: "Notes about schedule block"
+
+      # Metadata
+      - name: updated_at
+        description: "When schedule was last updated"
+
+  - name: stg_scheduleop
+    description: "Links between schedules and operatories"
+    columns:
+      - name: schedule_operatory_id
+        description: "Primary key for schedule-operatory links"
+        tests:
+          - unique
+          - not_null
+      - name: schedule_id
+        description: "Foreign key to schedule"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_schedule')
+              field: schedule_id
+      - name: operatory_id
+        description: "Foreign key to operatory"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_operatory')
+              field: operatory_id
