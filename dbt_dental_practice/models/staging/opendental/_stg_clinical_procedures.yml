@@ -1,0 +1,488 @@
+version: 2
+
+models:
+  - name: stg_procedurecode
+    description: "Dental procedure codes and descriptions"
+    columns:
+      # Primary Key
+      - name: procedure_code_id
+        description: "Primary key for procedure codes"
+        tests:
+          - unique
+          - not_null
+
+      # Code Identifiers
+      - name: procedure_code
+        description: "Standard procedure code"
+        tests:
+          - not_null
+      - name: alternate_code
+        description: "Alternative procedure code"
+      - name: medical_code
+        description: "Associated medical code"
+      - name: substitution_code
+        description: "Code that can be substituted"
+      - name: drug_ndc_code
+        description: "National Drug Code if applicable"
+      - name: default_revenue_code
+        description: "Default revenue code"
+      - name: tax_code
+        description: "Associated tax code"
+      - name: diagnostic_codes
+        description: "Related diagnostic codes"
+
+      # Descriptions
+      - name: description
+        description: "Full description of procedure"
+        tests:
+          - not_null
+      - name: abbreviated_description
+        description: "Short description of procedure"
+      - name: layman_terms
+        description: "Patient-friendly description"
+      - name: paint_text
+        description: "Text for visual charting"
+
+      # Procedure Attributes
+      - name: procedure_time
+        description: "Standard time for procedure"
+      - name: procedure_category_id
+        description: "Category of procedure"
+      - name: treatment_area
+        description: "Area of treatment"
+      - name: graphic_type
+        description: "Type of graphic representation"
+      - name: base_units
+        description: "Base units for procedure"
+      - name: canada_time_units
+        description: "Time units for Canadian billing"
+
+      # Configuration Flags
+      - name: no_bill_insurance_flag
+        description: "Whether procedure is not billable to insurance"
+      - name: is_prosthetic_flag
+        description: "Whether procedure is prosthetic"
+      - name: is_hygiene_flag
+        description: "Whether procedure is hygiene-related"
+      - name: is_taxed_flag
+        description: "Whether procedure is taxable"
+      - name: is_canadian_lab_flag
+        description: "Whether procedure is Canadian lab work"
+      - name: is_pre_existing_flag
+        description: "Whether condition is pre-existing"
+      - name: is_multi_visit_flag
+        description: "Whether procedure requires multiple visits"
+      - name: is_radiology_flag
+        description: "Whether procedure involves radiology"
+
+      # Metadata
+      - name: updated_at
+        description: "When procedure code was last updated"
+
+  - name: stg_procedurelog
+    description: "Record of clinical procedures performed on patients"
+    columns:
+      # Primary Key
+      - name: procedure_id
+        description: "Primary key for procedure records"
+        tests:
+          - unique
+          - not_null
+
+      # Relationships
+      - name: patient_id
+        description: "Foreign key to patient"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_patient')
+              field: patient_id
+      - name: appointment_id
+        description: "Foreign key to appointment"
+        tests:
+          - relationships:
+              to: ref('stg_appointment')
+              field: appointment_id
+      - name: provider_id
+        description: "Foreign key to provider"
+        tests:
+          - relationships:
+              to: ref('stg_provider')
+              field: provider_id
+      - name: procedure_code_id
+        description: "Foreign key to procedure code"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_procedurecode')
+              field: procedure_code_id
+
+      # Clinical Details
+      - name: tooth_number
+        description: "Tooth number involved"
+      - name: tooth_range
+        description: "Range of teeth involved"
+      - name: surface
+        description: "Tooth surface involved"
+      - name: body_site
+        description: "SNOMED body site code"
+      - name: urgency
+        description: "Procedure urgency level"
+      - name: prognosis
+        description: "Expected outcome"
+
+      # Diagnostic Information
+      - name: diagnostic_code
+        description: "Primary diagnostic code"
+      - name: is_principal_diagnosis_flag
+        description: "Whether this is the principal diagnosis"
+
+      # Financial
+      - name: procedure_fee
+        description: "Fee for procedure"
+      - name: discount_amount
+        description: "Amount of discount applied"
+      - name: tax_amount
+        description: "Tax amount if applicable"
+
+      # Status
+      - name: procedure_status
+        description: "Current status of procedure"
+      - name: is_locked_flag
+        description: "Whether procedure is locked"
+
+      # Timing
+      - name: procedure_date
+        description: "Date procedure performed"
+        tests:
+          - not_null
+      - name: completion_date
+        description: "Date procedure completed"
+      - name: procedure_start_time
+        description: "Start time of procedure"
+      - name: procedure_end_time
+        description: "End time of procedure"
+
+      # Metadata
+      - name: created_at
+        description: "When procedure was created"
+        tests:
+          - not_null
+      - name: updated_at
+        description: "When procedure was last updated"
+
+  - name: stg_procgroupitem
+    description: "Links between procedures and procedure groups"
+    columns:
+      - name: procedure_group_item_id
+        description: "Primary key for procedure group items"
+        tests:
+          - unique
+          - not_null
+      - name: procedure_id
+        description: "Foreign key to procedure"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_procedurelog')
+              field: procedure_id
+      - name: group_id
+        description: "Foreign key to procedure group"
+        tests:
+          - not_null
+
+  - name: stg_procnote
+    description: "Notes related to specific procedures"
+    columns:
+      # Primary Key
+      - name: procedure_note_id
+        description: "Primary key for procedure notes"
+        tests:
+          - unique
+          - not_null
+
+      # Relationships
+      - name: patient_id
+        description: "Foreign key to patient"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_patient')
+              field: patient_id
+      - name: procedure_id
+        description: "Foreign key to procedure"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_procedurelog')
+              field: procedure_id
+      - name: user_id
+        description: "User who created the note"
+        tests:
+          - relationships:
+              to: ref('stg_userod')
+              field: user_id
+
+      # Timing
+      - name: entry_datetime
+        description: "When note was entered"
+        tests:
+          - not_null
+
+      # Note Content
+      - name: note_text
+        description: "Content of the note"
+
+      # Signature
+      - name: is_topaz_signature_flag
+        description: "Whether signature is Topaz format"
+      - name: signature_data
+        description: "Digital signature data"
+
+  - name: stg_proctp
+    description: "Procedure treatment plans"
+    columns:
+      # Primary Key
+      - name: treatment_plan_procedure_id
+        description: "Primary key for treatment plan procedures"
+        tests:
+          - unique
+          - not_null
+
+      # Relationships
+      - name: treatment_plan_id
+        description: "Foreign key to treatment plan"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_treatplan')
+              field: treatment_plan_id
+      - name: patient_id
+        description: "Foreign key to patient"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_patient')
+              field: patient_id
+      - name: original_procedure_id
+        description: "Foreign key to original procedure"
+        tests:
+          - relationships:
+              to: ref('stg_procedurelog')
+              field: procedure_id
+      - name: provider_id
+        description: "Foreign key to provider"
+        tests:
+          - relationships:
+              to: ref('stg_provider')
+              field: provider_id
+
+      # Procedure Details
+      - name: procedure_code
+        description: "Code for planned procedure"
+        tests:
+          - not_null
+      - name: description
+        description: "Description of planned procedure"
+      - name: procedure_abbreviation
+        description: "Short form of procedure name"
+      - name: tooth_number
+        description: "Tooth number for procedure"
+      - name: surface
+        description: "Tooth surface for procedure"
+
+      # Clinical Information
+      - name: prognosis
+        description: "Expected outcome"
+      - name: diagnosis
+        description: "Diagnosis code"
+
+      # Ordering
+      - name: display_order
+        description: "Order in treatment plan display"
+      - name: priority
+        description: "Priority of procedure"
+
+      # Financial
+      - name: fee_amount
+        description: "Standard fee amount"
+      - name: allowed_fee_amount
+        description: "Allowed fee amount"
+      - name: primary_insurance_amount
+        description: "Primary insurance portion"
+      - name: secondary_insurance_amount
+        description: "Secondary insurance portion"
+      - name: patient_amount
+        description: "Patient portion"
+      - name: discount_amount
+        description: "Applied discount"
+      - name: tax_amount
+        description: "Tax amount if applicable"
+      - name: category_percent_ucr
+        description: "Category percent of usual fee"
+
+      # Metadata
+      - name: created_at
+        description: "When plan procedure was created"
+        tests:
+          - not_null
+      - name: updated_at
+        description: "When plan procedure was last updated"
+      - name: created_by_user_id
+        description: "User who created the plan procedure"
+        tests:
+          - relationships:
+              to: ref('stg_userod')
+              field: user_id
+
+  - name: stg_perioexam
+    description: "Periodontal examination records"
+    columns:
+      # Primary Key
+      - name: periodontal_exam_id
+        description: "Primary key for periodontal exams"
+        tests:
+          - unique
+          - not_null
+
+      # Relationships
+      - name: patient_id
+        description: "Foreign key to patient"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_patient')
+              field: patient_id
+      - name: provider_id
+        description: "Foreign key to provider"
+        tests:
+          - relationships:
+              to: ref('stg_provider')
+              field: provider_id
+
+      # Dates
+      - name: exam_date
+        description: "Date of periodontal exam"
+        tests:
+          - not_null
+      - name: measurements_updated_at
+        description: "When measurements were last updated"
+
+      # Notes
+      - name: exam_notes
+        description: "Clinical notes from exam"
+
+  - name: stg_periomeasure
+    description: "Periodontal measurements and assessments"
+    columns:
+      # Primary Key
+      - name: periodontal_measure_id
+        description: "Primary key for periodontal measurements"
+        tests:
+          - unique
+          - not_null
+
+      # Relationships
+      - name: periodontal_exam_id
+        description: "Foreign key to periodontal exam"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_perioexam')
+              field: periodontal_exam_id
+
+      # Tooth Information
+      - name: tooth_number
+        description: "Tooth number being measured"
+        tests:
+          - not_null
+      - name: tooth_value
+        description: "Value recorded for tooth"
+      - name: sequence_type
+        description: "Type of measurement sequence"
+
+      # Measurement Values
+      - name: mesial_buccal_value
+        description: "Mesial buccal measurement"
+      - name: buccal_value
+        description: "Buccal measurement"
+      - name: distal_buccal_value
+        description: "Distal buccal measurement"
+      - name: mesial_lingual_value
+        description: "Mesial lingual measurement"
+      - name: lingual_value
+        description: "Lingual measurement"
+      - name: distal_lingual_value
+        description: "Distal lingual measurement"
+
+      # Metadata
+      - name: created_at
+        description: "When measurement was created"
+        tests:
+          - not_null
+      - name: updated_at
+        description: "When measurement was last updated"
+
+  - name: stg_labcase
+    description: "Dental laboratory case tracking"
+    columns:
+      # Primary Key
+      - name: lab_case_id
+        description: "Primary key for lab cases"
+        tests:
+          - unique
+          - not_null
+
+      # Relationships
+      - name: patient_id
+        description: "Foreign key to patient"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_patient')
+              field: patient_id
+      - name: laboratory_id
+        description: "Foreign key to laboratory"
+        tests:
+          - relationships:
+              to: ref('stg_laboratory')
+              field: laboratory_id
+      - name: appointment_id
+        description: "Foreign key to appointment"
+        tests:
+          - relationships:
+              to: ref('stg_appointment')
+              field: appointment_id
+      - name: provider_id
+        description: "Foreign key to provider"
+        tests:
+          - relationships:
+              to: ref('stg_provider')
+              field: provider_id
+
+      # Lab Case Details
+      - name: lab_fee
+        description: "Fee for laboratory work"
+      - name: invoice_number
+        description: "Laboratory invoice number"
+      - name: instructions
+        description: "Instructions for laboratory"
+
+      # Dates and Timing
+      - name: due_datetime
+        description: "When case is due"
+      - name: created_datetime
+        description: "When case was created"
+        tests:
+          - not_null
+      - name: sent_datetime
+        description: "When case was sent to lab"
+      - name: received_datetime
+        description: "When case was received from lab"
+      - name: checked_datetime
+        description: "When case was checked"
+
+      # Metadata
+      - name: updated_at
+        description: "When lab case was last updated"
+      
