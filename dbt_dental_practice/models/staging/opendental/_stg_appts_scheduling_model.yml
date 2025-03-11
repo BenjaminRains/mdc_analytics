@@ -2,7 +2,14 @@ version: 2
 
 models:
   - name: stg_appointment
-    description: "Standardized appointment scheduling and tracking information"
+    description: >
+      Standardized appointment scheduling and tracking information. 
+      Notable data quality issues:
+      - Provider bar text is 100% empty
+      - ~45% missing values in timing fields
+      - ~42% missing procedure descriptions
+      - Appointment durations typically 50-100 minutes
+      - Status code 2 represents ~77% of appointments
     columns:
       # Keys
       - name: appointment_id
@@ -43,6 +50,9 @@ models:
         description: "Scheduled date and time"
         tests:
           - not_null
+          - dbt_utils.expression_is_true:
+              expression: "appointment_datetime >= '2000-01-01'"
+              severity: error
       - name: appointment_date
         description: "Scheduled date"
       - name: appointment_time
@@ -58,25 +68,78 @@ models:
 
       # Flow Metrics
       - name: minutes_arrival_difference
-        description: "Minutes difference between asked arrival and actual arrival"
+        description: "Minutes difference between asked arrival and actual arrival. ~45% null rate."
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "minutes_arrival_difference IS NULL OR (DateTimeArrived > '0001-01-01' AND DateTimeAskedToArrive > '0001-01-01')"
       - name: wait_time_minutes
-        description: "Minutes between arrival and seating"
+        description: "Minutes between arrival and seating. ~45% null rate."
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "wait_time_minutes IS NULL OR (DateTimeSeated >= DateTimeArrived)"
       - name: chair_time_minutes
-        description: "Minutes between seating and dismissal"
+        description: "Minutes between seating and dismissal. ~45% null rate."
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "chair_time_minutes IS NULL OR (DateTimeDismissed >= DateTimeSeated)"
 
       # Details
       - name: appointment_status
-        description: "Current status of appointment"
+        description: >
+          Current status of appointment:
+          2 = Most common status (~77% of appointments)
+          3, 5, 6, 1 = Less common statuses (~6% each)
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1, 2, 3, 5, 6]
       - name: time_pattern
-        description: "Primary time pattern (each X = 5 minutes)"
+        description: "Primary time pattern (each X = 5 minutes). Used to calculate duration."
+        tests:
+          - not_null
       - name: secondary_time_pattern
         description: "Secondary time pattern if applicable"
       - name: duration_minutes
-        description: "Calculated appointment duration in minutes"
-      - name: is_time_locked
-        description: "Whether appointment time is locked"
-      - name: priority
-        description: "Appointment priority level"
+        description: "Calculated appointment duration in minutes. Typically 50-100 minutes."
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "duration_minutes BETWEEN 10 AND 480"
+              severity: warn
+
+      # Display settings
+      - name: colored_procedures
+        description: "Procedure color coding. ~42% null rate."
+      - name: provider_bar_text
+        description: "Provider bar text. Currently 100% null."
+      - name: procedure_description
+        description: "Description of procedures. ~42% null rate."
+
+      # New derived fields
+      - name: appointment_length_category
+        description: >
+          Categorizes appointments by duration:
+          Long = >120 minutes
+          Standard = 61-120 minutes
+          Short = <=60 minutes
+      - name: arrival_status
+        description: >
+          Categorizes patient arrival timing:
+          Late = Arrived after appointment time
+          Early = Arrived before appointment time
+          Unknown = No arrival time recorded
+      - name: has_invalid_timestamp_sequence
+        description: "Flag indicating if appointment timestamps are out of sequence"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "has_invalid_timestamp_sequence = FALSE"
+              severity: warn
+      - name: has_duration_mismatch
+        description: "Flag indicating if calculated duration doesn't match pattern length"
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "has_duration_mismatch = FALSE"
+              severity: warn
 
       # Flags
       - name: is_hygiene_appointment
@@ -94,8 +157,21 @@ models:
       - name: created_by_user_id
         description: "User who created the appointment"
 
+    # Add model-level tests
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "appointment_datetime <= CURRENT_TIMESTAMP() + INTERVAL 2 YEAR"
+          severity: warn
+      - dbt_utils.expression_is_true:
+          expression: "LENGTH(time_pattern) * 5 = duration_minutes"
+          severity: warn
+
   - name: stg_appointmenttype
     description: "Categorization of appointment types and durations"
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "pattern_status = 'Valid Pattern' OR is_hidden = 1"
+          severity: warn
     columns:
       - name: appointment_type_id
         description: "Primary key for appointment types"
@@ -124,6 +200,14 @@ models:
         description: "Minimum number of required codes"
       - name: blockout_type_list
         description: "Associated blockout types"
+      - name: pattern_status
+        tests:
+          - accepted_values:
+              values: ['Valid Pattern', 'No Pattern', 'Empty Pattern']
+      - name: appointment_type_status
+        tests:
+          - accepted_values:
+              values: ['Active', 'Hidden', 'Invalid Pattern']
 
   - name: stg_histappointment
     description: "Historical appointment data and changes"
