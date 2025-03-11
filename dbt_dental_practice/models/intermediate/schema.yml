@@ -1,0 +1,45 @@
+version: 2
+
+models:
+  - name: int_patient_profile
+    description: "Consolidated patient demographic, family, and contact information"
+    columns:
+      - name: patient_id
+        description: "Primary key - unique identifier for each patient"
+        tests:
+          - unique
+          - not_null
+      
+      - name: first_name
+        description: "Patient's first name"
+        tests:
+          - not_null
+      
+      - name: last_name
+        description: "Patient's last name"
+        tests:
+          - not_null
+      
+      - name: birthdate
+        description: "Patient's date of birth"
+      
+      - name: phone
+        description: "Patient's primary phone number"
+      
+      - name: email
+        description: "Patient's email address"
+      
+      - name: family_id
+        description: "ID linking patients within the same family unit"
+      
+      - name: city
+        description: "Patient's city of residence"
+      
+      - name: state
+        description: "Patient's state of residence"
+      
+      - name: model_created_at
+        description: "Timestamp when this record was first created in the model"
+      
+      - name: model_updated_at
+        description: "Timestamp when this record was last updated in the model"
