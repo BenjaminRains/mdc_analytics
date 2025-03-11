@@ -1,7 +1,3 @@
-```mermaid
-%%--------------------------------------------------------------------------
-%% Mermaid Initialization & Theme
-%%--------------------------------------------------------------------------
 %%{
   init: {
     'flowchart': {
@@ -152,6 +148,44 @@ flowchart TB
     end
 
     %%--------------------------------------------------------------------------
+    %% SYSTEM F: PATIENT–CLINIC COMMUNICATIONS
+    %%--------------------------------------------------------------------------
+    subgraph PatientCommunications["System F: Patient–Clinic Communications"]
+        PC1["Initiate Communication"]:::processStyle -->|Phone, SMS, Email, Portal| PC2[(CommLog<br>Type, Date, Notes)]:::datastoreStyle
+        PC2 --> PC3["Send Reminder/Notification"]:::processStyle
+        PC3 -->|Payment Reminder| P
+        PC3 -->|Appointment Reminder| G2
+        PC3 -->|Collection Notice| CS2
+        PC2 --> PC4["Track Responses"]:::processStyle
+        PC4 -->|Response Data| PC2
+    end
+
+    %%--------------------------------------------------------------------------
+    %% SYSTEM G: SCHEDULING & REFERRALS
+    %%--------------------------------------------------------------------------
+    subgraph SchedulingReferrals["System G: Scheduling & Referrals"]
+        G1["Create/Update Appointment"]:::processStyle --> G2[(Appointment Table<br>ApptNum, PatNum, DateTime)]:::datastoreStyle
+        G2 -->|Appointment Completed| ProcLog
+        G2 -->|No-Show| G3["Send No-Show Notice"]:::processStyle
+        G3 --> PatientCommunications
+
+        G4["Create Referral"]:::processStyle -->|Inbound/Outbound| G5[(Referral Records<br>RefNum, RefType, Notes)]:::datastoreStyle
+        G5 -->|Specialist Referral| ExternalProvider[External Provider]:::entityStyle
+        G5 -->|Insurance Pre-Auth| InsuranceProcessing
+        G5 -->|Close Referral| G4
+    end
+
+    %%--------------------------------------------------------------------------
+    %% Additional System Links
+    %%--------------------------------------------------------------------------
+    A -->|Schedules Appt| G1
+    PatientCommunications -->|Follow-Up| CA
+    G3 -->|Notify| PC1
+    PC3 -->|AR Reminders| AG
+    COL -->|Payment Record| PaymentAllocation
+    CT -->|Claim Status| ARAnalysis
+
+    %%--------------------------------------------------------------------------
     %% SUCCESS CRITERIA
     %%--------------------------------------------------------------------------
     COL -->|Completion Data| X["Close Journey"]:::processStyle
@@ -170,6 +204,8 @@ flowchart TB
         SystemC[Payment Allocation]:::paymentAllocationStyle
         SystemD[AR Analysis]:::arAnalysisStyle
         SystemE[Collection Process]:::collectionProcessStyle
+        SystemF[Communications]:::communicationsStyle
+        SystemG[Scheduling]:::schedulingStyle
     end
 
     %%--------------------------------------------------------------------------
@@ -184,13 +220,17 @@ flowchart TB
     classDef paymentAllocationStyle fill:#fff2cc,stroke:#333,stroke-width:2px
     classDef arAnalysisStyle fill:#e6ccff,stroke:#333,stroke-width:2px
     classDef collectionProcessStyle fill:#ccffcc,stroke:#333,stroke-width:2px
+    classDef communicationsStyle fill:#ffe6cc,stroke:#333,stroke-width:2px
+    classDef schedulingStyle fill:#ccffe6,stroke:#333,stroke-width:2px
 
     class FeeProcessing feeProcessingStyle
     class InsuranceProcessing insuranceProcessingStyle
     class PaymentAllocation paymentAllocationStyle
     class ARAnalysis arAnalysisStyle
     class CollectionProcess collectionProcessStyle
+    class PatientCommunications communicationsStyle
+    class SchedulingReferrals schedulingStyle
 
-    %% Add new style for critical paths
+    %% Critical path highlighting
     classDef criticalPath stroke:#ff0000,stroke-width:3px
-    class FR,ESC criticalPath
+    class FR,ESC,CT criticalPath
