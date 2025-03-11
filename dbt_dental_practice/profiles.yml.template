@@ -1,0 +1,20 @@
+# dbt Profile Template - Copy this file to ~/.dbt/profiles.yml
+# Replace placeholder values or set environment variables
+
+mdc_analytics:
+  # Default target environment. Can be set with DBT_TARGET env var
+  target: "{{ env_var('DBT_TARGET', 'dev') }}"
+  outputs:
+    # Development environment configuration
+    dev:
+      type: mysql
+      server:
+      port:
+      database:
+      username:
+      password:
+      charset: utf8mb4
+      collation: utf8mb4_general_ci
+      schema: ""
+      threads: 4
+    
