@@ -46,6 +46,13 @@ sources:
       
       - name: scheduleop
         description: "Schedule operation settings"
+
+      - name: task
+        description: "Tasks and to-do items"
+      
+      - name: timeadjust
+        description: "Time clock adjustments"
+
       
       # =========== CLINICAL PROCEDURES ===========
       - name: procedurecode
@@ -196,11 +203,23 @@ sources:
         description: "Referral attachments"
       
       # =========== MEDICATIONS & PHARMACY ===========
-      - name: pharmacy
-        description: "Pharmacy information"
+      - name: allergy
+        description: "Patient allergies"
+      
+      - name: allergydef
+        description: "Allergy definitions"
+      
+      - name: disease
+        description: "Patient diseases"
+      
+      - name: diseasedef
+        description: "Disease definitions"
       
       - name: pharmclinic
         description: "Pharmacy-clinic relationships"
+      
+      - name: pharmacy
+        description: "Pharmacy information"
       
       - name: rxdef
         description: "Prescription definitions"
@@ -230,9 +249,3 @@ sources:
       
       - name: programproperty
         description: "Program properties and settings"
-      
-      - name: task
-        description: "Tasks and to-do items"
-      
-      - name: timeadjust
-        description: "Time clock adjustments"
