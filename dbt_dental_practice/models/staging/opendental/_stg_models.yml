@@ -1,32 +1,6 @@
+version: 2
 
-
-  - name: stg_appointment
-    description: "Standardized appointment scheduling and tracking information"
-    columns:
-      - name: appointment_id
-        description: "Primary key for appointment records"
-        tests:
-          - unique
-          - not_null
-      - name: patient_id
-        description: "Foreign key to patient table"
-        tests:
-          - relationships:
-              to: ref('stg_patient')
-              field: patient_id
-      - name: provider_id
-        description: "Foreign key to provider table"
-        tests:
-          - relationships:
-              to: ref('stg_provider')
-              field: provider_id
-      - name: appointment_datetime
-        description: "Scheduled date and time of the appointment"
-        tests:
-          - not_null
-      - name: chair_time_minutes
-        description: "Calculated duration of patient time in chair"
-
+models:
   - name: stg_procedurelog
     description: "Standardized procedure records from OpenDental"
     columns:

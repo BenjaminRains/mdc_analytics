@@ -1,0 +1,208 @@
+version: 2
+
+models:
+  - name: stg_commlog
+    description: "Communication logs with patients"
+    columns:
+      # Primary Key
+      - name: communication_id
+        description: "Primary key for communication logs"
+        tests:
+          - unique
+          - not_null
+
+      # Relationships
+      - name: patient_id
+        description: "Foreign key to patient"
+        tests:
+          - relationships:
+              to: ref('stg_patient')
+              field: patient_id
+      - name: communication_type_id
+        description: "Type of communication"
+      - name: user_id
+        description: "User who logged communication"
+        tests:
+          - relationships:
+              to: ref('stg_userod')
+              field: user_id
+      - name: program_id
+        description: "Related program"
+      - name: referral_id
+        description: "Related referral"
+        tests:
+          - relationships:
+              to: ref('stg_referral')
+              field: referral_id
+
+      # Communication Timing
+      - name: communication_datetime
+        description: "When communication started"
+        tests:
+          - not_null
+      - name: communication_end_datetime
+        description: "When communication ended"
+      - name: communication_duration_minutes
+        description: "Duration in minutes"
+
+      # Communication Details
+      - name: communication_mode
+        description: "Raw mode of communication"
+      - name: communication_mode_description
+        description: "Human-readable mode"
+        tests:
+          - not_null
+      - name: sent_or_received
+        description: "Raw direction indicator"
+      - name: direction
+        description: "Whether sent or received"
+        tests:
+          - not_null
+      - name: communication_source
+        description: "Source of communication"
+      - name: referral_behavior
+        description: "How referral was handled"
+
+      # Metadata
+      - name: updated_at
+        description: "When record was last updated"
+      - name: entry_datetime
+        description: "When communication was logged"
+      - name: is_topaz_signature
+        description: "Whether signed via Topaz"
+
+  - name: stg_referral
+    description: "Referral source information"
+    columns:
+      # Primary Key
+      - name: referral_id
+        description: "Primary key for referrals"
+        tests:
+          - unique
+          - not_null
+
+      # Personal Identification
+      - name: last_name
+        description: "Last name of referral"
+      - name: first_name
+        description: "First name of referral"
+      - name: middle_name
+        description: "Middle name of referral"
+      - name: title
+        description: "Professional title"
+      - name: npi_number
+        description: "National Provider Identifier"
+
+      # Business Information
+      - name: business_name
+        description: "Name of business"
+      - name: specialty_id
+        description: "Specialty of referral"
+      - name: using_tin_flag
+        description: "Whether using tax ID number"
+
+      # Contact Information
+      - name: address_line_1
+        description: "Primary address line"
+      - name: address_line_2
+        description: "Secondary address line"
+      - name: city
+        description: "City"
+      - name: state
+        description: "State"
+      - name: postal_code
+        description: "ZIP/Postal code"
+      - name: primary_phone
+        description: "Primary phone number"
+      - name: secondary_phone
+        description: "Secondary phone number"
+      - name: email_address
+        description: "Email address"
+
+      # Status and Type
+      - name: is_hidden_flag
+        description: "Whether referral is hidden"
+      - name: is_not_person_flag
+        description: "Whether referral is organization"
+      - name: is_doctor_flag
+        description: "Whether referral is doctor"
+      - name: is_trusted_direct_flag
+        description: "Whether trusted for direct messaging"
+      - name: is_preferred_flag
+        description: "Whether preferred referral source"
+
+      # Relationships
+      - name: patient_id
+        description: "Related patient if applicable"
+        tests:
+          - relationships:
+              to: ref('stg_patient')
+              field: patient_id
+      - name: slip_id
+        description: "Related slip"
+
+      # Metadata
+      - name: updated_at
+        description: "When record was last updated"
+
+  - name: stg_refattach
+    description: "Referral attachments"
+    columns:
+      # Primary Key
+      - name: referral_attachment_id
+        description: "Primary key for referral attachments"
+        tests:
+          - unique
+          - not_null
+
+      # Relationships
+      - name: referral_id
+        description: "Foreign key to referral"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_referral')
+              field: referral_id
+      - name: patient_id
+        description: "Foreign key to patient"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_patient')
+              field: patient_id
+      - name: procedure_id
+        description: "Related procedure"
+        tests:
+          - relationships:
+              to: ref('stg_procedurelog')
+              field: procedure_id
+      - name: provider_id
+        description: "Related provider"
+        tests:
+          - relationships:
+              to: ref('stg_provider')
+              field: provider_id
+
+      # Referral Details
+      - name: referral_type
+        description: "Type of referral"
+        tests:
+          - not_null
+      - name: referral_to_status
+        description: "Status of referral"
+      - name: is_transition_of_care_flag
+        description: "Whether involves care transition"
+
+      # Display
+      - name: display_order
+        description: "Order for display"
+
+      # Dates
+      - name: referral_date
+        description: "Date of referral"
+        tests:
+          - not_null
+      - name: procedure_completion_date
+        description: "When procedure was completed"
+      - name: updated_at
+        description: "When record was last updated"

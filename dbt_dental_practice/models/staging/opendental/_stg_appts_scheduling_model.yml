@@ -365,3 +365,130 @@ models:
           - relationships:
               to: ref('stg_operatory')
               field: operatory_id
+
+  - name: stg_task
+    description: "Tasks and to-do items for scheduling and workflow management"
+    columns:
+      # Primary Key
+      - name: task_id
+        description: "Primary key for tasks"
+        tests:
+          - unique
+          - not_null
+
+      # Relationships
+      - name: task_list_id
+        description: "Foreign key to task list"
+        tests:
+          - not_null
+      - name: user_id
+        description: "Foreign key to assigned user"
+        tests:
+          - relationships:
+              to: ref('stg_userod')
+              field: user_id
+      - name: priority_definition_id
+        description: "Foreign key to priority definition"
+      - name: key_id
+        description: "Related object key"
+      - name: from_id
+        description: "User ID of task creator"
+      - name: triage_category_id
+        description: "Category for triage tasks"
+
+      # Task Configuration
+      - name: task_status
+        description: "Current status of task"
+        tests:
+          - not_null
+      - name: object_type
+        description: "Type of object task is related to"
+      - name: date_type
+        description: "Type of date tracking"
+      - name: is_repeating_flag
+        description: "Whether task repeats"
+        tests:
+          - not_null
+      - name: is_readonly_flag
+        description: "Whether task is read-only"
+        tests:
+          - not_null
+
+      # Reminder Settings
+      - name: reminder_group_id
+        description: "Group ID for reminders"
+      - name: reminder_type
+        description: "Type of reminder"
+      - name: reminder_frequency
+        description: "Frequency of reminders"
+
+      # Dates
+      - name: task_date
+        description: "Due date of task"
+      - name: entry_datetime
+        description: "When task was created"
+        tests:
+          - not_null
+      - name: finished_datetime
+        description: "When task was completed"
+      - name: original_datetime
+        description: "Original due date"
+      - name: updated_at
+        description: "When task was last updated"
+
+  - name: stg_timeadjust
+    description: "Time clock adjustments for staff scheduling"
+    columns:
+      # Primary Key
+      - name: time_adjustment_id
+        description: "Primary key for time adjustments"
+        tests:
+          - unique
+          - not_null
+
+      # Relationships
+      - name: employee_id
+        description: "Foreign key to employee"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_employee')
+              field: employee_id
+      - name: clinic_id
+        description: "Foreign key to clinic"
+        tests:
+          - relationships:
+              to: ref('stg_clinic')
+              field: clinic_id
+      - name: pto_definition_id
+        description: "Foreign key to PTO definition"
+      - name: created_by_user_id
+        description: "User who created adjustment"
+        tests:
+          - relationships:
+              to: ref('stg_userod')
+              field: user_id
+
+      # Hours
+      - name: regular_hours
+        description: "Regular hours adjusted"
+      - name: overtime_hours
+        description: "Overtime hours adjusted"
+      - name: pto_hours
+        description: "PTO hours adjusted"
+
+      # Status Flags
+      - name: is_automatic_flag
+        description: "Whether adjustment was automatic"
+        tests:
+          - not_null
+      - name: is_unpaid_protected_leave_flag
+        description: "Whether adjustment is unpaid protected leave"
+        tests:
+          - not_null
+
+      # Timing
+      - name: entry_datetime
+        description: "When adjustment was entered"
+        tests:
+          - not_null
