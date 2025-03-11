@@ -1,0 +1,514 @@
+version: 2
+
+models:
+  - name: stg_carrier
+    description: "Insurance carrier information"
+    columns:
+      # Primary Key
+      - name: carrier_id
+        description: "Primary key for insurance carriers"
+        tests:
+          - unique
+          - not_null
+
+      # Carrier Details
+      - name: carrier_group_id
+        description: "Group identifier for carrier"
+      - name: carrier_name
+        description: "Name of insurance carrier"
+        tests:
+          - not_null
+      - name: tax_id_number
+        description: "Tax identification number"
+      - name: is_hidden
+        description: "Whether carrier is hidden from active use"
+
+      # Location
+      - name: city
+        description: "City of carrier"
+      - name: state
+        description: "State of carrier"
+      - name: zip
+        description: "ZIP code of carrier"
+      - name: country
+        description: "Country of carrier"
+      - name: phone
+        description: "Contact phone number"
+
+      # Electronic Filing
+      - name: electronic_id
+        description: "Electronic filing identifier"
+      - name: no_electronic_claims
+        description: "Whether electronic claims are disabled"
+      - name: trusted_etrans_flags
+        description: "Electronic transaction trust settings"
+      - name: era_automation_override
+        description: "Override for ERA automation"
+
+      # Canadian Settings
+      - name: is_canadian_dental_association
+        description: "Whether carrier uses CDA"
+      - name: cdanet_version
+        description: "Version of CDAnet"
+      - name: canadian_network_id
+        description: "Canadian network identifier"
+
+      # Claim Processing
+      - name: is_coinsurance_inverted
+        description: "Whether coinsurance calculation is inverted"
+      - name: cob_ins_paid_behavior_override
+        description: "Override for COB payment behavior"
+      - name: ortho_ins_pay_consolidate
+        description: "Orthodontic payment consolidation setting"
+
+      # Metadata
+      - name: created_by_user_id
+        description: "User who created the carrier"
+      - name: created_at
+        description: "When carrier was created"
+        tests:
+          - not_null
+      - name: updated_at
+        description: "When carrier was last updated"
+
+  - name: stg_insplan
+    description: "Insurance plan details and configuration"
+    columns:
+      # Primary Key
+      - name: insurance_plan_id
+        description: "Primary key for insurance plans"
+        tests:
+          - unique
+          - not_null
+
+      # Relationships
+      - name: carrier_id
+        description: "Foreign key to carrier"
+        tests:
+          - relationships:
+              to: ref('stg_carrier')
+              field: carrier_id
+      - name: employer_id
+        description: "Foreign key to employer"
+      - name: fee_schedule_id
+        description: "Primary fee schedule"
+      - name: copay_fee_schedule_id
+        description: "Copayment fee schedule"
+      - name: allowed_fee_schedule_id
+        description: "Allowed amounts fee schedule"
+
+      # Plan Identification
+      - name: group_name
+        description: "Name of insurance group"
+      - name: group_number
+        description: "Insurance group number"
+      - name: division_number
+        description: "Division identifier"
+      - name: trojan_id
+        description: "Trojan benefit system ID"
+
+      # Configuration
+      - name: plan_type
+        description: "Type of insurance plan"
+      - name: is_medical
+        description: "Whether plan is medical insurance"
+      - name: is_hidden
+        description: "Whether plan is hidden from active use"
+      - name: renewal_month
+        description: "Month when plan renews"
+
+      # Fee Options
+      - name: use_alternate_codes
+        description: "Whether to use alternate procedure codes"
+      - name: claims_use_ucr
+        description: "Whether claims use UCR fees"
+      - name: show_base_units
+        description: "Whether to show base units"
+      - name: is_bluebook_enabled
+        description: "Whether bluebook pricing is enabled"
+
+      # Orthodontic Settings
+      - name: orthodontic_type
+        description: "Type of orthodontic coverage"
+      - name: orthodontic_auto_procedure_frequency
+        description: "Frequency of auto procedures"
+      - name: orthodontic_auto_fee_billed
+        description: "Auto-billed orthodontic fee"
+
+      # Metadata
+      - name: created_by_user_id
+        description: "User who created the plan"
+      - name: created_at
+        description: "When plan was created"
+        tests:
+          - not_null
+      - name: updated_at
+        description: "When plan was last updated"
+
+  - name: stg_inssub
+    description: "Insurance subscriber information"
+    columns:
+      # Primary Key
+      - name: insurance_subscriber_id
+        description: "Primary key for insurance subscribers"
+        tests:
+          - unique
+          - not_null
+
+      # Relationships
+      - name: insurance_plan_id
+        description: "Foreign key to insurance plan"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_insplan')
+              field: insurance_plan_id
+      - name: subscriber_patient_id
+        description: "Foreign key to patient who is subscriber"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_patient')
+              field: patient_id
+
+      # Subscriber Details
+      - name: subscriber_id_number
+        description: "Subscriber's insurance ID number"
+        tests:
+          - not_null
+
+      # Coverage Dates
+      - name: effective_date
+        description: "When coverage becomes effective"
+      - name: termination_date
+        description: "When coverage terminates"
+
+      # Authorization
+      - name: release_information
+        description: "Whether information release is authorized"
+      - name: assign_benefits
+        description: "Whether benefits assignment is authorized"
+
+      # Metadata
+      - name: created_by_user_id
+        description: "User who created the subscriber record"
+      - name: created_at
+        description: "When subscriber record was created"
+        tests:
+          - not_null
+      - name: updated_at
+        description: "When subscriber record was last updated"
+
+  - name: stg_patplan
+    description: "Patient-plan assignments and coverage"
+    columns:
+      # Primary Key
+      - name: patient_plan_id
+        description: "Primary key for patient plan assignments"
+        tests:
+          - unique
+          - not_null
+
+      # Relationships
+      - name: patient_id
+        description: "Foreign key to patient"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_patient')
+              field: patient_id
+      - name: insurance_subscriber_id
+        description: "Foreign key to insurance subscriber"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_inssub')
+              field: insurance_subscriber_id
+
+      # Plan Details
+      - name: plan_order
+        description: "Order of insurance plans (primary, secondary, etc.)"
+        tests:
+          - not_null
+      - name: is_pending_flag
+        description: "Whether coverage is pending verification"
+      - name: relationship_type
+        description: "Relationship to subscriber"
+      - name: patient_insurance_id
+        description: "Patient's ID for this insurance"
+
+      # Orthodontic Settings
+      - name: ortho_auto_fee_billed_override
+        description: "Override for auto-billed orthodontic fee"
+      - name: ortho_next_claim_date
+        description: "Next date for orthodontic claim"
+
+      # Metadata
+      - name: created_at
+        description: "When patient plan was created"
+        tests:
+          - not_null
+      - name: updated_at
+        description: "When patient plan was last updated"
+
+  - name: stg_benefit
+    description: "Insurance benefit information"
+    columns:
+      # Primary Key
+      - name: benefit_id
+        description: "Primary key for benefits"
+        tests:
+          - unique
+          - not_null
+
+      # Relationships
+      - name: insurance_plan_id
+        description: "Foreign key to insurance plan"
+        tests:
+          - relationships:
+              to: ref('stg_insplan')
+              field: insurance_plan_id
+      - name: patient_plan_id
+        description: "Foreign key to patient plan"
+        tests:
+          - relationships:
+              to: ref('stg_patplan')
+              field: patient_plan_id
+      - name: coverage_category_id
+        description: "Category of coverage"
+      - name: procedure_code_id
+        description: "Specific procedure code if applicable"
+      - name: code_group_id
+        description: "Group of procedure codes if applicable"
+
+      # Benefit Details
+      - name: benefit_type
+        description: "Type of benefit"
+        tests:
+          - not_null
+      - name: coverage_percent
+        description: "Percentage of coverage"
+      - name: monetary_amount
+        description: "Fixed monetary amount"
+      - name: time_period
+        description: "Period for benefit limitation"
+
+      # Limitations
+      - name: quantity_qualifier
+        description: "How quantity limit is applied"
+      - name: quantity_limit
+        description: "Limit on quantity"
+      - name: coverage_level
+        description: "Level of coverage"
+      - name: treatment_area
+        description: "Area of treatment covered"
+
+      # Calculated Fields
+      - name: benefit_calculation_type
+        description: "How benefit is calculated (monetary/percentage/other)"
+        tests:
+          - not_null
+
+      # Metadata
+      - name: created_at
+        description: "When benefit was created"
+        tests:
+          - not_null
+      - name: updated_at
+        description: "When benefit was last updated"
+
+  - name: stg_insverify
+    description: "Insurance verification records"
+    columns:
+      # Primary Key
+      - name: insurance_verification_id
+        description: "Primary key for verification records"
+        tests:
+          - unique
+          - not_null
+
+      # Relationships
+      - name: user_id
+        description: "User who performed verification"
+        tests:
+          - relationships:
+              to: ref('stg_userod')
+              field: user_id
+      - name: foreign_key_id
+        description: "Reference to verified entity"
+        tests:
+          - not_null
+      - name: definition_id
+        description: "Verification definition reference"
+
+      # Verification Details
+      - name: verification_type
+        description: "Type of verification performed"
+        tests:
+          - not_null
+      - name: hours_available
+        description: "Hours available for verification"
+
+      # Dates and Timing
+      - name: last_verified_date
+        description: "When last verification occurred"
+      - name: last_assigned_date
+        description: "When verification was last assigned"
+      - name: entry_datetime
+        description: "When verification record was created"
+        tests:
+          - not_null
+
+      # Metadata
+      - name: updated_at
+        description: "When verification record was last updated"
+
+  - name: stg_insverifyhist
+    description: "Historical insurance verification data"
+    columns:
+      # Primary Key
+      - name: insurance_verification_history_id
+        description: "Primary key for verification history"
+        tests:
+          - unique
+          - not_null
+
+      # Relationships
+      - name: insurance_verification_id
+        description: "Foreign key to verification record"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_insverify')
+              field: insurance_verification_id
+      - name: user_id
+        description: "User who created history record"
+        tests:
+          - relationships:
+              to: ref('stg_userod')
+              field: user_id
+      - name: verifying_user_id
+        description: "User who performed verification"
+        tests:
+          - relationships:
+              to: ref('stg_userod')
+              field: user_id
+      - name: foreign_key_id
+        description: "Reference to verified entity"
+        tests:
+          - not_null
+      - name: definition_id
+        description: "Verification definition reference"
+
+      # Verification Details
+      - name: verification_type
+        description: "Type of verification performed"
+        tests:
+          - not_null
+      - name: hours_available
+        description: "Hours available for verification"
+
+      # Dates and Timing
+      - name: last_verified_date
+        description: "When verification occurred"
+      - name: last_assigned_date
+        description: "When verification was assigned"
+      - name: entry_datetime
+        description: "When history record was created"
+        tests:
+          - not_null
+
+      # Metadata
+      - name: updated_at
+        description: "When history record was last updated"
+
+  - name: stg_insbluebook
+    description: "Insurance fee schedules (bluebook)"
+    columns:
+      # Primary Key
+      - name: insurance_bluebook_id
+        description: "Primary key for bluebook entries"
+        tests:
+          - unique
+          - not_null
+
+      # Relationships
+      - name: procedure_code_id
+        description: "Foreign key to procedure code"
+        tests:
+          - relationships:
+              to: ref('stg_procedurecode')
+              field: procedure_code_id
+      - name: carrier_id
+        description: "Foreign key to carrier"
+        tests:
+          - relationships:
+              to: ref('stg_carrier')
+              field: carrier_id
+      - name: insurance_plan_id
+        description: "Foreign key to insurance plan"
+        tests:
+          - relationships:
+              to: ref('stg_insplan')
+              field: insurance_plan_id
+      - name: procedure_id
+        description: "Foreign key to procedure"
+        tests:
+          - relationships:
+              to: ref('stg_procedurelog')
+              field: procedure_id
+      - name: claim_id
+        description: "Foreign key to claim"
+
+      # Insurance Details
+      - name: group_number
+        description: "Insurance group number"
+      - name: claim_type
+        description: "Type of claim"
+
+      # Financial Information
+      - name: insurance_payment_amount
+        description: "Amount paid by insurance"
+      - name: allowed_amount_override
+        description: "Override for allowed amount"
+
+      # Dates
+      - name: entry_datetime
+        description: "When bluebook entry was created"
+        tests:
+          - not_null
+      - name: procedure_date
+        description: "Date of procedure"
+
+  - name: stg_insbluebooklog
+    description: "Logs of insurance bluebook changes"
+    columns:
+      # Primary Key
+      - name: insurance_bluebook_log_id
+        description: "Primary key for bluebook log entries"
+        tests:
+          - unique
+          - not_null
+
+      # Relationships
+      - name: claim_procedure_id
+        description: "Foreign key to claim procedure"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_claimproc')
+              field: claim_procedure_id
+
+      # Financial Information
+      - name: allowed_fee_amount
+        description: "Allowed fee amount"
+
+      # Log Details
+      - name: description
+        description: "Description of bluebook change"
+
+      # Metadata
+      - name: entry_datetime
+        description: "When log entry was created"
+        tests:
+          - not_null
