@@ -54,11 +54,6 @@ renamed as (
 
         -- Enhanced data quality flags
         CASE 
-            WHEN Reaction = '' OR Reaction IS NULL THEN 1
-            ELSE 0
-        END as is_missing_reaction,
-        
-        CASE 
             WHEN SnomedReaction = '' OR SnomedReaction IS NULL THEN 1
             ELSE 0
         END as is_missing_snomed,
