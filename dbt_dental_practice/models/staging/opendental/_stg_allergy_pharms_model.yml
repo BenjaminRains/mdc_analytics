@@ -1,6 +1,6 @@
 version: 2
 
-models:
+# models:
   # =========== ALLERGIES ===========
   # - name: stg_allergy
   #   description: "Patient allergies"

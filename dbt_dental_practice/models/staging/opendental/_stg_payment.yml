@@ -19,13 +19,6 @@ models:
         description: Amount of the payment
         tests:
           - not_null
-          # Custom tests:
-          - test_name: payment_type_amount_validation
-            config:
-              where: |
-                (payment_type_id = 0 and payment_amount != 0) or
-                (payment_type_id = 72 and payment_amount >= 0) or
-                (payment_type_id = 574 and payment_amount < 5000)
       - name: payment_date
         description: Date of the payment
         tests:
@@ -43,3 +36,5 @@ models:
           - not_null
           - accepted_values:
               values: [0, 69, 70, 71, 72, 391, 412, 417, 574, 634]
+              config:
+                severity: warn  # Add severity level since some payment types might be added

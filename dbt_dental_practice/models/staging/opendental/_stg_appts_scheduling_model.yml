@@ -1,6 +1,6 @@
 version: 2
 
-models:
+# models:
   # =========== APPOINTMENTS ===========
   # - name: stg_appointment
   #   description: >

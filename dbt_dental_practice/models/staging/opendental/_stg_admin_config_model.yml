@@ -1,8 +1,6 @@
 version: 2
 
-version: 2
-
-models:
+# models:
   # =========== PROGRAM CONFIGURATION ===========
   # - name: stg_program
   #   description: "Program configuration and settings"

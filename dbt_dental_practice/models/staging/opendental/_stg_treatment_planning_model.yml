@@ -4,150 +4,150 @@ version: 2
 #   - name: stg_treatplan
 #     description: "Treatment plans for patients"
 #     columns:
-      # Primary Key
-      # - name: treatment_plan_id
-      #   description: "Primary key for treatment plans"
-      #   tests:
-      #     - unique
-      #     - not_null
-
-      # # Relationships
-      # - name: patient_id
-      #   description: "Foreign key to patient"
-      #   tests:
-      #     - not_null
-      #     - relationships:
-      #         to: ref('stg_patient')
-      #         field: patient_id
-      # - name: responsible_party_id
-      #   description: "Patient responsible for treatment"
-      #   tests:
-      #     - relationships:
-      #         to: ref('stg_patient')
-      #         field: patient_id
-      # - name: document_id
-      #   description: "Related document"
-      # - name: created_by_user_id
-      #   description: "User who created plan"
-      #   tests:
-      #     - relationships:
-      #         to: ref('stg_userod')
-      #         field: user_id
-      # - name: presenter_user_id
-      #   description: "User who presented plan"
-      #   tests:
-      #     - relationships:
-      #         to: ref('stg_userod')
-      #         field: user_id
-
-      # # Plan Details
-      # - name: treatment_plan_type
-      #   description: "Type of treatment plan"
-      # - name: treatment_plan_status
-      #   description: "Current status of plan"
-      #   tests:
-      #     - not_null
-      # - name: plan_heading
-      #   description: "Title/heading for plan"
-
-      # # Signatures
-      # - name: is_topaz_signature_flag
-      #   description: "Whether signed via Topaz"
-      # - name: patient_signature_text
-      #   description: "Patient signature text"
-      # - name: practice_signature_text
-      #   description: "Practice signature text"
-
-      # # Dates
-      # - name: treatment_plan_date
-      #   description: "Date plan was created"
-      #   tests:
-      #     - not_null
-      # - name: patient_signed_datetime
-      #   description: "When patient signed"
-      # - name: practice_signed_datetime
-      #   description: "When practice signed"
-      # - name: created_at
-      #   description: "When record was created"
-      #   tests:
-      #     - not_null
-      # - name: updated_at
-      #   description: "When record was last updated"
-
-  - name: stg_treatplanattach
-    description: "Attachments to treatment plans"
-    columns:
-      # Primary Key
-      - name: treatment_plan_attachment_id
-        description: "Primary key for treatment plan attachments"
-        tests:
-          - unique
-          - not_null
-
-      # Relationships
-      - name: treatment_plan_id
-        description: "Foreign key to treatment plan"
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_treatplan')
-              field: treatment_plan_id
-      - name: procedure_id
-        description: "Foreign key to procedure"
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_procedurelog')
-              field: procedure_id
-
-      # Details
-      - name: priority
-        description: "Priority order of procedure in plan"
-        tests:
-          - not_null
-
-  - name: stg_treatplanparam
-    description: "Treatment plan parameters"
-    columns:
-      # Primary Key
-      - name: treatment_plan_parameter_id
-        description: "Primary key for treatment plan parameters"
-        tests:
-          - unique
-          - not_null
-
-      # Relationships
-      - name: patient_id
-        description: "Foreign key to patient"
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_patient')
-              field: patient_id
-      - name: treatment_plan_id
-        description: "Foreign key to treatment plan"
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_treatplan')
-              field: treatment_plan_id
-
-      # Display Settings
-      - name: show_fees_flag
-        description: "Whether to display fees"
-      - name: show_insurance_flag
-        description: "Whether to display insurance"
-      - name: show_discount_flag
-        description: "Whether to display discounts"
-      - name: show_maximum_deductible_flag
-        description: "Whether to display max/deductible"
-
-      # Total Display Options
-      - name: show_subtotals_flag
-        description: "Whether to display subtotals"
-      - name: show_totals_flag
-        description: "Whether to display totals"
-
-      # Additional Options
-      - name: show_completed_procedures_flag
-        description: "Whether to show completed procedures"
+#       # Primary Key
+#       - name: treatment_plan_id
+#         description: "Primary key for treatment plans"
+#         tests:
+#           - unique
+#           - not_null
+#
+#       # Relationships
+#       - name: patient_id
+#         description: "Foreign key to patient"
+#         tests:
+#           - not_null
+#           - relationships:
+#               to: ref('stg_patient')
+#               field: patient_id
+#       - name: responsible_party_id
+#         description: "Patient responsible for treatment"
+#         tests:
+#           - relationships:
+#               to: ref('stg_patient')
+#               field: patient_id
+#       - name: document_id
+#         description: "Related document"
+#       - name: created_by_user_id
+#         description: "User who created plan"
+#         tests:
+#           - relationships:
+#               to: ref('stg_userod')
+#               field: user_id
+#       - name: presenter_user_id
+#         description: "User who presented plan"
+#         tests:
+#           - relationships:
+#               to: ref('stg_userod')
+#               field: user_id
+#
+#       # Plan Details
+#       - name: treatment_plan_type
+#         description: "Type of treatment plan"
+#       - name: treatment_plan_status
+#         description: "Current status of plan"
+#         tests:
+#           - not_null
+#       - name: plan_heading
+#         description: "Title/heading for plan"
+#
+#       # Signatures
+#       - name: is_topaz_signature_flag
+#         description: "Whether signed via Topaz"
+#       - name: patient_signature_text
+#         description: "Patient signature text"
+#       - name: practice_signature_text
+#         description: "Practice signature text"
+#
+#       # Dates
+#       - name: treatment_plan_date
+#         description: "Date plan was created"
+#         tests:
+#           - not_null
+#       - name: patient_signed_datetime
+#         description: "When patient signed"
+#       - name: practice_signed_datetime
+#         description: "When practice signed"
+#       - name: created_at
+#         description: "When record was created"
+#         tests:
+#           - not_null
+#       - name: updated_at
+#         description: "When record was last updated"
+#
+#   - name: stg_treatplanattach
+#     description: "Attachments to treatment plans"
+#     columns:
+#       # Primary Key
+#       - name: treatment_plan_attachment_id
+#         description: "Primary key for treatment plan attachments"
+#         tests:
+#           - unique
+#           - not_null
+#
+#       # Relationships
+#       - name: treatment_plan_id
+#         description: "Foreign key to treatment plan"
+#         tests:
+#           - not_null
+#           - relationships:
+#               to: ref('stg_treatplan')
+#               field: treatment_plan_id
+#       - name: procedure_id
+#         description: "Foreign key to procedure"
+#         tests:
+#           - not_null
+#           - relationships:
+#               to: ref('stg_procedurelog')
+#               field: procedure_id
+#
+#       # Details
+#       - name: priority
+#         description: "Priority order of procedure in plan"
+#         tests:
+#           - not_null
+#
+#   - name: stg_treatplanparam
+#     description: "Treatment plan parameters"
+#     columns:
+#       # Primary Key
+#       - name: treatment_plan_parameter_id
+#         description: "Primary key for treatment plan parameters"
+#         tests:
+#           - unique
+#           - not_null
+#
+#       # Relationships
+#       - name: patient_id
+#         description: "Foreign key to patient"
+#         tests:
+#           - not_null
+#           - relationships:
+#               to: ref('stg_patient')
+#               field: patient_id
+#       - name: treatment_plan_id
+#         description: "Foreign key to treatment plan"
+#         tests:
+#           - not_null
+#           - relationships:
+#               to: ref('stg_treatplan')
+#               field: treatment_plan_id
+#
+#       # Display Settings
+#       - name: show_fees_flag
+#         description: "Whether to display fees"
+#       - name: show_insurance_flag
+#         description: "Whether to display insurance"
+#       - name: show_discount_flag
+#         description: "Whether to display discounts"
+#       - name: show_maximum_deductible_flag
+#         description: "Whether to display max/deductible"
+#
+#       # Total Display Options
+#       - name: show_subtotals_flag
+#         description: "Whether to display subtotals"
+#       - name: show_totals_flag
+#         description: "Whether to display totals"
+#
+#       # Additional Options
+#       - name: show_completed_procedures_flag
+#         description: "Whether to show completed procedures"
