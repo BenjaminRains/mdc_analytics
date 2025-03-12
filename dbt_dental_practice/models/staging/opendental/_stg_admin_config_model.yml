@@ -1,99 +1,100 @@
 version: 2
 
+version: 2
+
 models:
-  - name: stg_program
-    description: "Program configuration and settings"
-    columns:
-      # Primary Key
-      - name: program_id
-        description: "Primary key for program entries"
-        tests:
-          - unique
-          - not_null
-
-      # Program Identification
-      - name: program_name
-        description: "Name of the program"
-        tests:
-          - not_null
-      - name: program_description
-        description: "Description of the program"
-
-      # Status Flags
-      - name: is_enabled_flag
-        description: "Whether program is currently enabled"
-        tests:
-          - not_null
-      - name: is_disabled_by_hq_flag
-        description: "Whether program is disabled by headquarters"
-        tests:
-          - not_null
-
-      # Program Configuration
-      - name: program_path
-        description: "File path to program executable"
-      - name: command_line
-        description: "Command line arguments for program"
-      - name: plugin_dll_name
-        description: "Name of associated plugin DLL"
-
-      # File Settings
-      - name: file_template
-        description: "Template for file generation"
-      - name: file_path
-        description: "Path for file operations"
-      - name: button_image
-        description: "Image used for program button"
-
-      # Additional Information
-      - name: program_notes
-        description: "Additional notes about program"
-      - name: custom_error_message
-        description: "Custom error message for program"
-
-  - name: stg_programproperty
-    description: "Program properties and configuration settings"
-    columns:
-      # Primary Key
-      - name: program_property_id
-        description: "Primary key for program properties"
-        tests:
-          - unique
-          - not_null
-
-      # Relationships
-      - name: program_id
-        description: "Foreign key to program"
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_program')
-              field: program_id
-      - name: clinic_id
-        description: "Foreign key to clinic"
-        tests:
-          - relationships:
-              to: ref('stg_clinic')
-              field: clinic_id
-
-      # Property Details
-      - name: property_description
-        description: "Description of the property"
-        tests:
-          - not_null
-      - name: property_value
-        description: "Value of the property"
-      - name: computer_name
-        description: "Name of computer where property is set"
-
-      # Security Flags
-      - name: is_masked_flag
-        description: "Whether property value should be masked"
-        tests:
-          - not_null
-      - name: is_high_security_flag
-        description: "Whether property requires high security"
-        tests:
-          - not_null
-
-
+  # =========== PROGRAM CONFIGURATION ===========
+  # - name: stg_program
+  #   description: "Program configuration and settings"
+  #   columns:
+  #     # Primary Key
+  #     - name: program_id
+  #       description: "Primary key for program entries"
+  #       tests:
+  #         - unique
+  #         - not_null
+  #
+  #     # Program Identification
+  #     - name: program_name
+  #       description: "Name of the program"
+  #       tests:
+  #         - not_null
+  #     - name: program_description
+  #       description: "Description of the program"
+  #
+  #     # Status Flags
+  #     - name: is_enabled_flag
+  #       description: "Whether program is currently enabled"
+  #       tests:
+  #         - not_null
+  #     - name: is_disabled_by_hq_flag
+  #       description: "Whether program is disabled by headquarters"
+  #       tests:
+  #         - not_null
+  #
+  #     # Program Configuration
+  #     - name: program_path
+  #       description: "File path to program executable"
+  #     - name: command_line
+  #       description: "Command line arguments for program"
+  #     - name: plugin_dll_name
+  #       description: "Name of associated plugin DLL"
+  #
+  #     # File Settings
+  #     - name: file_template
+  #       description: "Template for file generation"
+  #     - name: file_path
+  #       description: "Path for file operations"
+  #     - name: button_image
+  #       description: "Image used for program button"
+  #
+  #     # Additional Information
+  #     - name: program_notes
+  #       description: "Additional notes about program"
+  #     - name: custom_error_message
+  #       description: "Custom error message for program"
+  #
+  # - name: stg_programproperty
+  #   description: "Program properties and configuration settings"
+  #   columns:
+  #     # Primary Key
+  #     - name: program_property_id
+  #       description: "Primary key for program properties"
+  #       tests:
+  #         - unique
+  #         - not_null
+  #
+  #     # Relationships
+  #     - name: program_id
+  #       description: "Foreign key to program"
+  #       tests:
+  #         - not_null
+  #         - relationships:
+  #             to: ref('stg_program')
+  #             field: program_id
+  #     - name: clinic_id
+  #       description: "Foreign key to clinic"
+  #       tests:
+  #         - relationships:
+  #             to: ref('stg_clinic')
+  #             field: clinic_id
+  #
+  #     # Property Details
+  #     - name: property_description
+  #       description: "Description of the property"
+  #       tests:
+  #         - not_null
+  #     - name: property_value
+  #       description: "Value of the property"
+  #     - name: computer_name
+  #       description: "Name of computer where property is set"
+  #
+  #     # Security Flags
+  #     - name: is_masked_flag
+  #       description: "Whether property value should be masked"
+  #       tests:
+  #         - not_null
+  #     - name: is_high_security_flag
+  #       description: "Whether property requires high security"
+  #       tests:
+  #         - not_null

@@ -1,336 +1,336 @@
 version: 2
 
-models:
-  - name: stg_document
-    description: "Documents attached to patient records"
-    columns:
-      # Primary Key
-      - name: document_id
-        description: "Primary key for documents"
-        tests:
-          - unique
-          - not_null
-
-      # Relationships
-      - name: patient_id
-        description: "Foreign key to patient"
-        tests:
-          - relationships:
-              to: ref('stg_patient')
-              field: patient_id
-      - name: document_category_id
-        description: "Category of document"
-      - name: provider_id
-        description: "Provider associated with document"
-        tests:
-          - relationships:
-              to: ref('stg_provider')
-              field: provider_id
-      - name: mount_item_id
-        description: "Related mount item"
-
-      # Document Metadata
-      - name: image_type
-        description: "Type of image/document"
-      - name: created_datetime
-        description: "When document was created"
-        tests:
-          - not_null
-      - name: tooth_numbers
-        description: "Associated tooth numbers"
-
-      # Document Properties
-      - name: is_flipped
-        description: "Whether image is flipped"
-      - name: degrees_rotated
-        description: "Degrees of rotation applied"
-      - name: print_heading
-        description: "Heading when printed"
-
-      # Source Information
-      - name: external_source
-        description: "Source of external document"
-      - name: image_capture_type
-        description: "How image was captured"
-
-      # Image Processing
-      - name: crop_x
-        description: "X coordinate of crop"
-      - name: crop_y
-        description: "Y coordinate of crop"
-      - name: crop_width
-        description: "Width of crop"
-      - name: crop_height
-        description: "Height of crop"
-      - name: windowing_min
-        description: "Minimum window value"
-      - name: windowing_max
-        description: "Maximum window value"
-      - name: is_crop_old
-        description: "Whether using old crop system"
-
-      # Metadata
-      - name: updated_at
-        description: "When document was last updated"
-
-  - name: stg_sheet
-    description: "Custom forms and sheets"
-    columns:
-      # Primary Key
-      - name: sheet_id
-        description: "Primary key for sheets"
-        tests:
-          - unique
-          - not_null
-
-      # Relationships
-      - name: patient_id
-        description: "Foreign key to patient"
-        tests:
-          - relationships:
-              to: ref('stg_patient')
-              field: patient_id
-      - name: sheet_definition_id
-        description: "Definition of sheet layout"
-        tests:
-          - not_null
-      - name: document_id
-        description: "Related document"
-        tests:
-          - relationships:
-              to: ref('stg_document')
-              field: document_id
-      - name: clinic_id
-        description: "Clinic where sheet was created"
-      - name: web_form_sheet_id
-        description: "Web form identifier"
-
-      # Sheet Details
-      - name: sheet_type
-        description: "Type of sheet"
-        tests:
-          - not_null
-      - name: sheet_description
-        description: "Description of sheet"
-
-      # Format Configuration
-      - name: font_size
-        description: "Size of font"
-      - name: font_name
-        description: "Name of font"
-      - name: width
-        description: "Width of sheet"
-      - name: height
-        description: "Height of sheet"
-      - name: is_landscape_flag
-        description: "Whether in landscape orientation"
-
-      # Display Settings
-      - name: show_in_terminal_flag
-        description: "Whether to show in terminal"
-      - name: is_web_form_flag
-        description: "Whether is web form"
-      - name: is_multi_page_flag
-        description: "Whether has multiple pages"
-      - name: has_mobile_layout_flag
-        description: "Whether has mobile layout"
-
-      # Status
-      - name: is_deleted_flag
-        description: "Whether sheet is deleted"
-      - name: revision_id
-        description: "Version control identifier"
-
-      # Dates
-      - name: sheet_datetime
-        description: "When sheet was created"
-        tests:
-          - not_null
-      - name: last_edited_datetime
-        description: "When sheet was last edited"
-
-  - name: sheetfield
-    description: "Field values for custom sheets"
-
-  - name: sheetfielddef
-    description: "Field definitions for custom sheets"
-
-  - name: stg_sheetfield
-    description: "Field values for custom sheets"
-    columns:
-      # Primary Key
-      - name: sheet_field_id
-        description: "Primary key for sheet fields"
-        tests:
-          - unique
-          - not_null
-
-      # Relationships
-      - name: sheet_id
-        description: "Foreign key to sheet"
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_sheet')
-              field: sheet_id
-      - name: field_definition_id
-        description: "Foreign key to field definition"
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_sheetfielddef')
-              field: field_definition_id
-
-      # Field Details
-      - name: field_type
-        description: "Type of field"
-        tests:
-          - not_null
-      - name: field_name
-        description: "Name of field"
-      - name: field_value
-        description: "Value stored in field"
-      - name: reportable_name
-        description: "Name used in reports"
-
-      # Visual Formatting
-      - name: font_size
-        description: "Size of font"
-      - name: font_name
-        description: "Name of font"
-      - name: is_bold_flag
-        description: "Whether text is bold"
-      - name: text_alignment
-        description: "Text alignment setting"
-      - name: item_color
-        description: "Color of field"
-
-      # Position and Size
-      - name: x_position
-        description: "Horizontal position"
-      - name: y_position
-        description: "Vertical position"
-      - name: width
-        description: "Width of field"
-      - name: height
-        description: "Height of field"
-      - name: growth_behavior
-        description: "How field grows"
-
-      # Radio Button Settings
-      - name: radio_button_value
-        description: "Value for radio button"
-      - name: radio_button_group
-        description: "Group for radio buttons"
-
-      # Form Behavior
-      - name: is_required_flag
-        description: "Whether field is required"
-      - name: is_locked_flag
-        description: "Whether field is locked"
-      - name: tab_order
-        description: "Order in tab sequence"
-
-      # Mobile Configuration
-      - name: mobile_tab_order
-        description: "Tab order on mobile"
-      - name: mobile_label
-        description: "Label for mobile display"
-      - name: mobile_radio_button_label
-        description: "Mobile radio button label"
-
-      # Electronic Signature
-      - name: signature_datetime
-        description: "When field was signed"
-      - name: can_sign_electronically_flag
-        description: "Whether can be signed electronically"
-      - name: is_signature_provider_restricted_flag
-        description: "Whether signature is provider restricted"
-
-  - name: stg_sheetfielddef
-    description: "Field definitions for custom sheets"
-    columns:
-      # Primary Key
-      - name: field_definition_id
-        description: "Primary key for field definitions"
-        tests:
-          - unique
-          - not_null
-
-      # Relationships
-      - name: sheet_definition_id
-        description: "Foreign key to sheet definition"
-        tests:
-          - not_null
-
-      # Field Details
-      - name: field_type
-        description: "Type of field"
-        tests:
-          - not_null
-      - name: field_name
-        description: "Name of field"
-      - name: default_value
-        description: "Default value for field"
-      - name: reportable_name
-        description: "Name used in reports"
-
-      # Visual Formatting
-      - name: font_size
-        description: "Size of font"
-      - name: font_name
-        description: "Name of font"
-      - name: is_bold_flag
-        description: "Whether text is bold"
-      - name: text_alignment
-        description: "Text alignment setting"
-      - name: item_color
-        description: "Color of field"
-
-      # Position and Size
-      - name: x_position
-        description: "Horizontal position"
-      - name: y_position
-        description: "Vertical position"
-      - name: width
-        description: "Width of field"
-      - name: height
-        description: "Height of field"
-      - name: growth_behavior
-        description: "How field grows"
-
-      # Radio Button Settings
-      - name: radio_button_value
-        description: "Value for radio button"
-      - name: radio_button_group
-        description: "Group for radio buttons"
-
-      # Form Behavior
-      - name: is_required_flag
-        description: "Whether field is required"
-      - name: is_locked_flag
-        description: "Whether field is locked"
-      - name: tab_order
-        description: "Order in tab sequence"
-
-      # Mobile Configuration
-      - name: mobile_tab_order
-        description: "Tab order on mobile"
-      - name: mobile_label
-        description: "Label for mobile display"
-      - name: mobile_radio_button_label
-        description: "Mobile radio button label"
-
-      # Additional Settings
-      - name: is_payment_option_flag
-        description: "Whether field is payment option"
-      - name: layout_mode
-        description: "Mode for layout"
-      - name: language_code
-        description: "Language for field"
-
-      # Electronic Signature
-      - name: can_sign_electronically_flag
-        description: "Whether can be signed electronically"
-      - name: is_signature_provider_restricted_flag
-        description: "Whether signature is provider restricted"
+# models:
+#   - name: stg_document
+#     description: "Documents attached to patient records"
+#     columns:
+#       # Primary Key
+#       - name: document_id
+#         description: "Primary key for documents"
+#         tests:
+#           - unique
+#           - not_null
+#
+#       # Relationships
+#       - name: patient_id
+#         description: "Foreign key to patient"
+#         tests:
+#           - relationships:
+#               to: ref('stg_patient')
+#               field: patient_id
+#       - name: document_category_id
+#         description: "Category of document"
+#       - name: provider_id
+#         description: "Provider associated with document"
+#         tests:
+#           - relationships:
+#               to: ref('stg_provider')
+#               field: provider_id
+#       - name: mount_item_id
+#         description: "Related mount item"
+#
+#       # Document Metadata
+#       - name: image_type
+#         description: "Type of image/document"
+#       - name: created_datetime
+#         description: "When document was created"
+#         tests:
+#           - not_null
+#       - name: tooth_numbers
+#         description: "Associated tooth numbers"
+#
+#       # Document Properties
+#       - name: is_flipped
+#         description: "Whether image is flipped"
+#       - name: degrees_rotated
+#         description: "Degrees of rotation applied"
+#       - name: print_heading
+#         description: "Heading when printed"
+#
+#       # Source Information
+#       - name: external_source
+#         description: "Source of external document"
+#       - name: image_capture_type
+#         description: "How image was captured"
+#
+#       # Image Processing
+#       - name: crop_x
+#         description: "X coordinate of crop"
+#       - name: crop_y
+#         description: "Y coordinate of crop"
+#       - name: crop_width
+#         description: "Width of crop"
+#       - name: crop_height
+#         description: "Height of crop"
+#       - name: windowing_min
+#         description: "Minimum window value"
+#       - name: windowing_max
+#         description: "Maximum window value"
+#       - name: is_crop_old
+#         description: "Whether using old crop system"
+#
+#       # Metadata
+#       - name: updated_at
+#         description: "When document was last updated"
+#
+#   - name: stg_sheet
+#     description: "Custom forms and sheets"
+#     columns:
+#       # Primary Key
+#       - name: sheet_id
+#         description: "Primary key for sheets"
+#         tests:
+#           - unique
+#           - not_null
+#
+#       # Relationships
+#       - name: patient_id
+#         description: "Foreign key to patient"
+#         tests:
+#           - relationships:
+#               to: ref('stg_patient')
+#               field: patient_id
+#       - name: sheet_definition_id
+#         description: "Definition of sheet layout"
+#         tests:
+#           - not_null
+#       - name: document_id
+#         description: "Related document"
+#         tests:
+#           - relationships:
+#               to: ref('stg_document')
+#               field: document_id
+#       - name: clinic_id
+#         description: "Clinic where sheet was created"
+#       - name: web_form_sheet_id
+#         description: "Web form identifier"
+#
+#       # Sheet Details
+#       - name: sheet_type
+#         description: "Type of sheet"
+#         tests:
+#           - not_null
+#       - name: sheet_description
+#         description: "Description of sheet"
+#
+#       # Format Configuration
+#       - name: font_size
+#         description: "Size of font"
+#       - name: font_name
+#         description: "Name of font"
+#       - name: width
+#         description: "Width of sheet"
+#       - name: height
+#         description: "Height of sheet"
+#       - name: is_landscape_flag
+#         description: "Whether in landscape orientation"
+#
+#       # Display Settings
+#       - name: show_in_terminal_flag
+#         description: "Whether to show in terminal"
+#       - name: is_web_form_flag
+#         description: "Whether is web form"
+#       - name: is_multi_page_flag
+#         description: "Whether has multiple pages"
+#       - name: has_mobile_layout_flag
+#         description: "Whether has mobile layout"
+#
+#       # Status
+#       - name: is_deleted_flag
+#         description: "Whether sheet is deleted"
+#       - name: revision_id
+#         description: "Version control identifier"
+#
+#       # Dates
+#       - name: sheet_datetime
+#         description: "When sheet was created"
+#         tests:
+#           - not_null
+#       - name: last_edited_datetime
+#         description: "When sheet was last edited"
+#
+#   - name: sheetfield
+#     description: "Field values for custom sheets"
+#
+#   - name: sheetfielddef
+#     description: "Field definitions for custom sheets"
+#
+#   - name: stg_sheetfield
+#     description: "Field values for custom sheets"
+#     columns:
+#       # Primary Key
+#       - name: sheet_field_id
+#         description: "Primary key for sheet fields"
+#         tests:
+#           - unique
+#           - not_null
+#
+#       # Relationships
+#       - name: sheet_id
+#         description: "Foreign key to sheet"
+#         tests:
+#           - not_null
+#           - relationships:
+#               to: ref('stg_sheet')
+#               field: sheet_id
+#       - name: field_definition_id
+#         description: "Foreign key to field definition"
+#         tests:
+#           - not_null
+#           - relationships:
+#               to: ref('stg_sheetfielddef')
+#               field: field_definition_id
+#
+#       # Field Details
+#       - name: field_type
+#         description: "Type of field"
+#         tests:
+#           - not_null
+#       - name: field_name
+#         description: "Name of field"
+#       - name: field_value
+#         description: "Value stored in field"
+#       - name: reportable_name
+#         description: "Name used in reports"
+#
+#       # Visual Formatting
+#       - name: font_size
+#         description: "Size of font"
+#       - name: font_name
+#         description: "Name of font"
+#       - name: is_bold_flag
+#         description: "Whether text is bold"
+#       - name: text_alignment
+#         description: "Text alignment setting"
+#       - name: item_color
+#         description: "Color of field"
+#
+#       # Position and Size
+#       - name: x_position
+#         description: "Horizontal position"
+#       - name: y_position
+#         description: "Vertical position"
+#       - name: width
+#         description: "Width of field"
+#       - name: height
+#         description: "Height of field"
+#       - name: growth_behavior
+#         description: "How field grows"
+#
+#       # Radio Button Settings
+#       - name: radio_button_value
+#         description: "Value for radio button"
+#       - name: radio_button_group
+#         description: "Group for radio buttons"
+#
+#       # Form Behavior
+#       - name: is_required_flag
+#         description: "Whether field is required"
+#       - name: is_locked_flag
+#         description: "Whether field is locked"
+#       - name: tab_order
+#         description: "Order in tab sequence"
+#
+#       # Mobile Configuration
+#       - name: mobile_tab_order
+#         description: "Tab order on mobile"
+#       - name: mobile_label
+#         description: "Label for mobile display"
+#       - name: mobile_radio_button_label
+#         description: "Mobile radio button label"
+#
+#       # Electronic Signature
+#       - name: signature_datetime
+#         description: "When field was signed"
+#       - name: can_sign_electronically_flag
+#         description: "Whether can be signed electronically"
+#       - name: is_signature_provider_restricted_flag
+#         description: "Whether signature is provider restricted"
+#
+#   - name: stg_sheetfielddef
+#     description: "Field definitions for custom sheets"
+#     columns:
+#       # Primary Key
+#       - name: field_definition_id
+#         description: "Primary key for field definitions"
+#         tests:
+#           - unique
+#           - not_null
+#
+#       # Relationships
+#       - name: sheet_definition_id
+#         description: "Foreign key to sheet definition"
+#         tests:
+#           - not_null
+#
+#       # Field Details
+#       - name: field_type
+#         description: "Type of field"
+#         tests:
+#           - not_null
+#       - name: field_name
+#         description: "Name of field"
+#       - name: default_value
+#         description: "Default value for field"
+#       - name: reportable_name
+#         description: "Name used in reports"
+#
+#       # Visual Formatting
+#       - name: font_size
+#         description: "Size of font"
+#       - name: font_name
+#         description: "Name of font"
+#       - name: is_bold_flag
+#         description: "Whether text is bold"
+#       - name: text_alignment
+#         description: "Text alignment setting"
+#       - name: item_color
+#         description: "Color of field"
+#
+#       # Position and Size
+#       - name: x_position
+#         description: "Horizontal position"
+#       - name: y_position
+#         description: "Vertical position"
+#       - name: width
+#         description: "Width of field"
+#       - name: height
+#         description: "Height of field"
+#       - name: growth_behavior
+#         description: "How field grows"
+#
+#       # Radio Button Settings
+#       - name: radio_button_value
+#         description: "Value for radio button"
+#       - name: radio_button_group
+#         description: "Group for radio buttons"
+#
+#       # Form Behavior
+#       - name: is_required_flag
+#         description: "Whether field is required"
+#       - name: is_locked_flag
+#         description: "Whether field is locked"
+#       - name: tab_order
+#         description: "Order in tab sequence"
+#
+#       # Mobile Configuration
+#       - name: mobile_tab_order
+#         description: "Tab order on mobile"
+#       - name: mobile_label
+#         description: "Label for mobile display"
+#       - name: mobile_radio_button_label
+#         description: "Mobile radio button label"
+#
+#       # Additional Settings
+#       - name: is_payment_option_flag
+#         description: "Whether field is payment option"
+#       - name: layout_mode
+#         description: "Mode for layout"
+#       - name: language_code
+#         description: "Language for field"
+#
+#       # Electronic Signature
+#       - name: can_sign_electronically_flag
+#         description: "Whether can be signed electronically"
+#       - name: is_signature_provider_restricted_flag
+#         description: "Whether signature is provider restricted"

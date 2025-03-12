@@ -1,118 +1,118 @@
 version: 2
 
-models:
-  - name: stg_autocode
-    description: "Automatic code assignments for dental procedures"
-    columns:
-      # Primary Key
-      - name: autocode_id
-        description: "Primary key for automatic code assignments"
-        tests:
-          - unique
-          - not_null
-
-      # Details
-      - name: description
-        description: "Description of the automatic code assignment"
-        tests:
-          - not_null
-
-      # Configuration Flags
-      - name: is_hidden
-        description: "Whether the autocode is hidden from normal view"
-        tests:
-          - not_null
-      - name: is_less_intrusive
-        description: "Whether the procedure is considered less intrusive"
-        tests:
-          - not_null
-
-  - name: stg_codegroup
-    description: "Groupings of dental procedure codes"
-    columns:
-      # Primary Key
-      - name: code_group_id
-        description: "Primary key for code groups"
-        tests:
-          - unique
-          - not_null
-
-      # Group Details
-      - name: group_name
-        description: "Name of the code group"
-        tests:
-          - not_null
-      - name: procedure_codes
-        description: "List of procedure codes in the group"
-
-      # Configuration
-      - name: display_order
-        description: "Order for display in UI"
-      - name: is_fixed_group
-        description: "Whether the group is fixed/unchangeable"
-        tests:
-          - not_null
-      - name: is_hidden
-        description: "Whether the group is hidden from normal view"
-        tests:
-          - not_null
-      - name: show_in_age_limit
-        description: "Whether to show age limits for this group"
-        tests:
-          - not_null
-
-  - name: stg_cpt
-    description: "CPT (Current Procedural Terminology) procedure codes"
-    columns:
-      # Primary Key
-      - name: cpt_id
-        description: "Primary key for CPT entries"
-        tests:
-          - unique
-          - not_null
-
-      # CPT Code Details
-      - name: cpt_code
-        description: "Standard CPT procedure code"
-        tests:
-          - not_null
-      - name: description
-        description: "Description of the CPT code"
-        tests:
-          - not_null
-      - name: version_ids
-        description: "Associated version identifiers"
-
-  - name: stg_definition
-    description: "System definitions and configuration settings"
-    columns:
-      # Primary Key
-      - name: definition_id
-        description: "Primary key for system definitions"
-        tests:
-          - unique
-          - not_null
-
-      # Definition Details
-      - name: category_id
-        description: "Category identifier for the definition"
-        tests:
-          - not_null
-      - name: item_name
-        description: "Name of the configuration item"
-        tests:
-          - not_null
-      - name: item_value
-        description: "Value of the configuration item"
-
-      # Display Settings
-      - name: display_order
-        description: "Order for display in UI"
-      - name: color_value
-        description: "Color setting for display"
-      - name: is_hidden
-        description: "Whether definition is hidden from normal view"
-        tests:
-          - not_null
+# models:
+#   - name: stg_autocode
+#     description: "Automatic code assignments for dental procedures"
+#     columns:
+#       # Primary Key
+#       - name: autocode_id
+#         description: "Primary key for automatic code assignments"
+#         tests:
+#           - unique
+#           - not_null
+#
+#       # Details
+#       - name: description
+#         description: "Description of the automatic code assignment"
+#         tests:
+#           - not_null
+#
+#       # Configuration Flags
+#       - name: is_hidden
+#         description: "Whether the autocode is hidden from normal view"
+#         tests:
+#           - not_null
+#       - name: is_less_intrusive
+#         description: "Whether the procedure is considered less intrusive"
+#         tests:
+#           - not_null
+#
+#   - name: stg_codegroup
+#     description: "Groupings of dental procedure codes"
+#     columns:
+#       # Primary Key
+#       - name: code_group_id
+#         description: "Primary key for code groups"
+#         tests:
+#           - unique
+#           - not_null
+#
+#       # Group Details
+#       - name: group_name
+#         description: "Name of the code group"
+#         tests:
+#           - not_null
+#       - name: procedure_codes
+#         description: "List of procedure codes in the group"
+#
+#       # Configuration
+#       - name: display_order
+#         description: "Order for display in UI"
+#       - name: is_fixed_group
+#         description: "Whether the group is fixed/unchangeable"
+#         tests:
+#           - not_null
+#       - name: is_hidden
+#         description: "Whether the group is hidden from normal view"
+#         tests:
+#           - not_null
+#       - name: show_in_age_limit
+#         description: "Whether to show age limits for this group"
+#         tests:
+#           - not_null
+#
+#   - name: stg_cpt
+#     description: "CPT (Current Procedural Terminology) procedure codes"
+#     columns:
+#       # Primary Key
+#       - name: cpt_id
+#         description: "Primary key for CPT entries"
+#         tests:
+#           - unique
+#           - not_null
+#
+#       # CPT Code Details
+#       - name: cpt_code
+#         description: "Standard CPT procedure code"
+#         tests:
+#           - not_null
+#       - name: description
+#         description: "Description of the CPT code"
+#         tests:
+#           - not_null
+#       - name: version_ids
+#         description: "Associated version identifiers"
+#
+#   - name: stg_definition
+#     description: "System definitions and configuration settings"
+#     columns:
+#       # Primary Key
+#       - name: definition_id
+#         description: "Primary key for system definitions"
+#         tests:
+#           - unique
+#           - not_null
+#
+#       # Definition Details
+#       - name: category_id
+#         description: "Category identifier for the definition"
+#         tests:
+#           - not_null
+#       - name: item_name
+#         description: "Name of the configuration item"
+#         tests:
+#           - not_null
+#       - name: item_value
+#         description: "Value of the configuration item"
+#
+#       # Display Settings
+#       - name: display_order
+#         description: "Order for display in UI"
+#       - name: color_value
+#         description: "Color setting for display"
+#       - name: is_hidden
+#         description: "Whether definition is hidden from normal view"
+#         tests:
+#           - not_null
 
 

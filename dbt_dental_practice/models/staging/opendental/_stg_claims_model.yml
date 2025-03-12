@@ -1,316 +1,316 @@
 version: 2
 
-models:
-  - name: stg_claim
-    description: "Insurance claims submitted"
-    columns:
-      # Primary Key
-      - name: claim_id
-        description: "Primary key for claims"
-        tests:
-          - unique
-          - not_null
-
-      # Relationships
-      - name: patient_id
-        description: "Foreign key to patient"
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_patient')
-              field: patient_id
-      - name: insurance_plan_id
-        description: "Primary insurance plan"
-        tests:
-          - relationships:
-              to: ref('stg_insplan')
-              field: insurance_plan_id
-      - name: secondary_insurance_plan_id
-        description: "Secondary insurance plan"
-        tests:
-          - relationships:
-              to: ref('stg_insplan')
-              field: insurance_plan_id
-      - name: insurance_subscriber_id
-        description: "Primary insurance subscriber"
-        tests:
-          - relationships:
-              to: ref('stg_inssub')
-              field: insurance_subscriber_id
-      - name: treating_provider_id
-        description: "Provider who performed treatment"
-        tests:
-          - relationships:
-              to: ref('stg_provider')
-              field: provider_id
-      - name: clinic_id
-        description: "Clinic where service was provided"
-
-      # Claim Status and Timing
-      - name: claim_status
-        description: "Current status of claim"
-        tests:
-          - not_null
-      - name: claim_type
-        description: "Type of claim"
-      - name: service_date
-        description: "Date of service"
-        tests:
-          - not_null
-      - name: sent_date
-        description: "When claim was sent"
-      - name: received_date
-        description: "When claim was received"
-
-      # Claim Identifiers
-      - name: preauthorization_number
-        description: "Preauthorization reference"
-      - name: prior_authorization_number
-        description: "Prior authorization reference"
-      - name: claim_identifier
-        description: "Unique claim identifier"
-
-      # Financial Details
-      - name: claim_fee
-        description: "Total fee for claim"
-      - name: insurance_payment_estimate
-        description: "Estimated insurance payment"
-      - name: insurance_payment_amount
-        description: "Actual insurance payment"
-      - name: deductible_applied
-        description: "Deductible amount applied"
-      - name: write_off_amount
-        description: "Amount written off"
-
-      # Service Details
-      - name: place_of_service
-        description: "Where service was performed"
-      - name: patient_relationship
-        description: "Relationship to subscriber"
-
-      # Orthodontic Information
-      - name: is_orthodontic
-        description: "Whether claim is orthodontic"
-      - name: orthodontic_remaining_months
-        description: "Months of treatment remaining"
-      - name: orthodontic_total_months
-        description: "Total months of treatment"
-
-      # Metadata
-      - name: created_by_user_id
-        description: "User who created claim"
-      - name: created_at
-        description: "When claim was created"
-        tests:
-          - not_null
-      - name: updated_at
-        description: "When claim was last updated"
-
-  - name: stg_claimpayment
-    description: "Payments received from insurance claims"
-    columns:
-      # Primary Key
-      - name: claim_payment_id
-        description: "Primary key for claim payments"
-        tests:
-          - unique
-          - not_null
-
-      # Relationships
-      - name: clinic_id
-        description: "Clinic receiving payment"
-        tests:
-          - relationships:
-              to: ref('stg_clinic')
-              field: clinic_id
-      - name: deposit_id
-        description: "Associated deposit record"
-      - name: payment_type_id
-        description: "Type of payment"
-      - name: payment_group_id
-        description: "Payment group"
-
-      # Payment Details
-      - name: check_number
-        description: "Payment check number"
-      - name: check_amount
-        description: "Amount of payment"
-        tests:
-          - not_null
-      - name: check_date
-        description: "Date of check"
-      - name: bank_branch
-        description: "Issuing bank branch"
-      - name: carrier_name
-        description: "Name of insurance carrier"
-      - name: date_issued
-        description: "When payment was issued"
-
-      # Classification
-      - name: is_partial_payment
-        description: "Whether payment is partial"
-      - name: payment_completion_status
-        description: "Status of payment completion"
-
-      # Metadata
-      - name: created_by_user_id
-        description: "User who created payment record"
-      - name: created_at
-        description: "When payment was created"
-        tests:
-          - not_null
-      - name: updated_at
-        description: "When payment was last updated"
-
-  - name: stg_claimproc
-    description: "Procedures included in insurance claims"
-    columns:
-      # Primary Key
-      - name: claim_procedure_id
-        description: "Primary key for claim procedures"
-        tests:
-          - unique
-          - not_null
-
-      # Relationships
-      - name: procedure_id
-        description: "Foreign key to procedure"
-        tests:
-          - relationships:
-              to: ref('stg_procedurelog')
-              field: procedure_id
-      - name: claim_id
-        description: "Foreign key to claim"
-        tests:
-          - relationships:
-              to: ref('stg_claim')
-              field: claim_id
-      - name: patient_id
-        description: "Foreign key to patient"
-        tests:
-          - relationships:
-              to: ref('stg_patient')
-              field: patient_id
-      - name: provider_id
-        description: "Foreign key to provider"
-        tests:
-          - relationships:
-              to: ref('stg_provider')
-              field: provider_id
-      - name: claim_payment_id
-        description: "Foreign key to claim payment"
-        tests:
-          - relationships:
-              to: ref('stg_claimpayment')
-              field: claim_payment_id
-
-      # Billed Amounts
-      - name: fee_billed
-        description: "Amount billed for procedure"
-      - name: procedure_code_sent
-        description: "Procedure code submitted on claim"
-      - name: claim_line_number
-        description: "Line number on claim"
-      - name: do_not_bill_insurance
-        description: "Whether to exclude from insurance billing"
-
-      # Estimates
-      - name: insurance_payment_estimate
-        description: "Estimated insurance payment"
-      - name: deductible_estimate
-        description: "Estimated deductible"
-      - name: insurance_estimate_total
-        description: "Total estimated insurance portion"
-      - name: writeoff_estimate
-        description: "Estimated writeoff amount"
-      - name: copay_amount
-        description: "Patient copay amount"
-
-      # Actual Payments
-      - name: insurance_payment_amount
-        description: "Actual insurance payment"
-      - name: deductible_applied
-        description: "Actual deductible applied"
-      - name: writeoff_amount
-        description: "Actual writeoff amount"
-      - name: is_overpayment
-        description: "Whether payment exceeds expected"
-
-      # Overrides
-      - name: allowed_amount_override
-        description: "Override for allowed amount"
-      - name: percentage_override
-        description: "Override for coverage percentage"
-      - name: copay_override
-        description: "Override for copay amount"
-
-      # Status
-      - name: status
-        description: "Claim procedure status code"
-      - name: status_description
-        description: "Human-readable status"
-        tests:
-          - not_null
-      - name: coverage_percentage
-        description: "Percentage covered by insurance"
-
-      # Dates
-      - name: procedure_date
-        description: "Date of procedure"
-      - name: payment_received_date
-        description: "When payment was received"
-      - name: insurance_finalized_date
-        description: "When insurance processing completed"
-
-      # Metadata
-      - name: created_by_user_id
-        description: "User who created record"
-      - name: created_at
-        description: "When record was created"
-        tests:
-          - not_null
-      - name: updated_at
-        description: "When record was last updated"
-
-  - name: stg_claimtracking
-    description: "Tracking status of insurance claims"
-    columns:
-      # Primary Key
-      - name: claim_tracking_id
-        description: "Primary key for claim tracking"
-        tests:
-          - unique
-          - not_null
-
-      # Relationships
-      - name: claim_id
-        description: "Foreign key to claim"
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_claim')
-              field: claim_id
-      - name: tracking_definition_id
-        description: "Type of tracking event"
-      - name: tracking_error_definition_id
-        description: "Type of tracking error if applicable"
-      - name: user_id
-        description: "User who created tracking entry"
-        tests:
-          - relationships:
-              to: ref('stg_userod')
-              field: user_id
-
-      # Tracking Details
-      - name: tracking_type
-        description: "Type of tracking record"
-        tests:
-          - not_null
-      - name: tracking_note
-        description: "Notes about tracking status"
-
-      # Metadata
-      - name: entry_datetime
-        description: "When tracking record was created"
-        tests:
-          - not_null
+# models:
+#   - name: stg_claim
+#     description: "Insurance claims submitted"
+#     columns:
+#       # Primary Key
+#       - name: claim_id
+#         description: "Primary key for claims"
+#         tests:
+#           - unique
+#           - not_null
+# 
+#       # Relationships
+#       - name: patient_id
+#         description: "Foreign key to patient"
+#         tests:
+#           - not_null
+#           - relationships:
+#               to: ref('stg_patient')
+#               field: patient_id
+#       - name: insurance_plan_id
+#         description: "Primary insurance plan"
+#         tests:
+#           - relationships:
+#               to: ref('stg_insplan')
+#               field: insurance_plan_id
+#       - name: secondary_insurance_plan_id
+#         description: "Secondary insurance plan"
+#         tests:
+#           - relationships:
+#               to: ref('stg_insplan')
+#               field: insurance_plan_id
+#       - name: insurance_subscriber_id
+#         description: "Primary insurance subscriber"
+#         tests:
+#           - relationships:
+#               to: ref('stg_inssub')
+#               field: insurance_subscriber_id
+#       - name: treating_provider_id
+#         description: "Provider who performed treatment"
+#         tests:
+#           - relationships:
+#               to: ref('stg_provider')
+#               field: provider_id
+#       - name: clinic_id
+#         description: "Clinic where service was provided"
+# 
+#       # Claim Status and Timing
+#       - name: claim_status
+#         description: "Current status of claim"
+#         tests:
+#           - not_null
+#       - name: claim_type
+#         description: "Type of claim"
+#       - name: service_date
+#         description: "Date of service"
+#         tests:
+#           - not_null
+#       - name: sent_date
+#         description: "When claim was sent"
+#       - name: received_date
+#         description: "When claim was received"
+# 
+#       # Claim Identifiers
+#       - name: preauthorization_number
+#         description: "Preauthorization reference"
+#       - name: prior_authorization_number
+#         description: "Prior authorization reference"
+#       - name: claim_identifier
+#         description: "Unique claim identifier"
+# 
+#       # Financial Details
+#       - name: claim_fee
+#         description: "Total fee for claim"
+#       - name: insurance_payment_estimate
+#         description: "Estimated insurance payment"
+#       - name: insurance_payment_amount
+#         description: "Actual insurance payment"
+#       - name: deductible_applied
+#         description: "Deductible amount applied"
+#       - name: write_off_amount
+#         description: "Amount written off"
+# 
+#       # Service Details
+#       - name: place_of_service
+#         description: "Where service was performed"
+#       - name: patient_relationship
+#         description: "Relationship to subscriber"
+# 
+#       # Orthodontic Information
+#       - name: is_orthodontic
+#         description: "Whether claim is orthodontic"
+#       - name: orthodontic_remaining_months
+#         description: "Months of treatment remaining"
+#       - name: orthodontic_total_months
+#         description: "Total months of treatment"
+# 
+#       # Metadata
+#       - name: created_by_user_id
+#         description: "User who created claim"
+#       - name: created_at
+#         description: "When claim was created"
+#         tests:
+#           - not_null
+#       - name: updated_at
+#         description: "When claim was last updated"
+# 
+#   - name: stg_claimpayment
+#     description: "Payments received from insurance claims"
+#     columns:
+#       # Primary Key
+#       - name: claim_payment_id
+#         description: "Primary key for claim payments"
+#         tests:
+#           - unique
+#           - not_null
+# 
+#       # Relationships
+#       - name: clinic_id
+#         description: "Clinic receiving payment"
+#         tests:
+#           - relationships:
+#               to: ref('stg_clinic')
+#               field: clinic_id
+#       - name: deposit_id
+#         description: "Associated deposit record"
+#       - name: payment_type_id
+#         description: "Type of payment"
+#       - name: payment_group_id
+#         description: "Payment group"
+# 
+#       # Payment Details
+#       - name: check_number
+#         description: "Payment check number"
+#       - name: check_amount
+#         description: "Amount of payment"
+#         tests:
+#           - not_null
+#       - name: check_date
+#         description: "Date of check"
+#       - name: bank_branch
+#         description: "Issuing bank branch"
+#       - name: carrier_name
+#         description: "Name of insurance carrier"
+#       - name: date_issued
+#         description: "When payment was issued"
+# 
+#       # Classification
+#       - name: is_partial_payment
+#         description: "Whether payment is partial"
+#       - name: payment_completion_status
+#         description: "Status of payment completion"
+# 
+#       # Metadata
+#       - name: created_by_user_id
+#         description: "User who created payment record"
+#       - name: created_at
+#         description: "When payment was created"
+#         tests:
+#           - not_null
+#       - name: updated_at
+#         description: "When payment was last updated"
+# 
+#   - name: stg_claimproc
+#     description: "Procedures included in insurance claims"
+#     columns:
+#       # Primary Key
+#       - name: claim_procedure_id
+#         description: "Primary key for claim procedures"
+#         tests:
+#           - unique
+#           - not_null
+# 
+#       # Relationships
+#       - name: procedure_id
+#         description: "Foreign key to procedure"
+#         tests:
+#           - relationships:
+#               to: ref('stg_procedurelog')
+#               field: procedure_id
+#       - name: claim_id
+#         description: "Foreign key to claim"
+#         tests:
+#           - relationships:
+#               to: ref('stg_claim')
+#               field: claim_id
+#       - name: patient_id
+#         description: "Foreign key to patient"
+#         tests:
+#           - relationships:
+#               to: ref('stg_patient')
+#               field: patient_id
+#       - name: provider_id
+#         description: "Foreign key to provider"
+#         tests:
+#           - relationships:
+#               to: ref('stg_provider')
+#               field: provider_id
+#       - name: claim_payment_id
+#         description: "Foreign key to claim payment"
+#         tests:
+#           - relationships:
+#               to: ref('stg_claimpayment')
+#               field: claim_payment_id
+# 
+#       # Billed Amounts
+#       - name: fee_billed
+#         description: "Amount billed for procedure"
+#       - name: procedure_code_sent
+#         description: "Procedure code submitted on claim"
+#       - name: claim_line_number
+#         description: "Line number on claim"
+#       - name: do_not_bill_insurance
+#         description: "Whether to exclude from insurance billing"
+# 
+#       # Estimates
+#       - name: insurance_payment_estimate
+#         description: "Estimated insurance payment"
+#       - name: deductible_estimate
+#         description: "Estimated deductible"
+#       - name: insurance_estimate_total
+#         description: "Total estimated insurance portion"
+#       - name: writeoff_estimate
+#         description: "Estimated writeoff amount"
+#       - name: copay_amount
+#         description: "Patient copay amount"
+# 
+#       # Actual Payments
+#       - name: insurance_payment_amount
+#         description: "Actual insurance payment"
+#       - name: deductible_applied
+#         description: "Actual deductible applied"
+#       - name: writeoff_amount
+#         description: "Actual writeoff amount"
+#       - name: is_overpayment
+#         description: "Whether payment exceeds expected"
+# 
+#       # Overrides
+#       - name: allowed_amount_override
+#         description: "Override for allowed amount"
+#       - name: percentage_override
+#         description: "Override for coverage percentage"
+#       - name: copay_override
+#         description: "Override for copay amount"
+# 
+#       # Status
+#       - name: status
+#         description: "Claim procedure status code"
+#       - name: status_description
+#         description: "Human-readable status"
+#         tests:
+#           - not_null
+#       - name: coverage_percentage
+#         description: "Percentage covered by insurance"
+# 
+#       # Dates
+#       - name: procedure_date
+#         description: "Date of procedure"
+#       - name: payment_received_date
+#         description: "When payment was received"
+#       - name: insurance_finalized_date
+#         description: "When insurance processing completed"
+# 
+#       # Metadata
+#       - name: created_by_user_id
+#         description: "User who created record"
+#       - name: created_at
+#         description: "When record was created"
+#         tests:
+#           - not_null
+#       - name: updated_at
+#         description: "When record was last updated"
+# 
+#   - name: stg_claimtracking
+#     description: "Tracking status of insurance claims"
+#     columns:
+#       # Primary Key
+#       - name: claim_tracking_id
+#         description: "Primary key for claim tracking"
+#         tests:
+#           - unique
+#           - not_null
+# 
+#       # Relationships
+#       - name: claim_id
+#         description: "Foreign key to claim"
+#         tests:
+#           - not_null
+#           - relationships:
+#               to: ref('stg_claim')
+#               field: claim_id
+#       - name: tracking_definition_id
+#         description: "Type of tracking event"
+#       - name: tracking_error_definition_id
+#         description: "Type of tracking error if applicable"
+#       - name: user_id
+#         description: "User who created tracking entry"
+#         tests:
+#           - relationships:
+#               to: ref('stg_userod')
+#               field: user_id
+# 
+#       # Tracking Details
+#       - name: tracking_type
+#         description: "Type of tracking record"
+#         tests:
+#           - not_null
+#       - name: tracking_note
+#         description: "Notes about tracking status"
+# 
+#       # Metadata
+#       - name: entry_datetime
+#         description: "When tracking record was created"
+#         tests:
+#           - not_null

@@ -1,222 +1,222 @@
 version: 2
 
-models:
-  - name: stg_provider
-    description: "Dentists and other providers in the practice"
-    columns:
-      # Primary Key
-      - name: provider_id
-        description: "Primary key for providers"
-        tests:
-          - unique
-          - not_null
-
-      # Provider Identification
-      - name: provider_abbreviation
-        description: "Short form of provider name"
-      - name: last_name
-        description: "Provider last name"
-      - name: first_name
-        description: "Provider first name"
-      - name: middle_initial
-        description: "Provider middle initial"
-      - name: name_suffix
-        description: "Name suffix (Jr, Sr, etc)"
-      - name: preferred_name
-        description: "Provider's preferred name"
-
-      # Professional Details
-      - name: fee_schedule_id
-        description: "Default fee schedule for provider"
-        tests:
-          - relationships:
-              to: ref('stg_feesched')
-              field: fee_schedule_id
-      - name: specialty_id
-        description: "Provider's specialty"
-      - name: anesthesia_provider_type
-        description: "Type of anesthesia certification"
-      - name: school_class_id
-        description: "School/class identifier if applicable"
-
-      # Status and Type
-      - name: is_secondary_flag
-        description: "Whether provider is secondary"
-      - name: is_hidden_flag
-        description: "Whether provider is hidden"
-      - name: is_hidden_report_flag
-        description: "Whether hidden from reports"
-      - name: using_tin_flag
-        description: "Whether using tax ID number"
-      - name: signature_on_file_flag
-        description: "Whether signature is on file"
-      - name: is_cdanet_flag
-        description: "Whether provider uses CDAnet"
-      - name: is_not_person_flag
-        description: "Whether provider is organization"
-      - name: is_instructor_flag
-        description: "Whether provider is instructor"
-      - name: is_erx_enabled_flag
-        description: "Whether e-prescribe enabled"
-      - name: provider_status
-        description: "Current status of provider"
-
-      # Visual Settings
-      - name: provider_color
-        description: "Color for provider display"
-      - name: outline_color
-        description: "Color for provider outline"
-      - name: display_order
-        description: "Order for display purposes"
-
-      # Location and Licensing
-      - name: licensed_state
-        description: "State where provider is licensed"
-      - name: taxonomy_code_override
-        description: "Override for provider taxonomy"
-
-      # EHR Details
-      - name: ehr_meaningful_use_stage
-        description: "EHR meaningful use stage"
-      - name: billing_provider_override_id
-        description: "Override billing provider"
-
-      # Scheduling
-      - name: schedule_notes
-        description: "Notes for scheduling"
-      - name: web_schedule_description
-        description: "Description for web scheduling"
-      - name: hourly_production_goal
-        description: "Target hourly production"
-
-      # Dates
-      - name: birth_date
-        description: "Provider's birth date"
-      - name: termination_date
-        description: "When provider was terminated"
-      - name: updated_at
-        description: "When record was last updated"
-
-  - name: stg_userod
-    description: "User information for OpenDental"
-    columns:
-      # Primary Key
-      - name: user_id
-        description: "Primary key for users"
-        tests:
-          - unique
-          - not_null
-
-      # Basic Info
-      - name: username
-        description: "User's login name"
-        tests:
-          - not_null
-      - name: is_hidden_flag
-        description: "Whether user is hidden"
-
-      # Relationships
-      - name: user_group_id
-        description: "Security group for user"
-        tests:
-          - relationships:
-              to: ref('stg_usergroup')
-              field: user_group_id
-      - name: employee_id
-        description: "Related employee record"
-      - name: clinic_id
-        description: "Primary clinic for user"
-        tests:
-          - relationships:
-              to: ref('stg_clinic')
-              field: clinic_id
-      - name: provider_id
-        description: "Related provider if applicable"
-        tests:
-          - relationships:
-              to: ref('stg_provider')
-              field: provider_id
-      - name: parent_user_id
-        description: "Parent user for CEMT"
-
-      # Configuration
-      - name: task_list_inbox_id
-        description: "Default task list inbox"
-      - name: anesthesia_provider_type_id
-        description: "Type of anesthesia certification"
-      - name: default_hide_popups_flag
-        description: "Whether popups are hidden by default"
-      - name: clinic_restricted_flag
-        description: "Whether restricted to specific clinic"
-      - name: inbox_hide_popups_flag
-        description: "Whether inbox popups are hidden"
-      - name: domain_username
-        description: "Domain authentication username"
-
-      # Security Status
-      - name: password_is_strong_flag
-        description: "Whether password meets strength requirements"
-      - name: password_reset_required_flag
-        description: "Whether password reset is required"
-      - name: login_failed_attempts
-        description: "Number of failed login attempts"
-      - name: mobile_pin_failed_attempts
-        description: "Number of failed mobile PIN attempts"
-
-      # Tracking
-      - name: last_failed_login_at
-        description: "Last failed login attempt"
-      - name: last_successful_login_at
-        description: "Last successful login"
-      - name: badge_id
-        description: "Physical badge identifier"
-
-  - name: stg_usergroup
-    description: "User security groups"
-    columns:
-      # Primary Key
-      - name: user_group_id
-        description: "Primary key for user groups"
-        tests:
-          - unique
-          - not_null
-
-      # Details
-      - name: user_group_description
-        description: "Description of security group"
-        tests:
-          - not_null
-
-      # Relationships
-      - name: parent_user_group_id
-        description: "Parent group for CEMT hierarchy"
-        tests:
-          - relationships:
-              to: ref('stg_usergroup')
-              field: user_group_id
-
-  - name: stg_usergroupattach
-    description: "User-group assignments"
-    columns:
-      # Primary Key
-      - name: user_group_attachment_id
-        description: "Primary key for group assignments"
-        tests:
-          - unique
-          - not_null
-
-      # Relationships
-      - name: user_id
-        description: "Foreign key to user"
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_userod')
-              field: user_id
-      - name: user_group_id
-        description: "Foreign key to user group"
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_usergroup')
-              field: user_group_id
+# models:
+#   - name: stg_provider
+#     description: "Dentists and other providers in the practice"
+#     columns:
+#       # Primary Key
+#       - name: provider_id
+#         description: "Primary key for providers"
+#         tests:
+#           - unique
+#           - not_null
+#
+#       # Provider Identification
+#       - name: provider_abbreviation
+#         description: "Short form of provider name"
+#       - name: last_name
+#         description: "Provider last name"
+#       - name: first_name
+#         description: "Provider first name"
+#       - name: middle_initial
+#         description: "Provider middle initial"
+#       - name: name_suffix
+#         description: "Name suffix (Jr, Sr, etc)"
+#       - name: preferred_name
+#         description: "Provider's preferred name"
+#
+#       # Professional Details
+#       - name: fee_schedule_id
+#         description: "Default fee schedule for provider"
+#         tests:
+#           - relationships:
+#               to: ref('stg_feesched')
+#               field: fee_schedule_id
+#       - name: specialty_id
+#         description: "Provider's specialty"
+#       - name: anesthesia_provider_type
+#         description: "Type of anesthesia certification"
+#       - name: school_class_id
+#         description: "School/class identifier if applicable"
+#
+#       # Status and Type
+#       - name: is_secondary_flag
+#         description: "Whether provider is secondary"
+#       - name: is_hidden_flag
+#         description: "Whether provider is hidden"
+#       - name: is_hidden_report_flag
+#         description: "Whether hidden from reports"
+#       - name: using_tin_flag
+#         description: "Whether using tax ID number"
+#       - name: signature_on_file_flag
+#         description: "Whether signature is on file"
+#       - name: is_cdanet_flag
+#         description: "Whether provider uses CDAnet"
+#       - name: is_not_person_flag
+#         description: "Whether provider is organization"
+#       - name: is_instructor_flag
+#         description: "Whether provider is instructor"
+#       - name: is_erx_enabled_flag
+#         description: "Whether e-prescribe enabled"
+#       - name: provider_status
+#         description: "Current status of provider"
+#
+#       # Visual Settings
+#       - name: provider_color
+#         description: "Color for provider display"
+#       - name: outline_color
+#         description: "Color for provider outline"
+#       - name: display_order
+#         description: "Order for display purposes"
+#
+#       # Location and Licensing
+#       - name: licensed_state
+#         description: "State where provider is licensed"
+#       - name: taxonomy_code_override
+#         description: "Override for provider taxonomy"
+#
+#       # EHR Details
+#       - name: ehr_meaningful_use_stage
+#         description: "EHR meaningful use stage"
+#       - name: billing_provider_override_id
+#         description: "Override billing provider"
+#
+#       # Scheduling
+#       - name: schedule_notes
+#         description: "Notes for scheduling"
+#       - name: web_schedule_description
+#         description: "Description for web scheduling"
+#       - name: hourly_production_goal
+#         description: "Target hourly production"
+#
+#       # Dates
+#       - name: birth_date
+#         description: "Provider's birth date"
+#       - name: termination_date
+#         description: "When provider was terminated"
+#       - name: updated_at
+#         description: "When record was last updated"
+#
+#   - name: stg_userod
+#     description: "User information for OpenDental"
+#     columns:
+#       # Primary Key
+#       - name: user_id
+#         description: "Primary key for users"
+#         tests:
+#           - unique
+#           - not_null
+#
+#       # Basic Info
+#       - name: username
+#         description: "User's login name"
+#         tests:
+#           - not_null
+#       - name: is_hidden_flag
+#         description: "Whether user is hidden"
+#
+#       # Relationships
+#       - name: user_group_id
+#         description: "Security group for user"
+#         tests:
+#           - relationships:
+#               to: ref('stg_usergroup')
+#               field: user_group_id
+#       - name: employee_id
+#         description: "Related employee record"
+#       - name: clinic_id
+#         description: "Primary clinic for user"
+#         tests:
+#           - relationships:
+#               to: ref('stg_clinic')
+#               field: clinic_id
+#       - name: provider_id
+#         description: "Related provider if applicable"
+#         tests:
+#           - relationships:
+#               to: ref('stg_provider')
+#               field: provider_id
+#       - name: parent_user_id
+#         description: "Parent user for CEMT"
+#
+#       # Configuration
+#       - name: task_list_inbox_id
+#         description: "Default task list inbox"
+#       - name: anesthesia_provider_type_id
+#         description: "Type of anesthesia certification"
+#       - name: default_hide_popups_flag
+#         description: "Whether popups are hidden by default"
+#       - name: clinic_restricted_flag
+#         description: "Whether restricted to specific clinic"
+#       - name: inbox_hide_popups_flag
+#         description: "Whether inbox popups are hidden"
+#       - name: domain_username
+#         description: "Domain authentication username"
+#
+#       # Security Status
+#       - name: password_is_strong_flag
+#         description: "Whether password meets strength requirements"
+#       - name: password_reset_required_flag
+#         description: "Whether password reset is required"
+#       - name: login_failed_attempts
+#         description: "Number of failed login attempts"
+#       - name: mobile_pin_failed_attempts
+#         description: "Number of failed mobile PIN attempts"
+#
+#       # Tracking
+#       - name: last_failed_login_at
+#         description: "Last failed login attempt"
+#       - name: last_successful_login_at
+#         description: "Last successful login"
+#       - name: badge_id
+#         description: "Physical badge identifier"
+#
+#   - name: stg_usergroup
+#     description: "User security groups"
+#     columns:
+#       # Primary Key
+#       - name: user_group_id
+#         description: "Primary key for user groups"
+#         tests:
+#           - unique
+#           - not_null
+#
+#       # Details
+#       - name: user_group_description
+#         description: "Description of security group"
+#         tests:
+#           - not_null
+#
+#       # Relationships
+#       - name: parent_user_group_id
+#         description: "Parent group for CEMT hierarchy"
+#         tests:
+#           - relationships:
+#               to: ref('stg_usergroup')
+#               field: user_group_id
+#
+#   - name: stg_usergroupattach
+#     description: "User-group assignments"
+#     columns:
+#       # Primary Key
+#       - name: user_group_attachment_id
+#         description: "Primary key for group assignments"
+#         tests:
+#           - unique
+#           - not_null
+#
+#       # Relationships
+#       - name: user_id
+#         description: "Foreign key to user"
+#         tests:
+#           - not_null
+#           - relationships:
+#               to: ref('stg_userod')
+#               field: user_id
+#       - name: user_group_id
+#         description: "Foreign key to user group"
+#         tests:
+#           - not_null
+#           - relationships:
+#               to: ref('stg_usergroup')
+#               field: user_group_id

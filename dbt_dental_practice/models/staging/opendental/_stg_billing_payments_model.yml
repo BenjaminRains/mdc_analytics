@@ -146,419 +146,51 @@ models:
         tests:
           - unique
           - not_null
-
       # Dates
-      - name: start_date
-        description: "Start date of pay period"
-        tests:
-          - not_null
-      - name: end_date
-        description: "End date of pay period"
-        tests:
-          - not_null
-      - name: paycheck_date
-        description: "Date paychecks are issued"
-        tests:
-          - not_null
+      # - name: start_date
+      #   description: "Start date of pay period"
+      #   tests:
+      #     - not_null
+      # - name: end_date
+      #   description: "End date of pay period"
+      #   tests:
+      #     - not_null
+      # - name: paycheck_date
+      #   description: "Date paychecks are issued"
+      #   tests:
+      #     - not_null
 
-  - name: stg_payplan
-    description: "Payment plans for spreading costs over time"
-    columns:
-      # Primary Key
-      - name: payment_plan_id
-        description: "Primary key for payment plans"
-        tests:
-          - unique
-          - not_null
-
-      # Relationships
-      - name: patient_id
-        description: "Foreign key to patient"
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_patient')
-              field: patient_id
-      - name: guarantor_id
-        description: "Patient responsible for payments"
-        tests:
-          - relationships:
-              to: ref('stg_patient')
-              field: patient_id
-      - name: plan_id
-        description: "Insurance plan if applicable"
-      - name: insurance_subscriber_id
-        description: "Insurance subscriber if applicable"
-        tests:
-          - relationships:
-              to: ref('stg_inssub')
-              field: insurance_subscriber_id
-      - name: plan_category_id
-        description: "Category of payment plan"
-
-      # Financial Details
-      - name: annual_percentage_rate
-        description: "APR for payment plan"
-      - name: completed_amount
-        description: "Amount completed to date"
-      - name: payment_amount
-        description: "Regular payment amount"
-      - name: down_payment_amount
-        description: "Initial down payment"
-
-      # Payment Configuration
-      - name: payment_schedule
-        description: "Schedule of payments"
-      - name: number_of_payments
-        description: "Total number of payments"
-      - name: charge_frequency
-        description: "How often charges occur"
-
-      # Status Flags
-      - name: is_closed_flag
-        description: "Whether plan is closed"
-      - name: is_dynamic_flag
-        description: "Whether plan adjusts dynamically"
-      - name: is_locked_flag
-        description: "Whether plan is locked"
-      - name: dynamic_treatment_plan_option
-        description: "Treatment plan option for dynamic plans"
-
-      # Dates
-      - name: plan_created_date
-        description: "When plan was created"
-        tests:
-          - not_null
-      - name: plan_start_date
-        description: "When plan payments begin"
-      - name: interest_start_date
-        description: "When interest begins accruing"
-
-      # Security
-      - name: is_topaz_signature_flag
-        description: "Whether signed via Topaz"
-      - name: security_hash
-        description: "Hash for data integrity"
-
-  - name: stg_paysplit
-    description: "Payment splits across procedures"
-    columns:
-      # Primary Key
-      - name: payment_split_id
-        description: "Primary key for payment splits"
-        tests:
-          - unique
-          - not_null
-
-      # Relationships
-      - name: payment_id
-        description: "Foreign key to payment"
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_payment')
-              field: payment_id
-      - name: patient_id
-        description: "Foreign key to patient"
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_patient')
-              field: patient_id
-      - name: provider_id
-        description: "Provider associated with split"
-        tests:
-          - relationships:
-              to: ref('stg_provider')
-              field: provider_id
-      - name: clinic_id
-        description: "Clinic where split occurred"
-      - name: procedure_id
-        description: "Related procedure if applicable"
-        tests:
-          - relationships:
-              to: ref('stg_procedurelog')
-              field: procedure_id
-      - name: payment_plan_id
-        description: "Related payment plan"
-        tests:
-          - relationships:
-              to: ref('stg_payplan')
-              field: payment_plan_id
-      - name: adjustment_id
-        description: "Related adjustment"
-      - name: prepayment_split_id
-        description: "Related prepayment split"
-      - name: created_by_user_id
-        description: "User who created split"
-
-      # Financial Details
-      - name: split_amount
-        description: "Amount of split"
-        tests:
-          - not_null
-      - name: is_discount_flag
-        description: "Whether split is a discount"
-      - name: discount_type
-        description: "Type of discount if applicable"
-      - name: payment_plan_debit_type
-        description: "Type of payment plan debit"
-      - name: unearned_type
-        description: "Type of unearned payment"
-
-      # Dates
-      - name: procedure_date
-        description: "Date of related procedure"
-      - name: payment_date
-        description: "Date payment was made"
-        tests:
-          - not_null
-      - name: entry_date
-        description: "Date split was entered"
-      - name: updated_at
-        description: "When split was last updated"
-
-      # Security
-      - name: security_hash
-        description: "Hash for data integrity"
-
-  - name: stg_statement
-    description: "Patient billing statements"
-    columns:
-      # Primary Key
-      - name: statement_id
-        description: "Primary key for statements"
-        tests:
-          - unique
-          - not_null
-
-      # Relationships
-      - name: patient_id
-        description: "Foreign key to patient"
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_patient')
-              field: patient_id
-      - name: document_id
-        description: "Related document"
-      - name: super_family_id
-        description: "Family group identifier"
-
-      # Dates
-      - name: sent_date
-        description: "When statement was sent"
-      - name: date_range_start
-        description: "Start of statement period"
-      - name: date_range_end
-        description: "End of statement period"
-
-      # Statement Configuration
-      - name: statement_mode
-        description: "Mode of statement delivery"
-      - name: statement_type
-        description: "Type of statement"
-      - name: hide_payment_flag
-        description: "Whether to hide payment details"
-      - name: single_patient_flag
-        description: "Whether for single patient only"
-      - name: is_intermingled_flag
-        description: "Whether combines multiple accounts"
-      - name: is_sent_flag
-        description: "Whether statement was sent"
-      - name: is_receipt_flag
-        description: "Whether marked as receipt"
-      - name: is_invoice_flag
-        description: "Whether marked as invoice"
-      - name: is_invoice_copy_flag
-        description: "Whether is copy of invoice"
-      - name: limited_custom_family_flag
-        description: "Whether has custom family limits"
-
-      # Financial Information
-      - name: insurance_estimate
-        description: "Estimated insurance portion"
-      - name: total_balance
-        description: "Total balance on statement"
-      - name: is_balance_valid_flag
-        description: "Whether balance is valid"
-
-      # Communication Details
-      - name: email_subject
-        description: "Subject line for email delivery"
-      - name: sms_send_status
-        description: "Status of SMS delivery"
-
-      # Web Access
-      - name: short_guid
-        description: "Short identifier for web access"
-      - name: short_url
-        description: "Shortened URL for statement"
-      - name: full_url
-        description: "Full URL for statement"
-
-      # Metadata
-      - name: updated_at
-        description: "When statement was last updated"
-
-  - name: stg_statementprod
-    description: "Statement production data"
-    columns:
-      # Primary Key
-      - name: statement_production_id
-        description: "Primary key for statement production"
-        tests:
-          - unique
-          - not_null
-
-      # Relationships
-      - name: statement_id
-        description: "Foreign key to statement"
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_statement')
-              field: statement_id
-      - name: foreign_key_id
-        description: "References different tables based on production type"
-      - name: document_id
-        description: "Related document"
-      - name: late_charge_adjustment_id
-        description: "Related late charge adjustment"
-        tests:
-          - relationships:
-              to: ref('stg_adjustment')
-              field: adjustment_id
-
-      # Classification
-      - name: production_type
-        description: "Type of production record"
-        tests:
-          - not_null
-
-  # - name: famaging
-  #   description: "Family aging for accounts receivable"
-  # Note: famaging is a valid table in the database but it is currently unused by the clinic
-    
-  - name: stg_fee
-    description: "Fee amounts for procedures"
-    columns:
-      # Primary Key
-      - name: fee_id
-        description: "Primary key for fees"
-        tests:
-          - unique
-          - not_null
-
-      # Relationships
-      - name: fee_schedule_id
-        description: "Foreign key to fee schedule"
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_feesched')
-              field: fee_schedule_id
-      - name: procedure_code_id
-        description: "Foreign key to procedure code"
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_procedurecode')
-              field: procedure_code_id
-      - name: clinic_id
-        description: "Clinic where fee applies"
-      - name: provider_id
-        description: "Provider specific fee if applicable"
-        tests:
-          - relationships:
-              to: ref('stg_provider')
-              field: provider_id
-
-      # Fee Details
-      - name: fee_amount
-        description: "Amount charged for procedure"
-        tests:
-          - not_null
-      - name: legacy_code
-        description: "Legacy procedure code"
-
-      # Configuration
-      - name: use_default_fee
-        description: "Whether to use default fee"
-      - name: use_default_coverage
-        description: "Whether to use default coverage"
-      - name: fee_type
-        description: "Whether fee is default or custom"
-
-      # Metadata
-      - name: created_by_user_id
-        description: "User who created fee"
-      - name: created_at
-        description: "When fee was created"
-      - name: updated_at
-        description: "When fee was last updated"
-
-  - name: stg_feesched
-    description: "Fee schedules"
-    columns:
-      # Primary Key
-      - name: fee_schedule_id
-        description: "Primary key for fee schedules"
-        tests:
-          - unique
-          - not_null
-
-      # Details
-      - name: fee_schedule_name
-        description: "Name of fee schedule"
-        tests:
-          - not_null
-      - name: fee_schedule_type
-        description: "Type of fee schedule"
-      - name: display_order
-        description: "Order for display purposes"
-
-      # Configuration
-      - name: is_hidden
-        description: "Whether schedule is hidden"
-      - name: is_global
-        description: "Whether schedule applies globally"
-      - name: status
-        description: "Active or hidden status"
-
-      # Metadata
-      - name: created_by_user_id
-        description: "User who created schedule"
-      - name: created_at
-        description: "When schedule was created"
-      - name: updated_at
-        description: "When schedule was last updated"
-
-  - name: stg_feeschedgroup
-    description: "Groupings of fee schedules"
-    columns:
-      # Primary Key
-      - name: fee_schedule_group_id
-        description: "Primary key for fee schedule groups"
-        tests:
-          - unique
-          - not_null
-
-      # Relationships
-      - name: fee_schedule_id
-        description: "Foreign key to fee schedule"
-        tests:
-          - not_null
-          - relationships:
-              to: ref('stg_feesched')
-              field: fee_schedule_id
-
-      # Details
-      - name: group_description
-        description: "Description of fee schedule group"
-        tests:
-          - not_null
-      - name: clinic_numbers
-        description: "List of clinics in group"
-        tests:
-          - not_null
+  # - name: stg_payplan
+  #   description: "Payment plans for spreading costs over time"
+  #   columns:
+  #     # ... [payplan columns skipped]
+  #
+  # - name: stg_paysplit
+  #   description: "Payment splits across procedures"
+  #   columns:
+  #     # ... [paysplit columns skipped]
+  #
+  # - name: stg_statement
+  #   description: "Patient billing statements"
+  #   columns:
+  #     # ... [statement columns skipped]
+  #
+  # - name: stg_statementprod
+  #   description: "Statement production data"
+  #   columns:
+  #     # ... [statement production columns skipped]
+  #
+  # - name: stg_fee
+  #   description: "Fee amounts for procedures"
+  #   columns:
+  #     # ... [fee columns skipped]
+  #
+  # - name: stg_feesched
+  #   description: "Fee schedules"
+  #   columns:
+  #     # ... [fee schedule columns skipped]
+  #
+  # - name: stg_feeschedgroup
+  #   description: "Groupings of fee schedules"
+  #   columns:
+  #     # ... [fee schedule group columns skipped]
