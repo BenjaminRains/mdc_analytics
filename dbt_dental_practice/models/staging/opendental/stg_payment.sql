@@ -39,7 +39,10 @@ renamed as (
 
         -- Notes (may contain PHI)
         PayNote as payment_notes,
-        Receipt as receipt_text
+        Receipt as receipt_text,
+
+        -- Add metadata
+        current_timestamp() as _loaded_at
     from source
 )
 
