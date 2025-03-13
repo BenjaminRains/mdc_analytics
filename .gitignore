@@ -229,25 +229,20 @@ mdc_analytics_env/
 # Keep specific demo notebooks
 !/src/path_config_demo.ipynb
 
-# dbt specific files
-# Ignore profiles.yml which contains database credentials
+# DBT Configuration and Build Files
+target/
+dbt_packages/
+logs/
+
+# DBT Credentials and Environment Files
+.dbt-env
 profiles.yml
-~/.dbt/profiles.yml
-
-# Ignore dbt target directory
-/dbt_dental_practice/target/
-/dbt_dental_practice/dbt_packages/
-/dbt_dental_practice/logs/
-
-# Exclude dbt credential files, but keep model yml files
-**/profiles.yml
 **/.user.yml
 **/dbt_profile.yml
 
-# dbt environment and credentials
-.dbt-env
-**/profiles.yml
-~/.dbt/profiles.yml
-dbt_dental_practice/.dbt-env
+# Keep DBT Model YML Files
+!models/**/*.yml
+!models/**/schema.yml
+!models/**/_*.yml
 
 
