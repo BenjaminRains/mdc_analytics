@@ -2,9 +2,9 @@ version: 2
 
 sources:
   - name: opendental
-    description: "OpenDental database schema containing dental practice records"
+    description: "OpenDental backup database schema containing dental practice records"
     database: opendental_analytics_opendentalbackup_02_28_2025
-    
+    schema: opendental_analytics_opendentalbackup_02_28_2025
     tables:
       # =========== PATIENT INFORMATION ===========
       - name: patient
