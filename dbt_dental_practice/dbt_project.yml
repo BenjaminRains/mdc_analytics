@@ -11,6 +11,7 @@ analysis-paths: ["analysis"]
 test-paths: ["tests"]
 macro-paths: ["macros"]
 seed-paths: ["seeds"]
+docs-paths: ["docs"]
 
 # Build artifacts location
 target-path: "target"
@@ -29,17 +30,15 @@ models:
     # Configure materializations by folder
     staging:
       +materialized: view
-      +schema: staging
-      # Add database setting if needed
-      # +database: opendental_analytics_opendentalbackup_02_28_2025
+      +schema: opendental_analytics_opendentalbackup_02_28_2025
     
     intermediate:
       +materialized: table
-      +schema: intermediate
+      +schema: opendental_analytics_opendentalbackup_02_28_2025
     
     marts:
       +materialized: table
-      +schema: marts
+      +schema: opendental_analytics_opendentalbackup_02_28_2025
 
 # Add vars for flexible configuration
 vars:
