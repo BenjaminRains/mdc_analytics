@@ -7,9 +7,9 @@ This document outlines the staging models in our dental practice analytics DBT p
 ## Data Validation Scope
 
 ### Temporal Scope
-- **Valid Data Period**: All staging models filter for records from 2022-01-01 onwards
+- **Valid Data Period**: All staging models filter for records from 2023-01-01 onwards
   - This aligns with current business ownership and standardized data entry practices
-  - Historical data before 2022 is excluded due to inconsistent data entry practices
+  - Historical data before 2023 is excluded due to inconsistent data entry practices
 
 ### Source Systems
 - **Primary Source**: OpenDental Database
