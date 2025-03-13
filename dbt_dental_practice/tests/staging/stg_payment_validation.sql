@@ -3,7 +3,7 @@
   =======================
   
   Purpose:
-  Validates payment data patterns and business rules discovered during analysis.
+  Validates payment data patterns and business rules discovered during analysis. this file references the actual source table file 'stg_opendental__payment'. 
   
   Key Validation Rules:
   1. Payment Type Rules (2023-current):
